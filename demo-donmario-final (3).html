@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tablero PAC - Don Mario Semillas</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#F1F5F9}
+    #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
+    .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #2E7D32;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div id="root"><div id="loading"><div class="spinner"></div><span>Cargando tablero...</span></div></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const {useState,useMemo,useEffect,useCallback,useRef} = React;
+
+
+const ROLES_CONOCIDOS = ["sr", "rzn", "pm", "dc", "marketing", "produccion"];
+
+const USUARIOS_DEMO = [
+  { id:"sr",   nombre:"Sebastian Rios",  rol:"sr",  zona:null,     pin:"1234", email:"sr@donmario.com" },
+  { id:"rzn1", nombre:"RZN Zona 1",      rol:"rzn", zona:"Zona 1", pin:"1111", email:"rzn1@donmario.com" },
+  { id:"rzn2", nombre:"RZN Zona 2",      rol:"rzn", zona:"Zona 2", pin:"2222", email:"rzn2@donmario.com" },
+  { id:"pm",   nombre:"Product Manager", rol:"pm",  zona:null,     pin:"2001", email:"pm@donmario.com" },
+];
+
+function puedeEditar(usuario, tarea) {
+  if (!usuario) return false;                          
+  if (usuario.rol === "sr") return true;               
+  if (!tarea?.responsable) return false;
+  const resp = tarea.responsable.toLowerCase();
+  return resp.includes(usuario.rol.toLowerCase());     
+}
+
+function esRZNColectivo(tarea) {
+  const r = tarea?.responsable?.toLowerCase() || "";
+  return r.includes("rzn") && (r.includes("x 9") || r.includes("x9"));
+}
+
+const CLIENTE = {
+  nombre:    "Don Mario Semillas",
+  subtitulo: "Plan de Acción Comercial · Campaña Soja 25/26",
+  
+  colorA:    "#E05A1B",   
+  colorB:    "#2E7D32",   
+  colorC:    "#F5C800",   
+  
+  logo: null,
+};
+
+function colorAvance(v) {
+  if (v >= 1.0)  return { bar:"#3B82F6", bg:"#EFF6FF", text:"#1D4ED8", label:"Completa"  }; 
+  if (v >= 0.80) return { bar:"#22C55E", bg:"#F0FDF4", text:"#15803D", label:"Avanzado"  }; 
+  if (v >= 0.50) return { bar:"#EAB308", bg:"#FEFCE8", text:"#854D0E", label:"En marcha" }; 
+  if (v >= 0.10) return { bar:"#F97316", bg:"#FFF7ED", text:"#C2410C", label:"Iniciado"  }; 
+  return               { bar:"#EF4444", bg:"#FEF2F2", text:"#B91C1C", label:"Sin inicio" }; 
+}
+
+const ESTADO_CFG = {
+  "Pendiente": { bg:"#FFF7ED", text:"#C2410C", dot:"#F97316" },
+  "En curso":  { bg:"#EFF6FF", text:"#1D4ED8", dot:"#3B82F6" },
+  "Bloqueada": { bg:"#FFF1F2", text:"#BE123C", dot:"#F43F5E" },
+  "Cerrada":   { bg:"#F0FDF4", text:"#15803D", dot:"#22C55E" },
+};
+const PRIO_CFG = {
+  "Alta":  { bg:"#FEF2F2", text:"#B91C1C" },
+  "Media": { bg:"#FFFBEB", text:"#854D0E" },
+  "Baja":  { bg:"#F0FDF4", text:"#166534" },
+};
+
+const PROG_COLORS = [
+  CLIENTE.colorA,   
+  CLIENTE.colorB,   
+  "#8B5CF6",        
+  "#0EA5E9",        
+  "#EC4899",        
+  "#64748B",        
+];
+
+const DEMO = [
+  { programa:"Consolidacion del Sistema Sembra Evolucion", plan:"Jornadas tecnicas comerciales", tarea:"Definir cronograma para cada zona", responsable:"RZN x 9", estado:"En curso", prioridad:"Alta", avance:0.30, fechaVencimiento:"2026-02-15", comentarios:"Diferenciar jornadas en campo vs salon." },
+  { programa:"Consolidacion del Sistema Sembra Evolucion", plan:"Gestion de cartera SE", tarea:"Segmentar base de productores", responsable:"SR PM", estado:"Pendiente", prioridad:"Alta", avance:0.05, fechaVencimiento:"2026-01-30", comentarios:"" },
+  { programa:"Fortalecimiento de la Red Comercial", plan:"Estrategia Zonal 29/30", tarea:"Revalidacion 1+4", responsable:"RZN x 9", estado:"Bloqueada", prioridad:"Alta", avance:0.15, fechaVencimiento:"2026-01-30", comentarios:"Esperando aprobacion de gerencia." },
+  { programa:"Fortalecimiento de la Red Comercial", plan:"Fidelizacion / Bloqueo de Canal", tarea:"Definir politicas por segmento", responsable:"SR PM DC", estado:"En curso", prioridad:"Media", avance:0.50, fechaVencimiento:"2026-02-28", comentarios:"Tratamiento diferencial a exclusivos." },
+  { programa:"Generacion de Demanda y Posicionamiento", plan:"Ensayos Comparativos UP vs SF", tarea:"Organizar visitas a campo", responsable:"RZN x 9", estado:"En curso", prioridad:"Media", avance:0.80, fechaVencimiento:"2026-03-30", comentarios:"" },
+  { programa:"Gestion Integral de la Campana Soja 25/26", plan:"Gestion de Ventas", tarea:"Actualizar tablero semanalmente", responsable:"RZN x 9", estado:"Cerrada", prioridad:"Alta", avance:1.00, fechaVencimiento:"2026-01-15", comentarios:"" },
+  { programa:"Liderazgo de equipos", plan:"Sistema de incentivos", tarea:"Definir esquema de incentivos", responsable:"SR", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-02-28", comentarios:"" },
+  { programa:"Fortalecimiento del Vinculo con la Cadena Comercial", plan:"Gestion de Comercios Aliados", tarea:"Visita y Diagnostico de RZN", responsable:"RZN x 9", estado:"En curso", prioridad:"Media", avance:0.90, fechaVencimiento:"2026-03-30", comentarios:"" },
+].map((t, i) => ({ ...t, id: i, rowIndex: i+2, ultimaActualizacion: null }));
+
+const pct  = v => Math.round(v * 100);
+const avg  = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR",{day:"2-digit",month:"short"}); } catch { return iso; }};
+
+function LeyendaSemaforo() {
+  const items = [
+    { color:"#EF4444", label:"Sin inicio", rango:"0–9%" },
+    { color:"#F97316", label:"Iniciado",   rango:"10–49%" },
+    { color:"#EAB308", label:"En marcha",  rango:"50–79%" },
+    { color:"#22C55E", label:"Avanzado",   rango:"80–99%" },
+    { color:"#3B82F6", label:"Completa",   rango:"100%" },
+  ];
+  return (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:10, alignItems:"center", padding:"10px 16px", background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, marginBottom:20 }}>
+      <span style={{ fontSize:11, fontWeight:700, color:"#64748B", textTransform:"uppercase", letterSpacing:".06em", marginRight:4 }}>Avance:</span>
+      {items.map(it => (
+        <div key={it.label} style={{ display:"flex", alignItems:"center", gap:5 }}>
+          <span style={{ width:10, height:10, borderRadius:"50%", background:it.color, flexShrink:0 }}/>
+          <span style={{ fontSize:11, color:"#475569" }}><strong>{it.label}</strong> {it.rango}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BarraAvance({ valor, height=8 }) {
+  const { bar } = colorAvance(valor);
+  return (
+    <div style={{ background:"#E2E8F0", borderRadius:99, height, overflow:"hidden", width:"100%" }}>
+      <div style={{ width:`${pct(valor)}%`, background:bar, height:"100%", borderRadius:99, transition:"width .5s cubic-bezier(.4,0,.2,1)" }}/>
+    </div>
+  );
+}
+
+function PctBadge({ valor, size=44 }) {
+  const { bar, bg, text } = colorAvance(valor);
+  const r = (size/2)-4, circ = 2*Math.PI*r, offset = circ-(pct(valor)/100)*circ;
+  return (
+    <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
+      <svg width={size} height={size} style={{ position:"absolute", inset:0 }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E2E8F0" strokeWidth={4}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={bar} strokeWidth={4}
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          transform={`rotate(-90 ${size/2} ${size/2})`} style={{ transition:"stroke-dashoffset .5s" }}/>
+      </svg>
+      <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:800, color:text }}>
+        {pct(valor)}%
+      </div>
+    </div>
+  );
+}
+
+function Badge({ label, tipo }) {
+  const cfg = tipo==="estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
+  if (!cfg) return null;
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:4, background:cfg.bg, color:cfg.text, borderRadius:99, padding:"2px 9px", fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}>
+      {tipo==="estado" && <span style={{ width:6, height:6, borderRadius:"50%", background:ESTADO_CFG[label]?.dot, flexShrink:0 }}/>}
+      {label}
+    </span>
+  );
+}
+
+function Card({ children, onClick, accent, style={} }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onClick={onClick}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{ background:"#fff", border:`1px solid ${hov&&onClick?"#CBD5E1":"#E2E8F0"}`, borderRadius:12, padding:"15px 17px", cursor:onClick?"pointer":"default", transition:"all .15s", boxShadow: hov&&onClick?"0 4px 16px rgba(0,0,0,.08)":"none", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function Toast({ msg, ok }) {
+  return (
+    <div style={{ position:"fixed", bottom:24, right:24, zIndex:3000, background:ok?"#14532D":"#7F1D1D", color:"#fff", borderRadius:10, padding:"12px 20px", fontSize:13, fontWeight:600, boxShadow:"0 8px 32px rgba(0,0,0,.25)", display:"flex", alignItems:"center", gap:8 }}>
+      {ok?"✓":"✕"} {msg}
+    </div>
+  );
+}
+
+const ZONAS = ["Zona 1","Zona 2","Zona 3","Zona 4","Zona 5","Zona 6","Zona 7","Zona 8","Zona 9"];
+
+function zonaDefault() {
+  return ZONAS.reduce((acc, z) => ({ ...acc, [z]: { avance:0, estado:"Pendiente", comentario:"" } }), {});
+}
+
+function avanceZonas(zonas) {
+  const vals = Object.values(zonas).map(z => z.avance);
+  return vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : 0;
+}
+
+function GrillaZonas({ zonas, onChange, zonaUsuario }) {
+  
+  const [expandida, setExpandida] = useState(zonaUsuario || null); 
+  const avProm = avanceZonas(zonas);
+  const { bar: barProm } = colorAvance(avProm);
+
+  return (
+    <div>
+      {/* Resumen consolidado */}
+      <div style={{ background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:"12px 14px", marginBottom:12 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+          <span style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em" }}>
+            Promedio 9 zonas
+          </span>
+          <span style={{ fontSize:20, fontWeight:800, color:barProm }}>{pct(avProm)}%</span>
+        </div>
+        <BarraAvance valor={avProm} height={8}/>
+        {/* Mini chips de estado por zona */}
+        <div style={{ display:"flex", gap:4, marginTop:10, flexWrap:"wrap" }}>
+          {Object.entries(zonas).map(([zona, data]) => {
+            const { bar } = colorAvance(data.avance);
+            return (
+              <div key={zona}
+                onClick={() => (!zonaUsuario || zonaUsuario===zona) && setExpandida(expandida === zona ? null : zona)}
+                style={{ display:"flex", alignItems:"center", gap:4, background: zonaUsuario && zonaUsuario!==zona ? "#F8FAFC" : "#fff", border:`1.5px solid ${expandida===zona ? bar : "#E2E8F0"}`, borderRadius:8, padding:"4px 8px", cursor: zonaUsuario && zonaUsuario!==zona ? "default" : "pointer", transition:"border-color .15s", opacity: zonaUsuario && zonaUsuario!==zona ? 0.5 : 1 }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:bar, flexShrink:0 }}/>
+                <span style={{ fontSize:11, fontWeight:600, color:"#475569" }}>{zona.replace("Zona ","Z")}</span>
+                <span style={{ fontSize:11, fontWeight:800, color:bar }}>{pct(data.avance)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filas expandibles por zona */}
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {ZONAS.map(zona => {
+          const data = zonas[zona];
+          const { bar, bg, text } = colorAvance(data.avance);
+          const est = ESTADO_CFG[data.estado];
+          const abierta = expandida === zona;
+
+          return (
+            <div key={zona} style={{ border:`1px solid ${abierta ? bar : "#E2E8F0"}`, borderRadius:10, overflow:"hidden", transition:"border-color .2s" }}>
+              {/* Fila resumen — siempre visible */}
+              <div onClick={() => (!zonaUsuario || zonaUsuario===zona) && setExpandida(abierta ? null : zona)}
+                style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 13px", cursor: zonaUsuario && zonaUsuario!==zona ? "default" : "pointer", background: abierta ? "#F8FAFC" : "#fff", opacity: zonaUsuario && zonaUsuario!==zona ? 0.55 : 1 }}>
+                <span style={{ fontSize:12, fontWeight:700, color:"#475569", minWidth:52 }}>{zona}</span>
+                <div style={{ flex:1 }}>
+                  <BarraAvance valor={data.avance} height={6}/>
+                </div>
+                <span style={{ fontSize:13, fontWeight:800, color:bar, minWidth:34, textAlign:"right" }}>{pct(data.avance)}%</span>
+                <span style={{ fontSize:11, background:est?.bg, color:est?.text, borderRadius:99, padding:"1px 7px", fontWeight:700, minWidth:62, textAlign:"center" }}>
+                  {data.estado}
+                </span>
+                {zonaUsuario && zonaUsuario!==zona
+                  ? <span style={{ fontSize:12, color:"#CBD5E1" }}></span>
+                  : <span style={{ color:"#CBD5E1", fontSize:14, transform: abierta?"rotate(90deg)":"none", transition:"transform .2s" }}>›</span>
+                }
+              </div>
+
+              {/* Panel expandido de edición */}
+              {abierta && (
+                <div style={{ padding:"14px 13px", borderTop:"1px solid #E2E8F0", background:"#FAFBFC", display:"flex", flexDirection:"column", gap:14 }}>
+                  {/* Slider avance */}
+                  <div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".04em" }}>Avance</span>
+                      <span style={{ fontSize:15, fontWeight:800, color:bar }}>{pct(data.avance)}%</span>
+                    </div>
+                    <input type="range" min={0} max={100} value={pct(data.avance)}
+                      onChange={e => onChange(zona, "avance", Number(e.target.value)/100)}
+                      style={{ width:"100%", accentColor:bar, marginBottom:4 }}/>
+                    <div style={{ display:"flex", gap:5 }}>
+                      {[0,25,50,75,100].map(v => (
+                        <button key={v} onClick={() => onChange(zona, "avance", v/100)}
+                          style={{ flex:1, padding:"4px 0", borderRadius:6, border:`1px solid ${pct(data.avance)===v?"#CBD5E1":"#E2E8F0"}`, background:pct(data.avance)===v?"#F1F5F9":"#fff", color:"#64748B", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                          {v}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".04em", display:"block", marginBottom:6 }}>Estado</span>
+                    <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                      {["Pendiente","En curso","Bloqueada","Cerrada"].map(e => {
+                        const ec = ESTADO_CFG[e];
+                        return (
+                          <button key={e} onClick={() => onChange(zona, "estado", e)}
+                            style={{ padding:"5px 11px", borderRadius:99, border:`1.5px solid ${data.estado===e ? ec?.dot : "#E2E8F0"}`, background:data.estado===e ? ec?.bg : "#fff", color:data.estado===e ? ec?.text : "#64748B", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                            {e}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Comentario */}
+                  <div>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".04em", display:"block", marginBottom:6 }}>Comentario</span>
+                    <textarea value={data.comentario} onChange={e => onChange(zona, "comentario", e.target.value)} rows={2}
+                      placeholder={`Nota para ${zona}…`}
+                      style={{ width:"100%", border:"1.5px solid #E2E8F0", borderRadius:8, padding:"8px 11px", fontSize:12, color:"#0F172A", resize:"vertical", boxSizing:"border-box", fontFamily:"inherit", outline:"none", background:"#fff" }}/>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const esRZN = t => t?.responsable?.toLowerCase().includes("rzn");
+
+function Modal({ tarea, onSave, onClose, saving, usuario }) {
+  const [f, setF] = useState({
+    ...tarea,
+    zonas: tarea.zonas || zonaDefault(),
+  });
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+
+  
+  const avanceEfectivo = esRZNColectivo(f) ? avanceZonas(f.zonas) : f.avance;
+  const { bar, bg, text, label } = colorAvance(avanceEfectivo);
+
+  const handleZona = (zona, campo, valor) => {
+    setF(p => {
+      const nuevasZonas = { ...p.zonas, [zona]: { ...p.zonas[zona], [campo]: valor } };
+      return { ...p, zonas: nuevasZonas, avance: avanceZonas(nuevasZonas) };
+    });
+  };
+
+  const handleGuardar = () => {
+    const payload = { ...f, avance: avanceEfectivo, ultimaActualizacion: new Date().toISOString() };
+    onSave(payload);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.5)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(3px)" }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"#fff", borderRadius:18, width:"100%", maxWidth: esRZNColectivo(f) ? 560 : 500, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,.2)" }}>
+
+        {/* Header */}
+        <div style={{ background:"#F8FAFC", borderBottom:"1px solid #E2E8F0", padding:"18px 22px", borderRadius:"18px 18px 0 0" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+            <div style={{ flex:1, marginRight:12 }}>
+              <div style={{ fontSize:11, color:"#64748B", fontWeight:600, marginBottom:3 }}>{tarea.plan}</div>
+              <div style={{ fontSize:15, fontWeight:700, color:"#0F172A", lineHeight:1.35 }}>{tarea.tarea||"Tarea sin nombre"}</div>
+            </div>
+            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#94A3B8", padding:4, lineHeight:1 }}>✕</button>
+          </div>
+          <div style={{ display:"flex", gap:7, marginTop:10, flexWrap:"wrap", alignItems:"center" }}>
+            <Badge label={f.estado} tipo="estado"/>
+            <Badge label={f.prioridad} tipo="prioridad"/>
+            {tarea.responsable && (
+              <span style={{ fontSize:11, color:"#64748B", background: esRZN(tarea) ? "#FEF9C3" : "#EEF2FF", borderRadius:99, padding:"2px 9px", fontWeight:600 }}>
+                {esRZN(tarea) ? "" : ""} {tarea.responsable}
+              </span>
+            )}
+            {tarea.fechaVencimiento && <span style={{ fontSize:11, color:"#64748B", background:"#F1F5F9", borderRadius:99, padding:"2px 9px" }}> {fmtD(tarea.fechaVencimiento)}</span>}
+            {esRZNColectivo(tarea) && (
+              <span style={{ fontSize:11, background:"#EFF6FF", color:"#1D4ED8", borderRadius:99, padding:"2px 9px", fontWeight:700 }}>
+                Avance promedio: {pct(avanceEfectivo)}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:20 }}>
+
+          {/* ── BLOQUE RZN: grilla de zonas ── */}
+          {esRZNColectivo(f) ? (
+            <div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em" }}>
+                  Avance por zona
+                </label>
+                <span style={{ fontSize:11, color:"#94A3B8" }}>Tocá una zona para editar</span>
+              </div>
+              <GrillaZonas zonas={f.zonas} onChange={handleZona} zonaUsuario={usuario?.rol==="rzn" ? usuario.zona : null}/>
+            </div>
+          ) : (
+            /* ── BLOQUE NORMAL: avance único ── */
+            <div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em" }}>Avance</label>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:11, background:bg, color:text, borderRadius:99, padding:"2px 9px", fontWeight:700 }}>{label}</span>
+                  <span style={{ fontSize:22, fontWeight:800, color:bar }}>{pct(f.avance)}%</span>
+                </div>
+              </div>
+              <input type="range" min={0} max={100} value={pct(f.avance)}
+                onChange={e=>set("avance",Number(e.target.value)/100)}
+                style={{ width:"100%", accentColor:bar, marginBottom:6 }}/>
+              <BarraAvance valor={f.avance} height={10}/>
+              <div style={{ display:"flex", gap:6, marginTop:10 }}>
+                {[0,25,50,75,100].map(v => (
+                  <button key={v} onClick={()=>set("avance",v/100)}
+                    style={{ flex:1, padding:"5px 0", borderRadius:8, border:`1px solid ${pct(f.avance)===v?"#CBD5E1":"#E2E8F0"}`, background:pct(f.avance)===v?"#F1F5F9":"#fff", color:"#475569", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                    {v}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Estado general (aplica a ambos tipos) */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:8 }}>Estado general</label>
+            <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+              {["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>(
+                <button key={e} onClick={()=>set("estado",e)}
+                  style={{ padding:"7px 14px", borderRadius:99, border:`1.5px solid ${f.estado===e?ESTADO_CFG[e]?.dot:"#E2E8F0"}`, background:f.estado===e?ESTADO_CFG[e]?.bg:"#F8FAFC", color:f.estado===e?ESTADO_CFG[e]?.text:"#64748B", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s" }}>
+                  {e}
+                </button>
+              ))}
+              {f.estado==="Bloqueada" && (
+                <div style={{ width:"100%", background:"#FFF1F2", border:"1px solid #FECDD3", borderRadius:8, padding:"8px 12px", fontSize:11, color:"#BE123C", marginTop:4, display:"flex", gap:6, alignItems:"flex-start" }}>
+                  <span style={{ flexShrink:0 }}>⚠</span>
+                  <span><strong>Bloqueada</strong> significa que hay un impedimento que frena el avance. Usá el campo de comentarios para describir qué está bloqueando la tarea.</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Prioridad */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:8 }}>Prioridad</label>
+            <div style={{ display:"flex", gap:7 }}>
+              {["Alta","Media","Baja"].map(p=>(
+                <button key={p} onClick={()=>set("prioridad",p)}
+                  style={{ flex:1, padding:"7px 0", borderRadius:99, border:`1.5px solid ${f.prioridad===p?PRIO_CFG[p]?.text:"#E2E8F0"}`, background:f.prioridad===p?PRIO_CFG[p]?.bg:"#F8FAFC", color:f.prioridad===p?PRIO_CFG[p]?.text:"#64748B", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s" }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Comentarios generales */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:8 }}>
+              {esRZN(f) ? "Comentario general (SR)" : "Comentarios"}
+            </label>
+            <textarea value={f.comentarios} onChange={e=>set("comentarios",e.target.value)} rows={3}
+              placeholder={esRZN(f) ? "Observación general de SR sobre esta tarea…" : "Notas, aclaraciones o próximos pasos…"}
+              style={{ width:"100%", border:"1.5px solid #E2E8F0", borderRadius:10, padding:"10px 13px", fontSize:13, color:"#0F172A", resize:"vertical", boxSizing:"border-box", fontFamily:"inherit", outline:"none", background:"#F8FAFC" }}/>
+          </div>
+
+          {tarea.ultimaActualizacion && (
+            <div style={{ fontSize:11, color:"#94A3B8", textAlign:"right" }}>
+              Última actualización: {new Date(tarea.ultimaActualizacion).toLocaleString("es-AR")}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display:"flex", gap:10, padding:"0 22px 22px" }}>
+          <button onClick={onClose}
+            style={{ flex:1, padding:"11px", border:"1.5px solid #E2E8F0", borderRadius:10, background:"#F8FAFC", color:"#64748B", fontSize:14, fontWeight:600, cursor:"pointer" }}>
+            Cancelar
+          </button>
+          <button onClick={handleGuardar} disabled={saving}
+            style={{ flex:2, padding:"11px", border:"none", borderRadius:10, background:saving?"#94A3B8":CLIENTE.colorB, color:"#fff", fontSize:14, fontWeight:700, cursor:saving?"not-allowed":"pointer", transition:"background .2s" }}>
+            {saving?"Guardando…":" Guardar cambios"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogoDonMario({ height=44 }) {
+  return (
+    <svg height={height} viewBox="0 0 220 58" fill="none">
+      <defs><clipPath id="cs"><circle cx="29" cy="29" r="27"/></clipPath></defs>
+      <circle cx="29" cy="29" r="27" fill="#F5C800"/>
+      <g clipPath="url(#cs)">
+        <path d="M-4 46 Q29 14 62 46" stroke="#2E7D32" strokeWidth="14" fill="none"/>
+        <path d="M-4 52 Q29 24 62 52" stroke="#D4500A" strokeWidth="10" fill="none"/>
+        <rect x="-4" y="50" width="70" height="16" fill="#F5C800"/>
+      </g>
+      <text x="66" y="33" fontFamily="Arial Black,sans-serif" fontWeight="900" fontSize="22" fill="#1C1C1C">DONMARIO</text>
+      <text x="68" y="46" fontFamily="Arial,sans-serif" fontWeight="600" fontSize="9" fill="#666" letterSpacing="5">SEMILLAS</text>
+    </svg>
+  );
+}
+
+function ModalCambioPin({ usuario, onCambiar, onClose }) {
+  const [actual, setActual]   = useState("");
+  const [nuevo1, setNuevo1]   = useState("");
+  const [nuevo2, setNuevo2]   = useState("");
+  const [error, setError]     = useState("");
+  const [ok, setOk]           = useState(false);
+
+  const validar = () => {
+    if (actual !== usuario.pin)          { setError("El PIN actual es incorrecto."); return; }
+    if (!/^\d{4}$/.test(nuevo1))         { setError("El PIN nuevo debe tener 4 dígitos."); return; }
+    if (nuevo1 !== nuevo2)               { setError("Los PINs nuevos no coinciden."); return; }
+    if (nuevo1 === actual)               { setError("El PIN nuevo debe ser diferente al actual."); return; }
+    onCambiar(nuevo1);
+    setOk(true);
+  };
+
+  const inputStyle = { width:"100%", border:"1.5px solid #E2E8F0", borderRadius:10, padding:"11px 14px", fontSize:16, letterSpacing:8, color:"#0F172A", outline:"none", background:"#F8FAFC", textAlign:"center" };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.5)", zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(3px)" }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"#fff", borderRadius:18, width:"100%", maxWidth:360, boxShadow:"0 24px 64px rgba(0,0,0,.2)", padding:"24px 24px 20px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+          <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>Cambiar PIN</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#94A3B8" }}>✕</button>
+        </div>
+        {ok ? (
+          <div style={{ textAlign:"center", padding:"20px 0" }}>
+            <div style={{ fontSize:36, marginBottom:10 }}>✅</div>
+            <div style={{ fontSize:15, fontWeight:700, color:"#15803D", marginBottom:6 }}>PIN actualizado</div>
+            <div style={{ fontSize:12, color:"#64748B", marginBottom:20 }}>Tu nuevo PIN está activo.</div>
+            <button onClick={onClose} style={{ padding:"10px 28px", borderRadius:10, border:"none", background:CLIENTE.colorB, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>Cerrar</button>
+          </div>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            {error && <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:8, padding:"8px 12px", fontSize:12, color:"#B91C1C", textAlign:"center", fontWeight:600 }}>{error}</div>}
+            <div>
+              <label style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:6 }}>PIN actual</label>
+              <input type="password" inputMode="numeric" maxLength={4} value={actual} onChange={e=>{setActual(e.target.value.replace(/\D/g,"").slice(0,4));setError("");}} style={inputStyle} placeholder="····"/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:6 }}>PIN nuevo</label>
+              <input type="password" inputMode="numeric" maxLength={4} value={nuevo1} onChange={e=>{setNuevo1(e.target.value.replace(/\D/g,"").slice(0,4));setError("");}} style={inputStyle} placeholder="····"/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:6 }}>Repetir PIN nuevo</label>
+              <input type="password" inputMode="numeric" maxLength={4} value={nuevo2} onChange={e=>{setNuevo2(e.target.value.replace(/\D/g,"").slice(0,4));setError("");}} style={inputStyle} placeholder="····"/>
+            </div>
+            <div style={{ display:"flex", gap:10, marginTop:4 }}>
+              <button onClick={onClose} style={{ flex:1, padding:"11px", border:"1.5px solid #E2E8F0", borderRadius:10, background:"#F8FAFC", color:"#64748B", fontSize:14, fontWeight:600, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={validar} disabled={!actual||!nuevo1||!nuevo2}
+                style={{ flex:2, padding:"11px", border:"none", borderRadius:10, background:!actual||!nuevo1||!nuevo2?"#94A3B8":CLIENTE.colorB, color:"#fff", fontSize:14, fontWeight:700, cursor:!actual||!nuevo1||!nuevo2?"not-allowed":"pointer" }}>
+                Guardar PIN
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PanelAdmin({ usuarios, onAgregar, onEliminar, onResetPin, onClose }) {
+  const [modo, setModo]       = useState("lista");  
+  const [form, setForm]       = useState({ nombre:"", rol:"rzn", zona:"Zona 1", pin:"", email:"" });
+  const [error, setError]     = useState("");
+  const setF = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const guardarNuevo = () => {
+    if (!form.nombre.trim())               { setError("El nombre es obligatorio."); return; }
+    if (!/^\d{4}$/.test(form.pin))         { setError("El PIN debe tener 4 dígitos."); return; }
+    if (!form.email.includes("@"))         { setError("Email inválido."); return; }
+    if (usuarios.find(u=>u.pin===form.pin)){ setError("Ese PIN ya está en uso."); return; }
+    onAgregar({ ...form, id: "u_" + Date.now() });
+    setForm({ nombre:"", rol:"rzn", zona:"Zona 1", pin:"", email:"" });
+    setError("");
+    setModo("lista");
+  };
+
+  const inputStyle = { width:"100%", border:"1.5px solid #E2E8F0", borderRadius:8, padding:"9px 12px", fontSize:13, color:"#0F172A", outline:"none", background:"#F8FAFC", boxSizing:"border-box" };
+  const selectStyle = { ...inputStyle };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.5)", zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(3px)" }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"#fff", borderRadius:18, width:"100%", maxWidth:520, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,.2)" }}>
+
+        {/* Header */}
+        <div style={{ padding:"20px 22px 0", borderBottom:"1px solid #E2E8F0", paddingBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"#fff", zIndex:1 }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>⚙ Administración de usuarios</div>
+            <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>{usuarios.length} usuarios registrados</div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            {modo==="lista" && (
+              <button onClick={()=>{setModo("nuevo");setError("");}}
+                style={{ padding:"8px 14px", borderRadius:8, border:"none", background:CLIENTE.colorB, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                + Nuevo usuario
+              </button>
+            )}
+            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#94A3B8" }}>✕</button>
+          </div>
+        </div>
+
+        <div style={{ padding:"16px 22px 22px" }}>
+
+          {/* ── FORMULARIO NUEVO USUARIO ── */}
+          {modo==="nuevo" && (
+            <div style={{ background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:12, padding:"16px", marginBottom:16 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", marginBottom:14 }}>Nuevo usuario</div>
+              {error && <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:8, padding:"8px 12px", fontSize:12, color:"#B91C1C", marginBottom:12, fontWeight:600 }}>{error}</div>}
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <div>
+                  <label style={{ fontSize:11, fontWeight:700, color:"#475569", display:"block", marginBottom:4 }}>Nombre</label>
+                  <input value={form.nombre} onChange={e=>setF("nombre",e.target.value)} placeholder="Ej: RZN Córdoba" style={inputStyle}/>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#475569", display:"block", marginBottom:4 }}>Rol</label>
+                    <select value={form.rol} onChange={e=>setF("rol",e.target.value)} style={selectStyle}>
+                      <option value="rzn">RZN</option>
+                      <option value="sr">SR</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#475569", display:"block", marginBottom:4 }}>Zona</label>
+                    <select value={form.zona} onChange={e=>setF("zona",e.target.value)} style={selectStyle} disabled={form.rol==="sr"}>
+                      {["Zona 1","Zona 2","Zona 3","Zona 4","Zona 5","Zona 6","Zona 7","Zona 8","Zona 9"].map(z=>(
+                        <option key={z} value={z}>{z}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#475569", display:"block", marginBottom:4 }}>PIN (4 dígitos)</label>
+                    <input type="text" inputMode="numeric" maxLength={4} value={form.pin} onChange={e=>setF("pin",e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="1234" style={{ ...inputStyle, letterSpacing:6, textAlign:"center" }}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:"#475569", display:"block", marginBottom:4 }}>Email</label>
+                    <input type="email" value={form.email} onChange={e=>setF("email",e.target.value)} placeholder="rzn@donmario.com" style={inputStyle}/>
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                  <button onClick={()=>{setModo("lista");setError("");}} style={{ flex:1, padding:"9px", border:"1.5px solid #E2E8F0", borderRadius:8, background:"#fff", color:"#64748B", fontSize:13, fontWeight:600, cursor:"pointer" }}>Cancelar</button>
+                  <button onClick={guardarNuevo} style={{ flex:2, padding:"9px", border:"none", borderRadius:8, background:CLIENTE.colorB, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>Guardar usuario</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── LISTA DE USUARIOS ── */}
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {usuarios.map(u => {
+              const esAdmin = u.rol==="sr";
+              const rolColor = esAdmin ? CLIENTE.colorB : CLIENTE.colorA;
+              return (
+                <div key={u.id} style={{ display:"flex", alignItems:"center", gap:12, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:"11px 14px" }}>
+                  <div style={{ width:36, height:36, borderRadius:"50%", background:rolColor, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:800, flexShrink:0 }}>
+                    {u.nombre.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{u.nombre}</div>
+                    <div style={{ fontSize:11, color:"#94A3B8" }}>{u.email} · PIN: {"•".repeat(4)}</div>
+                  </div>
+                  <span style={{ fontSize:10, background:esAdmin?"#F0FDF4":"#FFF7ED", color:rolColor, borderRadius:99, padding:"2px 8px", fontWeight:700, flexShrink:0 }}>
+                    {esAdmin ? "SR" : u.zona}
+                  </span>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={()=>onResetPin(u)}
+                      title="Resetear PIN"
+                      style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #E2E8F0", background:"#fff", color:"#64748B", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                       Reset PIN
+                    </button>
+                    {u.rol !== "sr" && (
+                      <button onClick={()=>onEliminar(u.id)}
+                        title="Eliminar usuario"
+                        style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #FECACA", background:"#FEF2F2", color:"#B91C1C", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                        
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalResetPin({ usuario, onConfirmar, onClose }) {
+  const [nuevoPin, setNuevoPin] = useState("");
+  const [error, setError]       = useState("");
+  const [ok, setOk]             = useState(false);
+
+  const confirmar = () => {
+    if (!/^\d{4}$/.test(nuevoPin)) { setError("Debe tener 4 dígitos."); return; }
+    onConfirmar(usuario.id, nuevoPin);
+    setOk(true);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.6)", zIndex:4000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:320, padding:"22px 22px 18px", boxShadow:"0 24px 64px rgba(0,0,0,.2)" }}>
+        <div style={{ fontSize:15, fontWeight:800, color:"#0F172A", marginBottom:4 }}>Resetear PIN</div>
+        <div style={{ fontSize:12, color:"#64748B", marginBottom:16 }}>{usuario.nombre} — {usuario.email}</div>
+        {ok ? (
+          <div style={{ textAlign:"center", padding:"10px 0" }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>✅</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#15803D" }}>PIN reseteado</div>
+            <div style={{ fontSize:11, color:"#64748B", marginBottom:16 }}>Nuevo PIN: <strong>{nuevoPin}</strong></div>
+            <button onClick={onClose} style={{ padding:"9px 24px", borderRadius:9, border:"none", background:CLIENTE.colorB, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>Listo</button>
+          </div>
+        ) : (
+          <>
+            {error && <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:7, padding:"7px 11px", fontSize:12, color:"#B91C1C", marginBottom:12 }}>{error}</div>}
+            <input type="text" inputMode="numeric" maxLength={4} value={nuevoPin}
+              onChange={e=>{ setNuevoPin(e.target.value.replace(/\D/g,"").slice(0,4)); setError(""); }}
+              placeholder="Nuevo PIN"
+              style={{ width:"100%", border:"1.5px solid #E2E8F0", borderRadius:9, padding:"11px", fontSize:20, letterSpacing:10, textAlign:"center", color:"#0F172A", outline:"none", background:"#F8FAFC", marginBottom:14, boxSizing:"border-box" }}/>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={onClose} style={{ flex:1, padding:"10px", border:"1.5px solid #E2E8F0", borderRadius:9, background:"#F8FAFC", color:"#64748B", fontSize:13, fontWeight:600, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={confirmar} style={{ flex:2, padding:"10px", border:"none", borderRadius:9, background:CLIENTE.colorA, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>Confirmar reset</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PantallaLogin({ onLogin, usuarios }) {
+  const [pin, setPin]         = useState("");
+  const [error, setError]     = useState("");
+  const [modo, setModo]       = useState("login");
+  const [email, setEmail]     = useState("");
+  const [enviado, setEnviado] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const inputRef              = useRef(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, [modo]);
+
+  const handlePin = (d) => {
+    if (pin.length >= 4) return;
+    const nuevo = pin + d;
+    setPin(nuevo);
+    setError("");
+    if (nuevo.length === 4) setTimeout(() => intentarLogin(nuevo), 150);
+  };
+
+  const intentarLogin = (p) => {
+    const u = (usuarios||USUARIOS_DEMO).find(u => u.pin === p);
+    if (u) { onLogin(u); }
+    else { setError("PIN incorrecto. Intentá de nuevo."); setPin(""); }
+  };
+
+  const handleRecuperar = async () => {
+    const u = (usuarios||USUARIOS_DEMO).find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!u) { setError("No encontramos ese email."); return; }
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 1200));
+    setLoading(false);
+    setEnviado(true);
+  };
+
+  const btnStyle = {
+    padding:"18px 0", borderRadius:12, border:"1.5px solid #E2E8F0",
+    background:"#F8FAFC", fontSize:20, fontWeight:700, color:"#0F172A",
+    cursor:"pointer", transition:"background .1s", lineHeight:1,
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#F1F5F9", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20, fontFamily:"'Segoe UI', system-ui, sans-serif" }}>
+      <style>{`* { box-sizing:border-box; } input,button { font-family:inherit; }`}</style>
+
+      <div style={{ marginBottom:28, textAlign:"center" }}>
+        <LogoDonMario height={48}/>
+        <div style={{ fontSize:11, color:"#64748B", fontWeight:600, letterSpacing:".08em", textTransform:"uppercase", marginTop:10 }}>
+          {CLIENTE.subtitulo}
+        </div>
+      </div>
+
+      <div style={{ background:"#fff", borderRadius:20, padding:"28px 28px 24px", width:"100%", maxWidth:340, boxShadow:"0 8px 32px rgba(0,0,0,.10)", border:"1px solid #E2E8F0" }}>
+        <div style={{ height:4, background:`linear-gradient(90deg,${CLIENTE.colorB},${CLIENTE.colorA},${CLIENTE.colorC})`, borderRadius:99, marginBottom:22 }}/>
+
+        {modo === "login" ? (
+          <>
+            <div style={{ textAlign:"center", marginBottom:20 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#0F172A", marginBottom:4 }}>Ingresá tu PIN</div>
+              <div style={{ fontSize:12, color:"#94A3B8" }}>4 dígitos</div>
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"center", gap:14, marginBottom:20 }}>
+              {[0,1,2,3].map(i => (
+                <div key={i} style={{ width:18, height:18, borderRadius:"50%", background: i < pin.length ? CLIENTE.colorA : "#E2E8F0", border:`2px solid ${i < pin.length ? CLIENTE.colorA : "#CBD5E1"}`, transition:"background .15s" }}/>
+              ))}
+            </div>
+
+            {error && (
+              <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:8, padding:"8px 12px", fontSize:12, color:"#B91C1C", textAlign:"center", marginBottom:14, fontWeight:600 }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:14 }}>
+              {[1,2,3,4,5,6,7,8,9].map(d => (
+                <button key={d} onClick={() => handlePin(String(d))}
+                  onMouseDown={e=>e.currentTarget.style.background="#E2E8F0"}
+                  onMouseUp={e=>e.currentTarget.style.background="#F8FAFC"}
+                  style={btnStyle}>{d}</button>
+              ))}
+              <div/>
+              <button onClick={() => handlePin("0")}
+                onMouseDown={e=>e.currentTarget.style.background="#E2E8F0"}
+                onMouseUp={e=>e.currentTarget.style.background="#F8FAFC"}
+                style={btnStyle}>0</button>
+              <button onClick={() => { setPin(p => p.slice(0,-1)); setError(""); }}
+                onMouseDown={e=>e.currentTarget.style.background="#E2E8F0"}
+                onMouseUp={e=>e.currentTarget.style.background="#F8FAFC"}
+                style={{ ...btnStyle, fontSize:18, color:"#64748B" }}>⌫</button>
+            </div>
+
+            <input ref={inputRef} type="tel" inputMode="numeric" value={pin}
+              onChange={e => { const v=e.target.value.replace(/\D/g,"").slice(0,4); setPin(v); if(v.length===4) setTimeout(()=>intentarLogin(v),150); }}
+              style={{ position:"absolute", opacity:0, pointerEvents:"none", width:1, height:1 }}/>
+
+            <button onClick={() => { setModo("recuperar"); setError(""); setPin(""); }}
+              style={{ width:"100%", background:"none", border:"none", color:"#94A3B8", fontSize:12, cursor:"pointer", padding:"4px 0", textDecoration:"underline" }}>
+              Olvidé mi PIN
+            </button>
+
+            <div style={{ borderTop:"1px solid #F1F5F9", marginTop:14, paddingTop:14, textAlign:"center" }}>
+              <button onClick={() => onLogin(null)}
+                style={{ background:"none", border:"1px solid #E2E8F0", borderRadius:8, padding:"8px 18px", color:"#64748B", fontSize:12, cursor:"pointer", fontWeight:600 }}>
+                 Solo lectura
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ textAlign:"center", marginBottom:20 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#0F172A", marginBottom:4 }}>Recuperar PIN</div>
+              <div style={{ fontSize:12, color:"#94A3B8" }}>Te enviamos el PIN a tu email registrado</div>
+            </div>
+            {enviado ? (
+              <div style={{ background:"#F0FDF4", border:"1px solid #BBF7D0", borderRadius:10, padding:16, textAlign:"center" }}>
+                <div style={{ fontSize:28, marginBottom:8 }}>✅</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#15803D", marginBottom:4 }}>PIN enviado</div>
+                <div style={{ fontSize:11, color:"#64748B" }}>Revisá tu casilla de correo</div>
+              </div>
+            ) : (
+              <>
+                {error && <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:8, padding:"8px 12px", fontSize:12, color:"#B91C1C", textAlign:"center", marginBottom:12, fontWeight:600 }}>{error}</div>}
+                <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setError("");}}
+                  placeholder="tu@email.com"
+                  style={{ width:"100%", border:"1.5px solid #E2E8F0", borderRadius:10, padding:"12px 14px", fontSize:14, color:"#0F172A", outline:"none", marginBottom:12, background:"#F8FAFC" }}/>
+                <button onClick={handleRecuperar} disabled={!email||loading}
+                  style={{ width:"100%", padding:12, borderRadius:10, border:"none", background:!email||loading?"#94A3B8":CLIENTE.colorB, color:"#fff", fontSize:14, fontWeight:700, cursor:!email||loading?"not-allowed":"pointer" }}>
+                  {loading?"Enviando…":"Enviar PIN por email"}
+                </button>
+              </>
+            )}
+            <button onClick={()=>{setModo("login");setError("");setEmail("");setEnviado(false);}}
+              style={{ width:"100%", background:"none", border:"none", color:"#94A3B8", fontSize:12, cursor:"pointer", padding:"12px 0 0", textDecoration:"underline" }}>
+              ← Volver al login
+            </button>
+          </>
+        )}
+      </div>
+      <div style={{ marginTop:20, fontSize:11, color:"#CBD5E1", textAlign:"center" }}>Tablero PAC · {CLIENTE.nombre}</div>
+    </div>
+  );
+}
+
+function VistaEjecutiva({ tareas, onEditar, onNavegar }) {
+  const porPrograma = useMemo(()=>{
+    const m={};
+    tareas.forEach(t=>{ if(!m[t.programa])m[t.programa]=[]; m[t.programa].push(t); });
+    return m;
+  },[tareas]);
+
+  const totalAv = avg(tareas.map(t=>t.avance));
+  const { bar, bg, text, label } = colorAvance(totalAv);
+  const est = {Pendiente:0,"En curso":0,Bloqueada:0,Cerrada:0};
+  tareas.forEach(t=>{ est[t.estado]=(est[t.estado]||0)+1; });
+  const recientes = [...tareas].filter(t=>t.ultimaActualizacion).sort((a,b)=>new Date(b.ultimaActualizacion)-new Date(a.ultimaActualizacion)).slice(0,5);
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      <LeyendaSemaforo/>
+
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
+        {[
+          {label:"Avance PAC", valor:`${pct(totalAv)}%`, color:bar, sub:label},
+          {label:"En curso",   valor:est["En curso"],    color:"#3B82F6", sub:"tareas activas"},
+          {label:"Bloqueadas", valor:est["Bloqueada"],   color:"#EF4444", sub:"con impedimento"},
+          {label:"Cerradas",   valor:est["Cerrada"],     color:"#22C55E", sub:"completadas"},
+          {label:"Programas",  valor:Object.keys(porPrograma).length, color:CLIENTE.colorA, sub:"en seguimiento"},
+        ].map(k=>(
+          <div key={k.label} style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,padding:"14px 16px",borderTop:`3px solid ${k.color}`}}>
+            <div style={{fontSize:11,color:"#64748B",marginBottom:5,fontWeight:600,textTransform:"uppercase",letterSpacing:".04em"}}>{k.label}</div>
+            <div style={{fontSize:28,fontWeight:800,color:k.color,lineHeight:1}}>{k.valor}</div>
+            <div style={{fontSize:11,color:"#94A3B8",marginTop:4}}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Avance global */}
+      <div style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,padding:"18px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <span style={{fontWeight:700,color:"#0F172A",fontSize:15}}>Avance General del PAC</span>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:11,background:bg,color:text,borderRadius:99,padding:"2px 10px",fontWeight:700}}>{label}</span>
+            <span style={{fontWeight:800,color:bar,fontSize:24}}>{pct(totalAv)}%</span>
+          </div>
+        </div>
+        <BarraAvance valor={totalAv} height={12}/>
+      </div>
+
+      {/* Programas */}
+      <div>
+        <div style={{fontSize:11,color:"#64748B",fontWeight:700,textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Avance por Programa</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {Object.entries(porPrograma).map(([prog,ts],i)=>{
+            const av=avg(ts.map(t=>t.avance));
+            const col=PROG_COLORS[i%PROG_COLORS.length];
+            const planes=[...new Set(ts.map(t=>t.plan))];
+            const {bar:b}=colorAvance(av);
+            return (
+              <Card key={prog} onClick={()=>onNavegar("programas",{prog})} accent={b} style={{cursor:"pointer"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:10,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:700,color:"#0F172A",fontSize:14}}>
+                    <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",color:"#94A3B8",display:"block",marginBottom:2}}>PROGRAMA</span>
+                    {prog}
+                  </span>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:11,color:"#94A3B8"}}>{planes.length} planes · {ts.length} tareas</span>
+                    <span style={{fontWeight:800,color:b,fontSize:18}}>{pct(av)}%</span>
+                  </div>
+                </div>
+                <BarraAvance valor={av} height={7}/>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:10}}>
+                  {planes.map(pl=>{
+                    const pts=ts.filter(t=>t.plan===pl);
+                    const pav=avg(pts.map(t=>t.avance));
+                    const {bar:pb}=colorAvance(pav);
+                    return (
+                      <span key={pl}
+                        onClick={e=>{e.stopPropagation();onNavegar("planes",{prog,pl});}}
+                        style={{fontSize:11,background:"#F8FAFC",border:`1px solid ${pb}`,borderRadius:7,padding:"3px 9px",color:"#475569",cursor:"pointer",transition:"background .12s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background="#EFF6FF"}
+                        onMouseLeave={e=>e.currentTarget.style.background="#F8FAFC"}>
+                        <span style={{fontSize:9,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".06em",marginRight:3}}>PLAN</span>
+                        {pl} <strong style={{color:pb}}>{pct(pav)}%</strong>
+                      </span>
+                    );
+                  })}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Actividad reciente */}
+      {recientes.length>0&&(
+        <div>
+          <div style={{fontSize:11,color:"#64748B",fontWeight:700,textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Últimas actualizaciones</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {recientes.map(t=>(
+              <Card key={t.id} onClick={()=>onEditar(t)} style={{padding:"10px 14px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <PctBadge valor={t.avance} size={38}/>
+                  <div style={{flex:1,minWidth:100}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{t.tarea}</div>
+                    <div style={{fontSize:11,color:"#94A3B8"}}>{t.plan}</div>
+                  </div>
+                  <Badge label={t.estado} tipo="estado"/>
+                  <span style={{fontSize:10,color:"#CBD5E1"}}>{new Date(t.ultimaActualizacion).toLocaleDateString("es-AR")}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniTarea({ t, onEditar }) {
+  const { bar, bg, text } = colorAvance(t.avance);
+  const cfg = ESTADO_CFG[t.estado];
+  const pcfg = PRIO_CFG[t.prioridad];
+
+  
+  const urgColor = t.prioridad === "Alta" ? "#EF4444" : t.prioridad === "Media" ? "#F97316" : "#22C55E";
+
+  return (
+    <div onClick={() => onEditar(t)}
+      style={{ background:"#fff", border:"1px solid #E2E8F0", borderLeft:`4px solid ${urgColor}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"box-shadow .15s" }}
+      onMouseEnter={e => e.currentTarget.style.boxShadow="0 3px 12px rgba(0,0,0,.1)"}
+      onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
+
+      {/* Fila 1: nombre tarea + avance */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+        <span style={{ fontSize:13, fontWeight:700, color:"#0F172A", lineHeight:1.3, flex:1 }}>{t.tarea || "(Sin nombre)"}</span>
+        <span style={{ fontSize:14, fontWeight:800, color:bar, flexShrink:0 }}>{pct(t.avance)}%</span>
+      </div>
+
+      {/* Barra avance */}
+      <BarraAvance valor={t.avance} height={5}/>
+
+      {/* Fila 2: meta info */}
+      <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap", alignItems:"center" }}>
+        {/* Prioridad */}
+        <span style={{ fontSize:11, fontWeight:700, background:pcfg?.bg, color:pcfg?.text, borderRadius:99, padding:"2px 8px" }}>
+          {t.prioridad === "Alta" ? "" : t.prioridad === "Media" ? "" : ""} {t.prioridad}
+        </span>
+        {/* Responsable */}
+        {t.responsable && (
+          <span style={{ fontSize:11, color:"#475569", background:"#F1F5F9", borderRadius:99, padding:"2px 8px" }}>
+             {t.responsable}
+          </span>
+        )}
+        {/* Deadline */}
+        {t.fechaVencimiento && (
+          <span style={{ fontSize:11, color:"#64748B", background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:99, padding:"2px 8px" }}>
+             {fmtD(t.fechaVencimiento)}
+          </span>
+        )}
+        {/* Plan */}
+        <span style={{ fontSize:10, color:"#94A3B8", marginLeft:"auto" }}>{t.plan}</span>
+      </div>
+
+      {/* Mini chips de zonas si es RZN */}
+      {esRZNColectivo(t) && t.zonas && (
+        <div style={{ marginTop:8, borderTop:"1px solid #F1F5F9", paddingTop:8 }}>
+          <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600, marginBottom:5, textTransform:"uppercase", letterSpacing:".04em" }}>Por zona</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+            {ZONAS.map(zona => {
+              const data = t.zonas[zona];
+              if (!data) return null;
+              const { bar } = colorAvance(data.avance);
+              return (
+                <div key={zona} style={{ display:"flex", alignItems:"center", gap:3, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:6, padding:"3px 7px" }}>
+                  <span style={{ width:6, height:6, borderRadius:"50%", background:bar }}/>
+                  <span style={{ fontSize:10, color:"#475569", fontWeight:600 }}>{zona.replace("Zona ","Z")}</span>
+                  <span style={{ fontSize:10, fontWeight:800, color:bar }}>{pct(data.avance)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Comentario si existe */}
+      {t.comentarios && (
+        <div style={{ marginTop:6, fontSize:11, color:"#94A3B8", fontStyle:"italic", borderTop:"1px solid #F1F5F9", paddingTop:6 }}>
+           {t.comentarios.slice(0,90)}{t.comentarios.length>90?"…":""}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelEstado({ tareas, estado, progNombre, progColor, onEditar, onClose }) {
+  const cfg = ESTADO_CFG[estado];
+  const filtradas = tareas.filter(t => t.estado === estado);
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex" }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      {/* Overlay */}
+      <div style={{ flex:1, background:"rgba(15,23,42,.35)", backdropFilter:"blur(2px)" }} onClick={onClose}/>
+      {/* Panel */}
+      <div style={{ width:"min(420px, 100vw)", background:"#F8FAFC", borderLeft:"1px solid #E2E8F0", display:"flex", flexDirection:"column", boxShadow:"-8px 0 32px rgba(0,0,0,.12)", animation:"slideIn .2s ease" }}>
+        <style>{`@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}`}</style>
+
+        {/* Header del panel */}
+        <div style={{ background:"#fff", borderBottom:"1px solid #E2E8F0", padding:"16px 18px", flexShrink:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+            <div>
+              <div style={{ fontSize:11, color:"#64748B", marginBottom:3, fontWeight:600 }}>{progNombre}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ width:10, height:10, borderRadius:"50%", background:cfg?.dot, flexShrink:0 }}/>
+                <span style={{ fontSize:16, fontWeight:800, color:cfg?.text }}>{estado}</span>
+                <span style={{ fontSize:13, color:"#94A3B8", fontWeight:600 }}>· {filtradas.length} {filtradas.length === 1 ? "tarea" : "tareas"}</span>
+              </div>
+            </div>
+            <button onClick={onClose}
+              style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#94A3B8", padding:4, lineHeight:1 }}>✕</button>
+          </div>
+          {/* Mini stats del estado */}
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {["Alta","Media","Baja"].map(p => {
+              const cnt = filtradas.filter(t => t.prioridad === p).length;
+              if (!cnt) return null;
+              const pc = PRIO_CFG[p];
+              return (
+                <span key={p} style={{ fontSize:11, background:pc?.bg, color:pc?.text, borderRadius:99, padding:"2px 9px", fontWeight:700 }}>
+                  {p}: {cnt}
+                </span>
+              );
+            })}
+            {filtradas.length > 0 && (
+              <span style={{ fontSize:11, color:"#64748B", marginLeft:"auto" }}>
+                Avance prom.: <strong style={{ color: colorAvance(avg(filtradas.map(t=>t.avance))).bar }}>
+                  {pct(avg(filtradas.map(t=>t.avance)))}%
+                </strong>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Lista de tareas */}
+        <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+          {filtradas.length === 0 && (
+            <div style={{ textAlign:"center", padding:40, color:"#94A3B8", fontSize:14 }}>
+              No hay tareas en este estado.
+            </div>
+          )}
+          {filtradas.map(t => (
+            <MiniTarea key={t.id} t={t} onEditar={(tarea) => { onEditar(tarea); }} />
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ borderTop:"1px solid #E2E8F0", padding:"12px 16px", background:"#fff", flexShrink:0 }}>
+          <button onClick={onClose}
+            style={{ width:"100%", padding:"10px", border:"1px solid #E2E8F0", borderRadius:10, background:"#F8FAFC", color:"#64748B", fontSize:14, fontWeight:600, cursor:"pointer" }}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VistaProgramas({ tareas, onEditar }) {
+  const [prog, setProg]           = useState(null);
+  const [plan, setPlan]           = useState(null);
+  const [panelEstado, setPanelEstado] = useState(null); 
+
+  const tree = useMemo(() => {
+    const m = {};
+    tareas.forEach(t => {
+      if (!m[t.programa]) m[t.programa] = {};
+      if (!m[t.programa][t.plan]) m[t.programa][t.plan] = [];
+      m[t.programa][t.plan].push(t);
+    });
+    return m;
+  }, [tareas]);
+
+  const progNames = Object.keys(tree);
+
+  
+  const BadgeEstado = ({ estado, count, tareasDelProg, progNombre, progColor }) => {
+    const cfg = ESTADO_CFG[estado];
+    return (
+      <span
+        onClick={e => {
+          e.stopPropagation();
+          setPanelEstado({ estado, tareas: tareasDelProg, progNombre, progColor });
+        }}
+        style={{ fontSize:11, background:cfg?.bg, color:cfg?.text, borderRadius:99, padding:"3px 9px", fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4, border:`1px solid transparent`, transition:"border-color .15s" }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = cfg?.dot}
+        onMouseLeave={e => e.currentTarget.style.borderColor = "transparent"}
+        title={`Ver tareas ${estado}`}>
+        <span style={{ width:6, height:6, borderRadius:"50%", background:cfg?.dot }}/>
+        {estado} {count}
+      </span>
+    );
+  };
+
+  if (!prog) return (
+    <div>
+      {panelEstado && (
+        <PanelEstado
+          tareas={panelEstado.tareas}
+          estado={panelEstado.estado}
+          progNombre={panelEstado.progNombre}
+          progColor={panelEstado.progColor}
+          onEditar={(t) => { setPanelEstado(null); onEditar(t); }}
+          onClose={() => setPanelEstado(null)}
+        />
+      )}
+      <LeyendaSemaforo/>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12 }}>
+        {progNames.map((p, i) => {
+          const allT = Object.values(tree[p]).flat();
+          const av = avg(allT.map(t => t.avance));
+          const col = PROG_COLORS[i % PROG_COLORS.length];
+          const { bar:b, bg:bg2, text:tx, label:lb } = colorAvance(av);
+          const byEst = {};
+          allT.forEach(t => { byEst[t.estado] = (byEst[t.estado]||0)+1; });
+          return (
+            <Card key={p} onClick={() => { setProg(p); setPlan(null); }} accent={b}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:col, textTransform:"uppercase", letterSpacing:".04em" }}>{`P${i+1}`}</div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:26, fontWeight:800, color:b, lineHeight:1 }}>{pct(av)}%</div>
+                  <span style={{ fontSize:10, background:bg2, color:tx, borderRadius:99, padding:"1px 7px", fontWeight:700 }}>{lb}</span>
+                </div>
+              </div>
+              <div style={{ fontWeight:700, color:"#0F172A", fontSize:14, lineHeight:1.35, marginBottom:6 }}>
+                <span style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", display:"block", marginBottom:2 }}>PROGRAMA</span>
+                {p}
+              </div>
+              <div style={{ fontSize:11, color:"#94A3B8", marginBottom:12 }}>{Object.keys(tree[p]).length} planes · {allT.length} tareas</div>
+              <BarraAvance valor={av} height={6}/>
+              <div style={{ display:"flex", gap:5, marginTop:10, flexWrap:"wrap" }} onClick={e => e.stopPropagation()}>
+                {Object.entries(byEst).map(([e, n]) => (
+                  <BadgeEstado key={e} estado={e} count={n} tareasDelProg={allT} progNombre={p} progColor={col}/>
+                ))}
+              </div>
+              <div style={{ fontSize:10, color:"#CBD5E1", marginTop:8, textAlign:"right" }}>Tocá un estado para ver tareas ›</div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const col = PROG_COLORS[progNames.indexOf(prog) % PROG_COLORS.length];
+
+  if (!plan) return (
+    <div>
+      {panelEstado && (
+        <PanelEstado
+          tareas={panelEstado.tareas}
+          estado={panelEstado.estado}
+          progNombre={panelEstado.progNombre}
+          progColor={panelEstado.progColor}
+          onEditar={(t) => { setPanelEstado(null); onEditar(t); }}
+          onClose={() => setPanelEstado(null)}
+        />
+      )}
+      <button onClick={() => setProg(null)} style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0, display:"flex", alignItems:"center", gap:6 }}>
+        ← Todos los programas
+      </button>
+      <div style={{ borderLeft:`4px solid ${col}`, paddingLeft:14, marginBottom:18 }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:col, marginBottom:4 }}>PROGRAMA</div>
+        <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0F172A" }}>{prog}</h2>
+        <div style={{ fontSize:13, color:"#64748B", marginTop:3 }}>{Object.keys(tree[prog]).length} planes · {Object.values(tree[prog]).flat().length} tareas</div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {Object.keys(tree[prog]).map(pl => {
+          const ts = tree[prog][pl];
+          const av = avg(ts.map(t => t.avance));
+          const { bar:b } = colorAvance(av);
+          const byEst = {};
+          ts.forEach(t => { byEst[t.estado] = (byEst[t.estado]||0)+1; });
+          return (
+            <Card key={pl} onClick={() => setPlan(pl)} accent={b}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <span style={{ fontWeight:700, color:"#0F172A", fontSize:14 }}>
+                  <span style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", display:"block", marginBottom:1 }}>PLAN</span>
+                  {pl}
+                </span>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:11, color:"#94A3B8" }}>{ts.length} tareas</span>
+                  <span style={{ fontWeight:800, color:b, fontSize:16 }}>{pct(av)}%</span>
+                  <span style={{ color:"#CBD5E1", fontSize:18 }}>›</span>
+                </div>
+              </div>
+              <BarraAvance valor={av} height={6}/>
+              <div style={{ display:"flex", gap:5, marginTop:10, flexWrap:"wrap" }} onClick={e => e.stopPropagation()}>
+                {Object.entries(byEst).map(([e, n]) => (
+                  <BadgeEstado key={e} estado={e} count={n} tareasDelProg={ts} progNombre={`${prog} › ${pl}`} progColor={col}/>
+                ))}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const tareasDelPlan = tree[prog][plan];
+  return (
+    <div>
+      {panelEstado && (
+        <PanelEstado
+          tareas={panelEstado.tareas}
+          estado={panelEstado.estado}
+          progNombre={panelEstado.progNombre}
+          progColor={panelEstado.progColor}
+          onEditar={(t) => { setPanelEstado(null); onEditar(t); }}
+          onClose={() => setPanelEstado(null)}
+        />
+      )}
+      <button onClick={() => setPlan(null)} style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+        ← {prog}
+      </button>
+      <div style={{ borderLeft:`4px solid ${col}`, paddingLeft:14, marginBottom:18 }}>
+        <div style={{ fontSize:11, color:"#64748B", marginBottom:2 }}>{prog}</div>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:col, marginBottom:4 }}>PLAN</div>
+        <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0F172A" }}>{plan}</h2>
+        <div style={{ fontSize:13, color:"#64748B", marginTop:3 }}>{tareasDelPlan.length} tareas · {pct(avg(tareasDelPlan.map(t=>t.avance)))}% avance promedio</div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+        {tareasDelPlan.map(t => {
+          const { bar:b } = colorAvance(t.avance);
+          return (
+            <Card key={t.id} onClick={() => onEditar(t)} accent={b}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+                <span style={{ fontWeight:700, color:"#0F172A", fontSize:13, flex:1, lineHeight:1.35 }}>
+                  <span style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", display:"block", marginBottom:1 }}>TAREA</span>
+                  {t.tarea||"(Sin nombre)"}
+                </span>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                  <Badge label={t.estado} tipo="estado"/>
+                  <Badge label={t.prioridad} tipo="prioridad"/>
+                </div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                <BarraAvance valor={t.avance} height={6}/>
+                <span style={{ fontSize:12, fontWeight:800, color:b, minWidth:34, textAlign:"right" }}>{pct(t.avance)}%</span>
+              </div>
+              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                {t.responsable&&<span style={{ fontSize:11, color:"#64748B" }}> {t.responsable}</span>}
+                {t.fechaVencimiento&&<span style={{ fontSize:11, color:"#64748B" }}> {fmtD(t.fechaVencimiento)}</span>}
+                {t.comentarios&&<span style={{ fontSize:11, color:"#94A3B8", fontStyle:"italic" }}> {t.comentarios.slice(0,70)}{t.comentarios.length>70?"…":""}</span>}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VistaPlanesAll({ tareas, onEditar, initProg, initPlan }) {
+  const [filtroProg, setFiltroProg] = useState(initProg||"");
+  const [planAbierto, setPlanAbierto] = useState(initPlan||null);
+
+  const tree = useMemo(()=>{
+    const m={};
+    tareas.forEach(t=>{
+      if(!m[t.programa])m[t.programa]={};
+      if(!m[t.programa][t.plan])m[t.programa][t.plan]=[];
+      m[t.programa][t.plan].push(t);
+    });
+    return m;
+  },[tareas]);
+
+  const programas = Object.keys(tree);
+
+  
+  const planesFlat = useMemo(()=>{
+    const list=[];
+    programas.forEach((prog,pi)=>{
+      Object.keys(tree[prog]).forEach(plan=>{
+        const ts=tree[prog][plan];
+        list.push({ prog, plan, ts, color:PROG_COLORS[pi%PROG_COLORS.length] });
+      });
+    });
+    return list;
+  },[tree]);
+
+  const planesFiltrados = filtroProg ? planesFlat.filter(p=>p.prog===filtroProg) : planesFlat;
+
+  return (
+    <div>
+      <LeyendaSemaforo/>
+
+      {/* Filtro por programa */}
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
+        <button onClick={()=>{setFiltroProg("");setPlanAbierto(null);}}
+          style={{ padding:"6px 14px", borderRadius:99, border:`1.5px solid ${!filtroProg?CLIENTE.colorA:"#E2E8F0"}`, background:!filtroProg?CLIENTE.colorA:"#F8FAFC", color:!filtroProg?"#fff":"#64748B", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+          Todos
+        </button>
+        {programas.map((prog,i)=>(
+          <button key={prog} onClick={()=>{setFiltroProg(prog===filtroProg?"":prog);setPlanAbierto(null);}}
+            style={{ padding:"6px 14px", borderRadius:99, border:`1.5px solid ${filtroProg===prog?PROG_COLORS[i%PROG_COLORS.length]:"#E2E8F0"}`, background:filtroProg===prog?PROG_COLORS[i%PROG_COLORS.length]:"#F8FAFC", color:filtroProg===prog?"#fff":"#64748B", fontSize:11, fontWeight:700, cursor:"pointer", maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            {prog.split(" ").slice(0,3).join(" ")}…
+          </button>
+        ))}
+      </div>
+
+      <div style={{ fontSize:11, color:"#94A3B8", marginBottom:10 }}>{planesFiltrados.length} planes</div>
+
+      {/* Lista de planes */}
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {planesFiltrados.map(({prog,plan,ts,color})=>{
+          const av=avg(ts.map(t=>t.avance));
+          const {bar:b}=colorAvance(av);
+          const abierto = planAbierto===`${prog}||${plan}`;
+          const byEst={};
+          ts.forEach(t=>{byEst[t.estado]=(byEst[t.estado]||0)+1;});
+
+          return (
+            <div key={`${prog}||${plan}`} style={{ background:"#fff", border:`1px solid ${abierto?color:"#E2E8F0"}`, borderLeft:`4px solid ${b}`, borderRadius:12, overflow:"hidden", transition:"border-color .15s" }}>
+              {/* Header del plan */}
+              <div onClick={()=>setPlanAbierto(abierto?null:`${prog}||${plan}`)}
+                style={{ padding:"13px 16px", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:color, marginBottom:2 }}>PLAN · {prog}</div>
+                  <div style={{ fontWeight:700, color:"#0F172A", fontSize:14, lineHeight:1.3 }}>{plan}</div>
+                  <div style={{ fontSize:11, color:"#94A3B8", marginTop:3 }}>{ts.length} tareas</div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+                  <div style={{ width:80 }}><BarraAvance valor={av} height={6}/></div>
+                  <span style={{ fontWeight:800, color:b, fontSize:18, minWidth:38, textAlign:"right" }}>{pct(av)}%</span>
+                  <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                    {Object.entries(byEst).map(([e,n])=>(
+                      <span key={e} style={{ fontSize:10, background:ESTADO_CFG[e]?.bg, color:ESTADO_CFG[e]?.text, borderRadius:99, padding:"1px 7px", fontWeight:700 }}>{e} {n}</span>
+                    ))}
+                  </div>
+                  <span style={{ color:"#CBD5E1", fontSize:16, transform:abierto?"rotate(90deg)":"none", transition:"transform .2s" }}>›</span>
+                </div>
+              </div>
+
+              {/* Tareas del plan */}
+              {abierto && (
+                <div style={{ borderTop:"1px solid #E2E8F0", padding:"10px 14px", display:"flex", flexDirection:"column", gap:6, background:"#F8FAFC" }}>
+                  {ts.map(t=>{
+                    const {bar:tb}=colorAvance(t.avance);
+                    return (
+                      <div key={t.id} onClick={()=>onEditar(t)}
+                        style={{ background:"#fff", border:"1px solid #E2E8F0", borderLeft:`3px solid ${tb}`, borderRadius:9, padding:"10px 13px", cursor:"pointer", transition:"box-shadow .15s" }}
+                        onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.08)"}
+                        onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap" }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:"#94A3B8", marginBottom:2 }}>TAREA</div>
+                            <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", lineHeight:1.3 }}>{t.tarea||"(Sin nombre)"}</div>
+                          </div>
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+                            <Badge label={t.estado} tipo="estado"/>
+                            <Badge label={t.prioridad} tipo="prioridad"/>
+                            <span style={{ fontWeight:800, color:tb, fontSize:14 }}>{pct(t.avance)}%</span>
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                          {t.responsable&&<span style={{ fontSize:11, color:"#64748B" }}> {t.responsable}</span>}
+                          {t.fechaVencimiento&&<span style={{ fontSize:11, color:"#94A3B8" }}> {fmtD(t.fechaVencimiento)}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VistaTareas({ tareas, onEditar }) {
+  const [filtros,setFiltros]=useState({q:"",programa:"",responsable:"",estado:"",prioridad:""});
+  const set=(k,v)=>setFiltros(f=>({...f,[k]:v}));
+  const responsables=useMemo(()=>[...new Set(tareas.map(t=>t.responsable).filter(Boolean))].sort(),[tareas]);
+  const programas=useMemo(()=>[...new Set(tareas.map(t=>t.programa))].sort(),[tareas]);
+
+  const filtradas=useMemo(()=>tareas.filter(t=>{
+    if(filtros.programa&&t.programa!==filtros.programa)return false;
+    if(filtros.responsable&&t.responsable!==filtros.responsable)return false;
+    if(filtros.estado&&t.estado!==filtros.estado)return false;
+    if(filtros.prioridad&&t.prioridad!==filtros.prioridad)return false;
+    if(filtros.q){const q=filtros.q.toLowerCase();if(!t.tarea.toLowerCase().includes(q)&&!t.plan.toLowerCase().includes(q))return false;}
+    return true;
+  }),[tareas,filtros]);
+
+  return (
+    <div>
+      <LeyendaSemaforo/>
+      {/* Filtros */}
+      <div style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,padding:14,marginBottom:14,display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+        <input value={filtros.q} onChange={e=>set("q",e.target.value)} placeholder=" Buscar tarea o plan…"
+          style={{border:"1.5px solid #E2E8F0",borderRadius:8,padding:"7px 12px",fontSize:13,flex:"1 1 150px",outline:"none",color:"#0F172A",background:"#F8FAFC"}}/>
+        {[
+          {k:"programa",opts:["", ...programas],label:"Programa"},
+          {k:"responsable",opts:["", ...responsables],label:"Responsable"},
+          {k:"estado",opts:["","Pendiente","En curso","Bloqueada","Cerrada"],label:"Estado"},
+          {k:"prioridad",opts:["","Alta","Media","Baja"],label:"Prioridad"},
+        ].map(({k,opts,label})=>(
+          <select key={k} value={filtros[k]} onChange={e=>set(k,e.target.value)}
+            style={{border:"1.5px solid #E2E8F0",borderRadius:8,padding:"7px 10px",fontSize:13,background:"#F8FAFC",cursor:"pointer",color:filtros[k]?"#0F172A":"#94A3B8"}}>
+            <option value="">{label}</option>
+            {opts.filter(Boolean).map(o=><option key={o} value={o}>{o}</option>)}
+          </select>
+        ))}
+        {Object.values(filtros).some(Boolean)&&(
+          <button onClick={()=>setFiltros({q:"",programa:"",responsable:"",estado:"",prioridad:""})}
+            style={{border:"1px solid #FECACA",borderRadius:8,padding:"7px 12px",fontSize:12,background:"#FEF2F2",color:"#B91C1C",cursor:"pointer",fontWeight:600}}>
+            ✕ Limpiar
+          </button>
+        )}
+        <span style={{fontSize:12,color:"#94A3B8",marginLeft:"auto"}}>{filtradas.length} tareas</span>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {filtradas.length===0&&<div style={{textAlign:"center",padding:48,color:"#94A3B8",fontSize:14}}>Sin resultados.</div>}
+        {filtradas.map(t=>{
+          const {bar:b}=colorAvance(t.avance);
+          return (
+            <Card key={t.id} onClick={()=>onEditar(t)} style={{padding:"11px 14px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <PctBadge valor={t.avance} size={44}/>
+                <div style={{flex:1,minWidth:130}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#0F172A",marginBottom:2,lineHeight:1.3}}>{t.tarea||"(Sin nombre)"}</div>
+                  <div style={{fontSize:11,color:"#94A3B8"}}>{t.programa} › {t.plan}</div>
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <Badge label={t.estado} tipo="estado"/>
+                  <Badge label={t.prioridad} tipo="prioridad"/>
+                  {t.responsable&&<span style={{fontSize:11,color:"#64748B",background:"#F1F5F9",borderRadius:99,padding:"2px 8px"}}> {t.responsable}</span>}
+                  {t.fechaVencimiento&&<span style={{fontSize:11,color:"#94A3B8"}}> {fmtD(t.fechaVencimiento)}</span>}
+                </div>
+                <span style={{color:"#CBD5E1",fontSize:18}}>›</span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const MANUAL_OPERACION = `
+MANUAL DE OPERACION - TABLERO PAC
+Don Mario Semillas
+
+COMO ENTRAR
+- Abri la URL en Chrome o Safari
+- Ingresa tu PIN de 4 digitos
+- Olvide mi PIN: ingresa tu email
+
+PESTANAS
+Resumen / Programas / Planes / Equipos / Tareas
+
+SEMAFORO: Rojo 0-9% / Naranja 10-49% / Amarillo 50-79% / Verde 80-99% / Azul 100%
+
+ESTADOS: Pendiente / En curso / Bloqueada (hay un impedimento) / Cerrada
+
+CARGAR AVANCE (RZN)
+1. Pestana Tareas - filtrar por tu nombre
+2. Tocar la tarea - expandir tu zona
+3. Mover el slider - guardar
+`;
+
+const MANUAL_INSTALACION = `
+INSTALACION - TABLERO PAC
+
+ARQUITECTURA
+Sheet <-> Apps Script <-> Netlify
+
+PASOS
+1. Google Sheet: hojas Tareas y Usuarios
+2. Apps Script: pegar y publicar como web app
+3. API Key: Google Cloud Console
+4. config.js: pegar los 3 valores
+5. Netlify: arrastrar la carpeta
+
+MANTENIMIENTO
+- Datos: editar el Sheet directamente
+- Codigo: editar .jsx y republicar en Netlify
+`;
+
+function ModalAyuda({ onClose }) {
+  const [seccion, setSeccion] = useState("operacion");
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.5)", zIndex:2500, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(3px)" }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"#fff", borderRadius:18, width:"100%", maxWidth:620, maxHeight:"88vh", display:"flex", flexDirection:"column", boxShadow:"0 24px 64px rgba(0,0,0,.2)" }}>
+
+        {/* Header */}
+        <div style={{ padding:"18px 22px", borderBottom:"1px solid #E2E8F0", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+          <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>❓ Ayuda</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#94A3B8", padding:4 }}>✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:"flex", borderBottom:"1px solid #E2E8F0", flexShrink:0 }}>
+          {[
+            { id:"operacion",    label:" Manual de usuario" },
+            { id:"instalacion",  label:" Instalación y mantenimiento" },
+          ].map(t => (
+            <button key={t.id} onClick={()=>setSeccion(t.id)}
+              style={{ flex:1, padding:"11px 8px", border:"none", background:"none", cursor:"pointer", fontSize:12, fontWeight:700,
+                color:seccion===t.id?CLIENTE.colorA:"#64748B",
+                borderBottom:`3px solid ${seccion===t.id?CLIENTE.colorA:"transparent"}`,
+                marginBottom:-1, transition:"color .15s" }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex:1, overflowY:"auto", padding:"20px 22px" }}>
+          <pre style={{ fontFamily:"'Segoe UI', system-ui, sans-serif", fontSize:12.5, color:"#334155", lineHeight:1.75, whiteSpace:"pre-wrap", margin:0 }}>
+            {seccion === "operacion" ? MANUAL_OPERACION : MANUAL_INSTALACION}
+          </pre>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding:"12px 22px", borderTop:"1px solid #E2E8F0", flexShrink:0, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontSize:10, color:"#94A3B8" }}>Tablero PAC v1.0 · Don Mario Semillas</span>
+          <button onClick={onClose}
+            style={{ padding:"8px 20px", borderRadius:9, border:"none", background:CLIENTE.colorB, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VistaEquipos({ tareas, onEditar, usuarios }) {
+  const [subvista, setSubvista] = useState("rzn");     
+  const [zonaActiva, setZonaActiva]     = useState(null);
+  const [rolActivo, setRolActivo]       = useState(null);
+  const [progActivo, setProgActivo]     = useState(null);
+  const [planActivo, setPlanActivo]     = useState(null);
+
+  
+  
+  const dataZonas = useMemo(() => {
+    return ZONAS.map(zona => {
+      const tareasRZN = tareas.filter(t => esRZNColectivo(t));
+      const avances = tareasRZN.map(t => t.zonas?.[zona]?.avance ?? t.avance);
+      const avProm = avances.length ? avances.reduce((a,b)=>a+b,0)/avances.length : 0;
+      const porProg = {};
+      tareas.forEach(t => {
+        if (!esRZNColectivo(t)) return;
+        if (!porProg[t.programa]) porProg[t.programa] = {};
+        if (!porProg[t.programa][t.plan]) porProg[t.programa][t.plan] = [];
+        porProg[t.programa][t.plan].push({
+          ...t,
+          avanceZona: t.zonas?.[zona]?.avance ?? t.avance,
+          estadoZona: t.zonas?.[zona]?.estado ?? t.estado,
+          comentarioZona: t.zonas?.[zona]?.comentario ?? "",
+        });
+      });
+      return { zona, avProm, porProg };
+    });
+  }, [tareas]);
+
+  
+  
+  const dataRoles = useMemo(() => {
+    const roles = {};
+    tareas.forEach(t => {
+      if (!t.responsable) return;
+      const resp = t.responsable;
+      
+      const partes = resp.split(/\s+/);
+      partes.forEach(p => {
+        const r = p.toLowerCase();
+        if (r === "sr" || r === "x" || r === "9" || r === "rzn") return;
+        if (!roles[p]) roles[p] = [];
+        roles[p].push(t);
+      });
+    });
+    
+    return Object.entries(roles).map(([rol, ts]) => ({
+      rol,
+      tareas: ts,
+      avProm: avg(ts.map(t => t.avance)),
+    })).sort((a,b) => b.tareas.length - a.tareas.length);
+  }, [tareas]);
+
+  
+  const resetZona = () => { setZonaActiva(null); setProgActivo(null); setPlanActivo(null); };
+  const resetProg = () => { setProgActivo(null); setPlanActivo(null); };
+
+  const zdData = zonaActiva ? dataZonas.find(z => z.zona === zonaActiva) : null;
+
+  
+  return (
+    <div>
+      <LeyendaSemaforo/>
+
+      {/* Selector de subvista */}
+      <div style={{ display:"flex", gap:8, marginBottom:18 }}>
+        <button onClick={()=>{setSubvista("rzn");resetZona();setRolActivo(null);}}
+          style={{ padding:"8px 18px", borderRadius:99, border:`1.5px solid ${subvista==="rzn"?CLIENTE.colorA:"#E2E8F0"}`, background:subvista==="rzn"?CLIENTE.colorA:"#F8FAFC", color:subvista==="rzn"?"#fff":"#64748B", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+          Zonas RZN
+        </button>
+        <button onClick={()=>{setSubvista("otros");resetZona();setRolActivo(null);}}
+          style={{ padding:"8px 18px", borderRadius:99, border:`1.5px solid ${subvista==="otros"?CLIENTE.colorB:"#E2E8F0"}`, background:subvista==="otros"?CLIENTE.colorB:"#F8FAFC", color:subvista==="otros"?"#fff":"#64748B", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+          Otros responsables
+        </button>
+      </div>
+
+      {/* ── SUBVISTA RZN ── */}
+      {subvista === "rzn" && !zonaActiva && (
+        <div>
+          <div style={{ fontSize:11, color:"#64748B", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", marginBottom:12 }}>Avance por zona</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10, marginBottom:20 }}>
+            {dataZonas.map(({ zona, avProm }) => {
+              const { bar, bg, text, label } = colorAvance(avProm);
+              return (
+                <div key={zona} onClick={() => { setZonaActiva(zona); resetProg(); }}
+                  style={{ background:"#fff", border:"1px solid #E2E8F0", borderTop:`4px solid ${bar}`, borderRadius:12, padding:"14px 16px", cursor:"pointer", transition:"box-shadow .15s" }}
+                  onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)"}
+                  onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                  <div style={{ fontSize:11, color:"#94A3B8", fontWeight:600, textTransform:"uppercase", letterSpacing:".06em", marginBottom:6 }}>{zona}</div>
+                  <div style={{ fontSize:26, fontWeight:800, color:bar, lineHeight:1 }}>{pct(avProm)}%</div>
+                  <span style={{ fontSize:10, background:bg, color:text, borderRadius:99, padding:"1px 8px", fontWeight:700, marginTop:6, display:"inline-block" }}>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+          {/* Tabla comparativa */}
+          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:12, overflow:"hidden" }}>
+            <div style={{ padding:"14px 18px", borderBottom:"1px solid #E2E8F0", fontWeight:700, color:"#0F172A", fontSize:14 }}>Ranking de zonas</div>
+            <div style={{ padding:"12px 18px", display:"flex", flexDirection:"column", gap:8 }}>
+              {[...dataZonas].sort((a,b)=>b.avProm-a.avProm).map(({ zona, avProm }, i) => {
+                const { bar } = colorAvance(avProm);
+                return (
+                  <div key={zona} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}
+                    onClick={() => { setZonaActiva(zona); resetProg(); }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#94A3B8", minWidth:18 }}>#{i+1}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:"#475569", minWidth:58 }}>{zona}</span>
+                    <div style={{ flex:1 }}><BarraAvance valor={avProm} height={8}/></div>
+                    <span style={{ fontSize:13, fontWeight:800, color:bar, minWidth:38, textAlign:"right" }}>{pct(avProm)}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Drill-down zona → programa → plan → tareas */}
+      {subvista === "rzn" && zonaActiva && !progActivo && zdData && (
+        <div>
+          <button onClick={resetZona} style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+            ← Todas las zonas
+          </button>
+          <div style={{ borderLeft:`4px solid ${colorAvance(zdData.avProm).bar}`, paddingLeft:14, marginBottom:18 }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>ZONA</div>
+            <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:"#0F172A" }}>{zonaActiva}</h2>
+            <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Avance promedio: <strong style={{ color:colorAvance(zdData.avProm).bar }}>{pct(zdData.avProm)}%</strong></div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {Object.keys(zdData.porProg).map((prog, i) => {
+              const planes = zdData.porProg[prog];
+              const allTs = Object.values(planes).flat();
+              const av = avg(allTs.map(t => t.avanceZona));
+              const { bar: b } = colorAvance(av);
+              return (
+                <Card key={prog} onClick={() => setProgActivo(prog)} accent={b}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>PROGRAMA</div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, gap:10 }}>
+                    <span style={{ fontWeight:700, color:"#0F172A", fontSize:14 }}>{prog}</span>
+                    <span style={{ fontWeight:800, color:b, fontSize:18 }}>{pct(av)}%</span>
+                  </div>
+                  <BarraAvance valor={av} height={6}/>
+                  <div style={{ fontSize:11, color:"#94A3B8", marginTop:6 }}>{Object.keys(planes).length} planes · {allTs.length} tareas</div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {subvista === "rzn" && zonaActiva && progActivo && !planActivo && zdData && (
+        <div>
+          <button onClick={resetProg} style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+            ← {zonaActiva}
+          </button>
+          <div style={{ borderLeft:`4px solid ${colorAvance(avg(Object.values(zdData.porProg[progActivo]).flat().map(t=>t.avanceZona))).bar}`, paddingLeft:14, marginBottom:18 }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>PROGRAMA · {zonaActiva}</div>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0F172A" }}>{progActivo}</h2>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {Object.keys(zdData.porProg[progActivo]).map(plan => {
+              const ts = zdData.porProg[progActivo][plan];
+              const av = avg(ts.map(t => t.avanceZona));
+              const { bar: b } = colorAvance(av);
+              return (
+                <Card key={plan} onClick={() => setPlanActivo(plan)} accent={b}>
+                  <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>PLAN</div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <span style={{ fontWeight:700, color:"#0F172A", fontSize:14 }}>{plan}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:11, color:"#94A3B8" }}>{ts.length} tareas</span>
+                      <span style={{ fontWeight:800, color:b, fontSize:16 }}>{pct(av)}%</span>
+                      <span style={{ color:"#CBD5E1", fontSize:18 }}>›</span>
+                    </div>
+                  </div>
+                  <BarraAvance valor={av} height={6}/>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {subvista === "rzn" && zonaActiva && progActivo && planActivo && zdData && (() => {
+        const ts = zdData.porProg[progActivo][planActivo];
+        return (
+          <div>
+            <button onClick={() => setPlanActivo(null)} style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+              ← {progActivo}
+            </button>
+            <div style={{ borderLeft:`4px solid ${colorAvance(avg(ts.map(t=>t.avanceZona))).bar}`, paddingLeft:14, marginBottom:18 }}>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>PLAN · {zonaActiva}</div>
+              <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0F172A" }}>{planActivo}</h2>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+              {ts.map(t => {
+                const { bar: b } = colorAvance(t.avanceZona);
+                const eCfg = ESTADO_CFG[t.estadoZona];
+                return (
+                  <Card key={t.id} onClick={() => onEditar(t)} accent={b}>
+                    <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>TAREA</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+                      <span style={{ fontWeight:700, color:"#0F172A", fontSize:13, flex:1, lineHeight:1.35 }}>{t.tarea||"(Sin nombre)"}</span>
+                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                        <span style={{ fontSize:11, background:eCfg?.bg, color:eCfg?.text, borderRadius:99, padding:"2px 9px", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>
+                          <span style={{ width:6, height:6, borderRadius:"50%", background:eCfg?.dot }}/>
+                          {t.estadoZona}
+                        </span>
+                        <span style={{ fontWeight:800, color:b, fontSize:15 }}>{pct(t.avanceZona)}%</span>
+                      </div>
+                    </div>
+                    <BarraAvance valor={t.avanceZona} height={6}/>
+                    {t.comentarioZona && <div style={{ fontSize:11, color:"#94A3B8", marginTop:7, fontStyle:"italic" }}> {t.comentarioZona}</div>}
+                    <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                      {t.responsable&&<span style={{ fontSize:11, color:"#64748B" }}> {t.responsable}</span>}
+                      {t.fechaVencimiento&&<span style={{ fontSize:11, color:"#94A3B8" }}> {fmtD(t.fechaVencimiento)}</span>}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── SUBVISTA OTROS RESPONSABLES ── */}
+      {subvista === "otros" && !rolActivo && (
+        <div>
+          <div style={{ fontSize:11, color:"#64748B", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", marginBottom:12 }}>
+            Avance por responsable
+          </div>
+          {dataRoles.length === 0 && (
+            <div style={{ textAlign:"center", padding:40, color:"#94A3B8", fontSize:14 }}>
+              No hay responsables adicionales en los datos actuales.
+            </div>
+          )}
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {dataRoles.map(({ rol, tareas: ts, avProm }) => {
+              const { bar, bg, text, label } = colorAvance(avProm);
+              const byEst = {};
+              ts.forEach(t => { byEst[t.estado] = (byEst[t.estado]||0)+1; });
+              
+              const usuarioReal = usuarios?.find(u => u.rol.toLowerCase() === rol.toLowerCase());
+              return (
+                <Card key={rol} onClick={() => setRolActivo(rol)} accent={bar}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:10, flexWrap:"wrap" }}>
+                    <div>
+                      <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>RESPONSABLE</div>
+                      <div style={{ fontWeight:700, color:"#0F172A", fontSize:15 }}>{usuarioReal?.nombre || rol}</div>
+                      {usuarioReal && <div style={{ fontSize:11, color:"#64748B", marginTop:2 }}>Rol: {rol}</div>}
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:24, fontWeight:800, color:bar, lineHeight:1 }}>{pct(avProm)}%</div>
+                      <span style={{ fontSize:10, background:bg, color:text, borderRadius:99, padding:"1px 8px", fontWeight:700 }}>{label}</span>
+                    </div>
+                  </div>
+                  <BarraAvance valor={avProm} height={6}/>
+                  <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+                    <span style={{ fontSize:11, color:"#94A3B8" }}>{ts.length} tareas</span>
+                    {Object.entries(byEst).map(([e,n]) => (
+                      <span key={e} style={{ fontSize:10, background:ESTADO_CFG[e]?.bg, color:ESTADO_CFG[e]?.text, borderRadius:99, padding:"1px 7px", fontWeight:700 }}>
+                        {e} {n}
+                      </span>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Detalle de tareas de un rol */}
+      {subvista === "otros" && rolActivo && (() => {
+        const rolData = dataRoles.find(r => r.rol === rolActivo);
+        if (!rolData) return null;
+        const usuarioReal = usuarios?.find(u => u.rol.toLowerCase() === rolActivo.toLowerCase());
+        return (
+          <div>
+            <button onClick={() => setRolActivo(null)} style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+              ← Todos los responsables
+            </button>
+            <div style={{ borderLeft:`4px solid ${colorAvance(rolData.avProm).bar}`, paddingLeft:14, marginBottom:18 }}>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>RESPONSABLE</div>
+              <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:"#0F172A" }}>{usuarioReal?.nombre || rolActivo}</h2>
+              <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>
+                {rolData.tareas.length} tareas · Avance promedio: <strong style={{ color:colorAvance(rolData.avProm).bar }}>{pct(rolData.avProm)}%</strong>
+              </div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+              {rolData.tareas.map(t => {
+                const { bar: b } = colorAvance(t.avance);
+                return (
+                  <Card key={t.id} onClick={() => onEditar(t)} accent={b}>
+                    <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>TAREA</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:11, color:"#94A3B8", marginBottom:2 }}>{t.programa} › {t.plan}</div>
+                        <div style={{ fontWeight:700, color:"#0F172A", fontSize:13, lineHeight:1.35 }}>{t.tarea||"(Sin nombre)"}</div>
+                      </div>
+                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                        <Badge label={t.estado} tipo="estado"/>
+                        <Badge label={t.prioridad} tipo="prioridad"/>
+                        <span style={{ fontWeight:800, color:b, fontSize:15 }}>{pct(t.avance)}%</span>
+                      </div>
+                    </div>
+                    <BarraAvance valor={t.avance} height={6}/>
+                    <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                      {t.fechaVencimiento&&<span style={{ fontSize:11, color:"#94A3B8" }}> {fmtD(t.fechaVencimiento)}</span>}
+                      {t.comentarios&&<span style={{ fontSize:11, color:"#94A3B8", fontStyle:"italic" }}> {t.comentarios.slice(0,60)}{t.comentarios.length>60?"…":""}</span>}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function VistaZonas({ tareas, onEditar }) {
+  const [zonaActiva, setZonaActiva] = useState(null);
+  const [progActivo, setProgActivo] = useState(null);
+  const [planActivo, setPlanActivo] = useState(null);
+
+  
+  const dataZonas = useMemo(() => {
+    return ZONAS.map(zona => {
+      
+      const tareasRZN = tareas.filter(t => esRZNColectivo(t));
+      const avances = tareasRZN.map(t => {
+        const zdata = t.zonas?.[zona];
+        return zdata ? zdata.avance : t.avance; 
+      });
+      const avProm = avances.length ? avances.reduce((a,b)=>a+b,0)/avances.length : 0;
+
+      
+      const porProg = {};
+      tareas.forEach(t => {
+        if (!esRZNColectivo(t)) return;
+        if (!porProg[t.programa]) porProg[t.programa] = {};
+        if (!porProg[t.programa][t.plan]) porProg[t.programa][t.plan] = [];
+        porProg[t.programa][t.plan].push({
+          ...t,
+          avanceZona: t.zonas?.[zona]?.avance ?? t.avance,
+          estadoZona: t.zonas?.[zona]?.estado ?? t.estado,
+          comentarioZona: t.zonas?.[zona]?.comentario ?? "",
+        });
+      });
+
+      return { zona, avProm, porProg };
+    });
+  }, [tareas]);
+
+  
+  if (!zonaActiva) return (
+    <div>
+      <LeyendaSemaforo/>
+      <div style={{ fontSize:11, color:"#64748B", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", marginBottom:12 }}>
+        Desempeño por zona RZN
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:10, marginBottom:20 }}>
+        {dataZonas.map(({ zona, avProm }) => {
+          const { bar, bg, text, label } = colorAvance(avProm);
+          return (
+            <div key={zona} onClick={() => { setZonaActiva(zona); setProgActivo(null); setPlanActivo(null); }}
+              style={{ background:"#fff", border:`1px solid #E2E8F0`, borderTop:`4px solid ${bar}`, borderRadius:12, padding:"14px 16px", cursor:"pointer", transition:"box-shadow .15s" }}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)"}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <div style={{ fontSize:11, color:"#94A3B8", fontWeight:600, textTransform:"uppercase", letterSpacing:".06em", marginBottom:6 }}>{zona}</div>
+              <div style={{ fontSize:26, fontWeight:800, color:bar, lineHeight:1 }}>{pct(avProm)}%</div>
+              <span style={{ fontSize:10, background:bg, color:text, borderRadius:99, padding:"1px 8px", fontWeight:700, marginTop:6, display:"inline-block" }}>{label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tabla comparativa rápida */}
+      <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:12, overflow:"hidden" }}>
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid #E2E8F0", fontWeight:700, color:"#0F172A", fontSize:14 }}>
+          Comparativo de zonas
+        </div>
+        <div style={{ padding:"12px 18px", display:"flex", flexDirection:"column", gap:8 }}>
+          {[...dataZonas].sort((a,b)=>b.avProm-a.avProm).map(({ zona, avProm }) => {
+            const { bar } = colorAvance(avProm);
+            return (
+              <div key={zona} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}
+                onClick={() => { setZonaActiva(zona); setProgActivo(null); setPlanActivo(null); }}>
+                <span style={{ fontSize:12, fontWeight:700, color:"#475569", minWidth:60 }}>{zona}</span>
+                <div style={{ flex:1 }}><BarraAvance valor={avProm} height={8}/></div>
+                <span style={{ fontSize:13, fontWeight:800, color:bar, minWidth:38, textAlign:"right" }}>{pct(avProm)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const zdData = dataZonas.find(z => z.zona === zonaActiva);
+  const progNames = Object.keys(zdData.porProg);
+  const { bar: zBar } = colorAvance(zdData.avProm);
+
+  
+  if (!progActivo) return (
+    <div>
+      <button onClick={() => setZonaActiva(null)}
+        style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+        ← Todas las zonas
+      </button>
+      <div style={{ borderLeft:`4px solid ${zBar}`, paddingLeft:14, marginBottom:18 }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>ZONA</div>
+        <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:"#0F172A" }}>{zonaActiva}</h2>
+        <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Avance promedio: <strong style={{ color:zBar }}>{pct(zdData.avProm)}%</strong></div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {progNames.map((prog, i) => {
+          const planes = zdData.porProg[prog];
+          const allTs = Object.values(planes).flat();
+          const av = avg(allTs.map(t => t.avanceZona));
+          const { bar: b } = colorAvance(av);
+          const col = PROG_COLORS[i % PROG_COLORS.length];
+          return (
+            <Card key={prog} onClick={() => setProgActivo(prog)} accent={b}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>PROGRAMA</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, gap:10 }}>
+                <span style={{ fontWeight:700, color:"#0F172A", fontSize:14 }}>{prog}</span>
+                <span style={{ fontWeight:800, color:b, fontSize:18 }}>{pct(av)}%</span>
+              </div>
+              <BarraAvance valor={av} height={6}/>
+              <div style={{ fontSize:11, color:"#94A3B8", marginTop:6 }}>{Object.keys(planes).length} planes · {allTs.length} tareas</div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const planesDelProg = zdData.porProg[progActivo];
+  const planNames = Object.keys(planesDelProg);
+  const avProg = avg(Object.values(planesDelProg).flat().map(t => t.avanceZona));
+  const { bar: pBar } = colorAvance(avProg);
+
+  
+  if (!planActivo) return (
+    <div>
+      <button onClick={() => setProgActivo(null)}
+        style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+        ← {zonaActiva}
+      </button>
+      <div style={{ borderLeft:`4px solid ${pBar}`, paddingLeft:14, marginBottom:18 }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>PROGRAMA · {zonaActiva}</div>
+        <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0F172A" }}>{progActivo}</h2>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {planNames.map(plan => {
+          const ts = planesDelProg[plan];
+          const av = avg(ts.map(t => t.avanceZona));
+          const { bar: b } = colorAvance(av);
+          return (
+            <Card key={plan} onClick={() => setPlanActivo(plan)} accent={b}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>PLAN</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <span style={{ fontWeight:700, color:"#0F172A", fontSize:14 }}>{plan}</span>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:11, color:"#94A3B8" }}>{ts.length} tareas</span>
+                  <span style={{ fontWeight:800, color:b, fontSize:16 }}>{pct(av)}%</span>
+                  <span style={{ color:"#CBD5E1", fontSize:18 }}>›</span>
+                </div>
+              </div>
+              <BarraAvance valor={av} height={6}/>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  
+  const tareasDelPlan = planesDelProg[planActivo];
+  return (
+    <div>
+      <button onClick={() => setPlanActivo(null)}
+        style={{ background:"none", border:"none", color:CLIENTE.colorA, cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:18, padding:0 }}>
+        ← {progActivo}
+      </button>
+      <div style={{ borderLeft:`4px solid ${colorAvance(avg(tareasDelPlan.map(t=>t.avanceZona))).bar}`, paddingLeft:14, marginBottom:18 }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:2 }}>PLAN · {zonaActiva}</div>
+        <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0F172A" }}>{planActivo}</h2>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+        {tareasDelPlan.map(t => {
+          const { bar: b } = colorAvance(t.avanceZona);
+          const eCfg = ESTADO_CFG[t.estadoZona];
+          return (
+            <Card key={t.id} onClick={() => onEditar(t)} accent={b}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"#94A3B8", marginBottom:3 }}>TAREA</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+                <span style={{ fontWeight:700, color:"#0F172A", fontSize:13, flex:1, lineHeight:1.35 }}>{t.tarea||"(Sin nombre)"}</span>
+                <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                  <span style={{ fontSize:11, background:eCfg?.bg, color:eCfg?.text, borderRadius:99, padding:"2px 9px", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>
+                    <span style={{ width:6, height:6, borderRadius:"50%", background:eCfg?.dot }}/>
+                    {t.estadoZona}
+                  </span>
+                  <span style={{ fontWeight:800, color:b, fontSize:15 }}>{pct(t.avanceZona)}%</span>
+                </div>
+              </div>
+              <BarraAvance valor={t.avanceZona} height={6}/>
+              {t.comentarioZona && (
+                <div style={{ fontSize:11, color:"#94A3B8", marginTop:7, fontStyle:"italic" }}>
+                   {t.comentarioZona}
+                </div>
+              )}
+              <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                {t.responsable&&<span style={{ fontSize:11, color:"#64748B" }}> {t.responsable}</span>}
+                {t.fechaVencimiento&&<span style={{ fontSize:11, color:"#94A3B8" }}> {fmtD(t.fechaVencimiento)}</span>}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [usuario, setUsuario]     = useState(undefined);
+  const [usuarios, setUsuarios]   = useState(USUARIOS_DEMO);
+  const [tareas,setTareas]        = useState(DEMO);
+  const [vista,setVista]          = useState("ejecutivo");
+  const [navPlanes, setNavPlanes] = useState({});   
+  const [modal,setModal]          = useState(null);
+  const [saving,setSaving]        = useState(false);
+  const [toast,setToast]          = useState(null);
+  const [showAyuda, setShowAyuda]         = useState(false);
+  const [showAyuda, setShowAyuda]         = useState(false);
+  const [showCambioPin, setShowCambioPin] = useState(false);
+  const [showAdmin, setShowAdmin]         = useState(false);
+  const [resetTarget, setResetTarget]     = useState(null);
+  const [showUserMenu, setShowUserMenu]   = useState(false);
+
+  const showToast=(msg,ok=true)=>{setToast({msg,ok});setTimeout(()=>setToast(null),3000);};
+  const handleLogin  = (u) => setUsuario(u);
+  const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); };
+
+  
+  const handleNavegar = (destVista, params={}) => {
+    if (destVista === "programas") {
+      setVista("programas");
+    } else if (destVista === "planes") {
+      setNavPlanes({ prog: params.prog, pl: params.pl });
+      setVista("planes");
+    }
+  };
+
+  const handleEditar = (tarea) => {
+    if (puedeEditar(usuario, tarea)) setModal(tarea);
+    else showToast("Solo lectura — no tenés permisos para editar esta tarea.", false);
+  };
+
+  const guardar = useCallback(async(form) => {
+    setSaving(true);
+    try { setTareas(prev=>prev.map(t=>t.id===form.id?form:t)); setModal(null); showToast("Cambio guardado ✓"); }
+    finally { setSaving(false); }
+  },[]);
+
+  const handleCambiarPin     = (pin)   => { setUsuarios(prev=>prev.map(u=>u.id===usuario.id?{...u,pin}:u)); setUsuario(prev=>({...prev,pin})); };
+  const handleAgregarUsuario = (nuevo) => { setUsuarios(prev=>[...prev,nuevo]); showToast(`Usuario ${nuevo.nombre} creado`); };
+  const handleEliminarUsuario= (id)    => { setUsuarios(prev=>prev.filter(u=>u.id!==id)); showToast("Usuario eliminado"); };
+  const handleResetPin       = (uid,pin)=>{ setUsuarios(prev=>prev.map(u=>u.id===uid?{...u,pin}:u)); setResetTarget(null); };
+
+  if (usuario === undefined) return <PantallaLogin onLogin={handleLogin} usuarios={usuarios}/>;
+
+  const TABS=[
+    {id:"ejecutivo",icon:"",label:"Resumen"},
+    {id:"programas",icon:"",label:"Programas"},
+    {id:"planes",   icon:"",label:"Planes"},
+    {id:"equipos",  icon:"",label:"Equipos"},
+    {id:"tareas",   icon:"✅",label:"Tareas"},
+  ];
+  const totalAv=avg(tareas.map(t=>t.avance));
+  const {bar}=colorAvance(totalAv);
+  const rolColor=!usuario?"#64748B":usuario.rol==="sr"?CLIENTE.colorB:CLIENTE.colorA;
+
+  return (
+    <div style={{minHeight:"100vh",background:"#F1F5F9",fontFamily:"'Segoe UI', system-ui, sans-serif"}}>
+      <style>{`* { box-sizing:border-box; } select,input,textarea,button { font-family:inherit; }`}</style>
+
+      {toast&&<Toast msg={toast.msg} ok={toast.ok}/>}
+      {modal&&<Modal tarea={modal} onSave={guardar} onClose={()=>setModal(null)} saving={saving} usuario={usuario}/>}
+      {showAyuda&&<ModalAyuda onClose={()=>setShowAyuda(false)}/>}
+      {showAyuda&&<ModalAyuda onClose={()=>setShowAyuda(false)}/>}
+      {showCambioPin&&usuario&&<ModalCambioPin usuario={usuario} onCambiar={handleCambiarPin} onClose={()=>setShowCambioPin(false)}/>}
+      {showAdmin&&usuario?.rol==="sr"&&<PanelAdmin usuarios={usuarios} onAgregar={handleAgregarUsuario} onEliminar={handleEliminarUsuario} onResetPin={(u)=>setResetTarget(u)} onClose={()=>setShowAdmin(false)}/>}
+      {resetTarget&&<ModalResetPin usuario={resetTarget} onConfirmar={handleResetPin} onClose={()=>setResetTarget(null)}/>}
+
+      {/* ── HEADER ── */}
+      <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",position:"sticky",top:0,zIndex:100,boxShadow:"0 1px 8px rgba(0,0,0,.06)"}}>
+        <div style={{maxWidth:980,margin:"0 auto",padding:"0 16px"}}>
+          <div style={{height:4,background:`linear-gradient(90deg, ${CLIENTE.colorB}, ${CLIENTE.colorA}, ${CLIENTE.colorC})`,margin:"0 -16px",marginBottom:0}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0 0",flexWrap:"wrap",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:14}}>
+              <LogoDonMario height={40}/>
+              <div style={{borderLeft:"1px solid #E2E8F0",paddingLeft:14}}>
+                <div style={{fontSize:11,color:"#64748B",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase"}}>{CLIENTE.subtitulo}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:10,padding:"7px 14px"}}>
+                <span style={{fontSize:12,color:"#64748B",fontWeight:600}}>Avance PAC</span>
+                <span style={{fontSize:20,fontWeight:800,color:bar}}>{pct(totalAv)}%</span>
+                <div style={{width:60}}><BarraAvance valor={totalAv} height={6}/></div>
+              </div>
+              {/* Botón Ayuda */}
+              <button onClick={()=>setShowAyuda(true)}
+                style={{display:"flex",alignItems:"center",gap:5,background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:99,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#475569",transition:"border-color .15s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="#CBD5E1"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="#E2E8F0"}>
+                ❓ Ayuda
+              </button>
+              {/* Chip usuario con menú */}
+              <div style={{position:"relative"}}>
+                <button onClick={()=>setShowUserMenu(v=>!v)}
+                  style={{display:"flex",alignItems:"center",gap:6,background:"#F8FAFC",border:`1.5px solid ${rolColor}`,borderRadius:99,padding:"6px 12px",cursor:"pointer"}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:rolColor}}/>
+                  <span style={{fontSize:12,fontWeight:700,color:rolColor}}>{usuario?.nombre||"Solo lectura"}</span>
+                  {usuario&&<span style={{fontSize:10,background:rolColor,color:"#fff",borderRadius:99,padding:"1px 6px",fontWeight:700}}>{usuario.rol==="sr"?"SR":usuario.zona}</span>}
+                  <span style={{fontSize:10,color:"#94A3B8"}}>▾</span>
+                </button>
+                {showUserMenu&&(
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 24px rgba(0,0,0,.12)",minWidth:190,zIndex:200,overflow:"hidden"}}>
+                    {usuario&&(
+                      <button onClick={()=>{setShowCambioPin(true);setShowUserMenu(false);}}
+                        style={{width:"100%",padding:"11px 16px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:8}}
+                        onMouseEnter={e=>e.currentTarget.style.background="#F8FAFC"}
+                        onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                         Cambiar PIN
+                      </button>
+                    )}
+                    {usuario?.rol==="sr"&&(
+                      <button onClick={()=>{setShowAdmin(true);setShowUserMenu(false);}}
+                        style={{width:"100%",padding:"11px 16px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:8}}
+                        onMouseEnter={e=>e.currentTarget.style.background="#F8FAFC"}
+                        onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                        ⚙ Administrar usuarios
+                      </button>
+                    )}
+                    <div style={{height:1,background:"#F1F5F9",margin:"4px 0"}}/>
+                    <button onClick={handleLogout}
+                      style={{width:"100%",padding:"11px 16px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:8}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#FEF2F2"}
+                      onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      → Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:0,marginTop:10}}>
+            {TABS.map(tab=>(
+              <button key={tab.id} onClick={()=>setVista(tab.id)}
+                style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:700,color:vista===tab.id?CLIENTE.colorA:"#64748B",borderBottom:`3px solid ${vista===tab.id?CLIENTE.colorA:"transparent"}`,marginBottom:-1,transition:"color .15s",whiteSpace:"nowrap"}}>
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+            <span style={{marginLeft:"auto",display:"flex",alignItems:"center",fontSize:11,color:"#F97316",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:99,padding:"3px 10px",marginBottom:8,fontWeight:700,alignSelf:"center"}}>
+               DEMO
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{maxWidth:980,margin:"0 auto",padding:"22px 14px 60px"}}>
+        {vista==="ejecutivo"&&<VistaEjecutiva tareas={tareas} onEditar={handleEditar} onNavegar={handleNavegar}/>}
+        {vista==="programas"&&<VistaProgramas tareas={tareas} onEditar={handleEditar}/>}
+        {vista==="planes"&&<VistaPlanesAll tareas={tareas} onEditar={handleEditar} initProg={navPlanes.prog} initPlan={navPlanes.pl}/>}
+        {vista==="equipos"&&<VistaEquipos tareas={tareas} onEditar={handleEditar} usuarios={usuarios}/>}
+        {vista==="tareas"&&<VistaTareas tareas={tareas} onEditar={handleEditar}/>}
+      </div>
+    </div>
+  );
+}
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>
