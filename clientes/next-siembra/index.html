@@ -24,7 +24,7 @@ const COLOR_PRIMARY   = "#F05A28";
 const COLOR_SECONDARY = "#2D2D2D";
 const COLOR_ACCENT    = "#F5A623";
 const NEGOCIO_LABEL   = "Siembra";
-const NEGOCIO_SUB     = "Dosificadores · IPS · Accesorios";
+const NEGOCIO_SUB     = "Dosificadores - IPS - Accesorios";
 const TABLERO_NOMBRE  = "Tablero GD - Generacion de Demanda";
 
 // ─── USUARIOS ─────────────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ function PanelAdmin({ usuarios, onUpdate, onClose }) {
               React.createElement("span",{style:{width:32,height:32,borderRadius:"50%",background:rc+"22",color:rc,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800}},u.nombre[0]||"?"),
               React.createElement("div",{style:{flex:1}},
                 React.createElement("div",{style:{fontSize:14,fontWeight:700,color:"#0F172A"}},u.nombre||"Sin nombre"),
-                React.createElement("div",{style:{fontSize:11,color:"#64748B"}},u.email||"—")),
+                React.createElement("div",{style:{fontSize:11,color:"#64748B"}},u.email||"-")),
               React.createElement("span",{style:{fontSize:11,background:rc+"22",color:rc,borderRadius:99,padding:"2px 9px",fontWeight:700}},u.rol),
               !isEdit&&React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"Editar")),
             isEdit&&form&&React.createElement("div",{style:{padding:"16px",borderTop:"1px solid #F1F5F9",display:"flex",flexDirection:"column",gap:12,background:"#FAFAFA"}},
@@ -376,7 +376,7 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
       React.createElement("div",{style:{flex:1}},
         React.createElement("div",{style:{fontSize:14,fontWeight:700,color:"#0F172A",marginBottom:6}},"Avance General del Plan"),
         React.createElement(BarraAvance,{valor:totalAv,height:12}),
-        React.createElement("div",{style:{fontSize:12,color:"#64748B",marginTop:6}},pct(totalAv),"% — ",label))),
+        React.createElement("div",{style:{fontSize:12,color:"#64748B",marginTop:6}},pct(totalAv),"% - ",label))),
     // Programas con click para ir a vista programas
     React.createElement("div",{style:{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden"}},
       React.createElement("div",{style:{padding:"16px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",justifyContent:"space-between",alignItems:"center"}},
@@ -394,10 +394,10 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
           React.createElement("div",{style:{width:10,height:10,borderRadius:"50%",background:PROG_COLORS[i%PROG_COLORS.length],flexShrink:0}}),
           React.createElement("div",{style:{flex:1}},
             React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#0F172A",marginBottom:3}},prog),
-            React.createElement("div",{style:{fontSize:11,color:"#94A3B8"}},ts.length," tareas · ",planes.length," planes"),
+            React.createElement("div",{style:{fontSize:11,color:"#94A3B8"}},ts.length," tareas - ",planes.length," planes"),
             React.createElement(BarraAvance,{valor:av,height:6})),
           React.createElement(CirculoAvance,{valor:av,size:48}),
-          React.createElement("span",{style:{color:"#CBD5E1",fontSize:14}},">")));
+          React.createElement("span",{style:{color:"#CBD5E1",fontSize:14}},">"));
       })));
 }
 
@@ -426,7 +426,7 @@ function VistaProgramas({ tareas, onEditar, progInicial }) {
           React.createElement("div",{style:{width:12,height:12,borderRadius:"50%",background:PROG_COLORS[pi%PROG_COLORS.length],flexShrink:0}}),
           React.createElement("div",{style:{flex:1}},
             React.createElement("div",{style:{fontSize:15,fontWeight:800,color:"#0F172A"}},prog),
-            React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginTop:2}},tsProg.length," tareas · ",planes.length," planes")),
+            React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginTop:2}},tsProg.length," tareas - ",planes.length," planes")),
           React.createElement(CirculoAvance,{valor:avProg,size:44}),
           React.createElement("span",{style:{color:"#94A3B8",fontSize:16,marginLeft:4}},isOpen?"v":">")),
         // Planes
@@ -491,7 +491,7 @@ function VistaTareas({ tareas, onEditar }) {
           onMouseEnter:e=>e.currentTarget.style.background="#FFF5F3",
           onMouseLeave:e=>e.currentTarget.style.background="#fff"},
           React.createElement("div",{style:{flex:1}},
-            React.createElement("div",{style:{fontSize:11,color:"#94A3B8",fontWeight:600,marginBottom:3}},t.programa," · ",t.plan),
+            React.createElement("div",{style:{fontSize:11,color:"#94A3B8",fontWeight:600,marginBottom:3}},t.programa," - ",t.plan),
             React.createElement("div",{style:{fontSize:14,fontWeight:600,color:"#0F172A",marginBottom:6}},t.tarea),
             React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
               React.createElement(Badge,{label:t.estado,tipo:"estado"}),
