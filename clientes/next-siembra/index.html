@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Next Siembra - Tablero GD</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#F1F5F9}
+    #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
+    .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+  <div id="root"><div id="loading"><div class="spinner"></div><span>Cargando tablero...</span></div></div>
+  <script>
+const {useState,useMemo,useEffect,useCallback,useRef} = React;
+
+// ─── IDENTIDAD ────────────────────────────────────────────────────────────────
+const COLOR_PRIMARY   = "#F05A28";
+const COLOR_SECONDARY = "#2D2D2D";
+const COLOR_ACCENT    = "#F5A623";
+const NEGOCIO_LABEL   = "Siembra";
+const NEGOCIO_SUB     = "Dosificadores · IPS · Accesorios";
+const TABLERO_NOMBRE  = "Tablero GD - Generacion de Demanda";
+
+// ─── USUARIOS ─────────────────────────────────────────────────────────────────
+const USUARIOS_INIT = [
+  { id:"maxi",   nombre:"Maxi Donolo",      rol:"director",  zona:null,         pin:"0001", email:"maxi@nextsiembra.com",   esAdmin:true  },
+  { id:"ariel",  nombre:"Ariel T.",          rol:"admin",     zona:null,         pin:"0002", email:"ariel@consultor.com",    esAdmin:true  },
+  { id:"adrian", nombre:"Adrian Bonfiglio",  rol:"lider",     zona:null,         pin:"0003", email:"adrian@nextsiembra.com", esAdmin:false },
+  { id:"v1",     nombre:"Vendedor 1",        rol:"vendedor",  zona:"Vendedor 1", pin:"1001", email:"v1@nextsiembra.com",     esAdmin:false },
+  { id:"v2",     nombre:"Vendedor 2",        rol:"vendedor",  zona:"Vendedor 2", pin:"1002", email:"v2@nextsiembra.com",     esAdmin:false },
+  { id:"v3",     nombre:"Vendedor 3",        rol:"vendedor",  zona:"Vendedor 3", pin:"1003", email:"v3@nextsiembra.com",     esAdmin:false },
+  { id:"v4",     nombre:"Vendedor 4",        rol:"vendedor",  zona:"Vendedor 4", pin:"1004", email:"v4@nextsiembra.com",     esAdmin:false },
+  { id:"jimena", nombre:"Jimena",            rol:"marketing", zona:null,         pin:"2001", email:"jimena@nextsiembra.com", esAdmin:false },
+  { id:"bimbi",  nombre:"Bimbi Aguero",      rol:"demanda",   zona:null,         pin:"2002", email:"bimbi@nextsiembra.com",  esAdmin:false },
+  { id:"jerry",  nombre:"Jerry",             rol:"ops",       zona:null,         pin:"2003", email:"jerry@nextsiembra.com",  esAdmin:false },
+];
+
+const VENDEDORES = ["Vendedor 1","Vendedor 2","Vendedor 3","Vendedor 4"];
+
+// ─── DATOS DEMO ───────────────────────────────────────────────────────────────
+const DEMO = [
+  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Definir reunion pre Agroactiva", responsable:"adrian bimbi jerry", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-05-09", comentarios:"Definir fecha, participantes, tipo de evento, gift. Hacer checklist" },
+  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Convocar. Asegurar participacion.", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"Redactar convocatoria. Ver quien la hace, a traves de quien." },
+  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Implementar base de productores CREA", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"Disenar y armar una base de contactos (CRM?)" },
+  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Por definir", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto con Lisandro Repetto", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto con Nestor D.", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Acuerdo con colegio de Agronomos", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Por definir", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"VISITAS A CAMPO", plan:"Cronograma", tarea:"Por definir", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Por definir", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"OPERACION GD", plan:"Acciones GD en fabricas", tarea:"Por definir", responsable:"adrian vendedor", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Por definir", responsable:"adrian vendedor", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"OPERACION GD", plan:"Acciones GD en productores", tarea:"Por definir", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"OPERACION GD", plan:"Acciones GD con referentes", tarea:"Por definir", responsable:"adrian demanda", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"IMPLEMENTACION GD", plan:"Cronograma de Acciones por vendedor", tarea:"Por definir", responsable:"adrian lider", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"IMPLEMENTACION GD", plan:"Sistema de seguimiento", tarea:"Por definir", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"IMPLEMENTACION GD", plan:"Acciones con Fabricas", tarea:"Por definir", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"IMPLEMENTACION GD", plan:"Acciones con Concesionarios", tarea:"Por definir", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+  { programa:"IMPLEMENTACION GD", plan:"Acciones con Productores", tarea:"Por definir", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"", comentarios:"" },
+];
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function colorAvance(v) {
+  if (v >= 1.0) return { bar:"#3B82F6", bg:"#EFF6FF", text:"#1D4ED8", label:"Completa" };
+  if (v >= 0.80) return { bar:"#22C55E", bg:"#F0FDF4", text:"#15803D", label:"Avanzado" };
+  if (v >= 0.50) return { bar:"#EAB308", bg:"#FEFCE8", text:"#854D0E", label:"En marcha" };
+  if (v >= 0.10) return { bar:"#F97316", bg:"#FFF7ED", text:"#C2410C", label:"Iniciado" };
+  return { bar:"#EF4444", bg:"#FEF2F2", text:"#B91C1C", label:"Sin inicio" };
+}
+const ESTADO_CFG = {
+  "Pendiente": { bg:"#FFF7ED", text:"#C2410C", dot:"#F97316" },
+  "En curso":  { bg:"#EFF6FF", text:"#1D4ED8", dot:"#3B82F6" },
+  "Bloqueada": { bg:"#FFF1F2", text:"#BE123C", dot:"#F43F5E" },
+  "Cerrada":   { bg:"#F0FDF4", text:"#15803D", dot:"#22C55E" },
+};
+const PRIO_CFG = {
+  "Alta":  { bg:"#FEF2F2", text:"#B91C1C" },
+  "Media": { bg:"#FFFBEB", text:"#854D0E" },
+  "Baja":  { bg:"#F0FDF4", text:"#166534" },
+};
+const PROG_COLORS = [COLOR_PRIMARY,"#0EA5E9","#8B5CF6","#22C55E","#EC4899","#64748B","#F97316","#0D9488"];
+const pct = v => Math.round(v * 100);
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR",{day:"2-digit",month:"short"}); } catch { return iso; } };
+
+function puedeEditar(usuario, tarea) {
+  if (!usuario) return false;
+  if (usuario.rol==="director"||usuario.rol==="admin"||usuario.rol==="lider") return true;
+  if (!tarea?.responsable) return false;
+  return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
+}
+
+function esVendedorColectivo(tarea) {
+  const r = tarea?.responsable?.toLowerCase()||"";
+  return r.includes("vendedor") && (r.includes("x4")||r.includes("x 4"));
+}
+
+function vendedorDefault() {
+  return VENDEDORES.reduce((acc,z)=>({...acc,[z]:{avance:0,estado:"Pendiente",comentario:""}}),{});
+}
+function avanceVendedores(zonas) {
+  const vals = Object.values(zonas).map(z=>z.avance);
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+}
+function initTareas(arr) {
+  return arr.map((t,i)=>{
+    const base = {...t,id:i,rowIndex:i+2,ultimaActualizacion:null};
+    if (esVendedorColectivo(t)) base.zonas = vendedorDefault();
+    return base;
+  });
+}
+
+// ─── LOGO ─────────────────────────────────────────────────────────────────────
+function LogoNextSiembra({ height=40 }) {
+  return React.createElement("svg", { height, viewBox:"0 0 200 54", fill:"none" },
+    React.createElement("text", { x:"0", y:"38", fontFamily:"Arial Black,Impact,sans-serif", fontWeight:"900", fontSize:"38", fill:COLOR_PRIMARY, letterSpacing:"-1" }, "NEXT"),
+    React.createElement("text", { x:"2", y:"52", fontFamily:"Arial,sans-serif", fontWeight:"700", fontSize:"13", fill:COLOR_SECONDARY, letterSpacing:"4" }, "SIEMBRA"));
+}
+
+// ─── BARRA AVANCE ─────────────────────────────────────────────────────────────
+function BarraAvance({ valor, height=8 }) {
+  const { bar } = colorAvance(valor);
+  return React.createElement("div", { style:{ background:"#E2E8F0", borderRadius:99, height, overflow:"hidden" } },
+    React.createElement("div", { style:{ width:`${pct(valor)}%`, height:"100%", background:bar, borderRadius:99, transition:"width .4s" } }));
+}
+
+// ─── BADGE ────────────────────────────────────────────────────────────────────
+function Badge({ label, tipo }) {
+  const cfg = tipo==="estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
+  if (!cfg) return null;
+  return React.createElement("span", { style:{ fontSize:11, background:cfg.bg, color:cfg.text, borderRadius:99, padding:"2px 9px", fontWeight:700 } }, label);
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function Toast({ msg, ok }) {
+  return React.createElement("div", { style:{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:ok?"#0F172A":"#B91C1C", color:"#fff", padding:"10px 20px", borderRadius:99, fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 16px rgba(0,0,0,.3)", whiteSpace:"nowrap" } }, msg);
+}
+
+// ─── GRILLA VENDEDORES ────────────────────────────────────────────────────────
+function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
+  const [activa, setActiva] = useState(null);
+  const z = zonas||vendedorDefault();
+  return React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:10 } },
+    Object.keys(z).map(nombre => {
+      const zd = z[nombre];
+      const { bar, bg, text, label } = colorAvance(zd.avance);
+      const editable = !zonaUsuario||zonaUsuario===nombre;
+      const isOpen = activa===nombre;
+      return React.createElement("div", { key:nombre, style:{ border:`1.5px solid ${isOpen?bar:"#E2E8F0"}`, borderRadius:12, overflow:"hidden", background:isOpen?bg:"#fff" } },
+        React.createElement("div", { onClick:()=>editable&&setActiva(isOpen?null:nombre), style:{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", cursor:editable?"pointer":"default" } },
+          React.createElement("span", { style:{ fontSize:12, fontWeight:700, color:"#475569", flex:1 } }, nombre),
+          React.createElement("span", { style:{ fontSize:11, background:bg, color:text, borderRadius:99, padding:"2px 8px", fontWeight:700 } }, label),
+          React.createElement("span", { style:{ fontSize:14, fontWeight:800, color:bar, minWidth:36, textAlign:"right" } }, pct(zd.avance),"%")),
+        isOpen&&editable&&React.createElement("div", { style:{ padding:"0 14px 14px", display:"flex", flexDirection:"column", gap:10, borderTop:"1px solid #F1F5F9" } },
+          React.createElement("div", null,
+            React.createElement("label", { style:{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:6, marginTop:10 } }, "Avance"),
+            React.createElement("input", { type:"range", min:0, max:100, value:pct(zd.avance), onChange:e=>onChange(nombre,"avance",Number(e.target.value)/100), style:{ width:"100%", accentColor:bar } })),
+          React.createElement("div", { style:{ display:"flex", gap:6 } },
+            ["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button", { key:e, onClick:()=>onChange(nombre,"estado",e), style:{ flex:1, padding:"5px 0", borderRadius:8, border:`1px solid ${zd.estado===e?ESTADO_CFG[e]?.dot:"#E2E8F0"}`, background:zd.estado===e?ESTADO_CFG[e]?.bg:"#fff", color:zd.estado===e?ESTADO_CFG[e]?.text:"#64748B", fontSize:11, fontWeight:600, cursor:"pointer" } }, e))),
+          React.createElement("textarea", { value:zd.comentario||"", onChange:e=>onChange(nombre,"comentario",e.target.value), rows:2, placeholder:"Comentario...", style:{ width:"100%", border:"1.5px solid #E2E8F0", borderRadius:8, padding:"8px 10px", fontSize:12, resize:"vertical", fontFamily:"inherit", background:"#F8FAFC" } })));
+    }));
+}
+
+// ─── MODAL EDICION ────────────────────────────────────────────────────────────
+function Modal({ tarea, onSave, onClose, saving, usuario }) {
+  const [f, setF] = useState(()=>{ const b={...tarea}; if(esVendedorColectivo(tarea)&&!b.zonas) b.zonas=vendedorDefault(); return b; });
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const handleZona = (nombre,campo,val) => setF(p=>({...p,zonas:{...p.zonas,[nombre]:{...p.zonas[nombre],[campo]:val}}}));
+  const handleGuardar = () => { const fin={...f}; if(esVendedorColectivo(f)&&f.zonas) fin.avance=avanceVendedores(f.zonas); onSave(fin); };
+  const { bar, bg, text, label } = colorAvance(f.avance);
+  const esVend = esVendedorColectivo(f);
+  return React.createElement("div", { style:{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(4px)" }, onClick:e=>e.target===e.currentTarget&&onClose() },
+    React.createElement("div", { style:{ background:"#fff", borderRadius:20, width:"100%", maxWidth:460, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,.25)" } },
+      React.createElement("div", { style:{ background:"#F8FAFC", borderBottom:"1px solid #E2E8F0", padding:"18px 22px", borderRadius:"20px 20px 0 0" } },
+        React.createElement("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" } },
+          React.createElement("div", { style:{ flex:1, marginRight:12 } },
+            React.createElement("div", { style:{ fontSize:11, color:"#64748B", fontWeight:600, marginBottom:3 } }, tarea.plan),
+            React.createElement("div", { style:{ fontSize:15, fontWeight:700, color:"#0F172A", lineHeight:1.35 } }, tarea.tarea||"Tarea sin nombre")),
+          React.createElement("button", { onClick:onClose, style:{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#94A3B8" } }, "x")),
+        React.createElement("div", { style:{ display:"flex", gap:7, marginTop:10, flexWrap:"wrap" } },
+          React.createElement(Badge,{label:f.estado,tipo:"estado"}),
+          React.createElement(Badge,{label:f.prioridad,tipo:"prioridad"}),
+          tarea.responsable&&React.createElement("span",{style:{fontSize:11,color:"#64748B",background:esVend?"#FEF9C3":"#EEF2FF",borderRadius:99,padding:"2px 9px",fontWeight:600}},tarea.responsable),
+          tarea.fechaVencimiento&&React.createElement("span",{style:{fontSize:11,color:"#64748B",background:"#F1F5F9",borderRadius:99,padding:"2px 9px"}},fmtD(tarea.fechaVencimiento)))),
+      React.createElement("div", { style:{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:20 } },
+        esVend
+          ? React.createElement("div",null,
+              React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+                React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}},"Avance por vendedor"),
+                React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"Toca un vendedor para editar")),
+              React.createElement(GrillaVendedores,{zonas:f.zonas,onChange:handleZona,zonaUsuario:usuario?.rol==="vendedor"?usuario.zona:null}))
+          : React.createElement("div",null,
+              React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
+                React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}},"Avance"),
+                React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                  React.createElement("span",{style:{fontSize:11,background:bg,color:text,borderRadius:99,padding:"2px 9px",fontWeight:700}},label),
+                  React.createElement("span",{style:{fontSize:22,fontWeight:800,color:bar}},pct(f.avance),"%"))),
+              React.createElement("input",{type:"range",min:0,max:100,value:pct(f.avance),onChange:e=>set("avance",Number(e.target.value)/100),style:{width:"100%",accentColor:bar,marginBottom:6}}),
+              React.createElement(BarraAvance,{valor:f.avance,height:10}),
+              React.createElement("div",{style:{display:"flex",gap:6,marginTop:10}},
+                [0,25,50,75,100].map(v=>React.createElement("button",{key:v,onClick:()=>set("avance",v/100),style:{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${pct(f.avance)===v?"#CBD5E1":"#E2E8F0"}`,background:pct(f.avance)===v?"#F1F5F9":"#fff",color:"#475569",fontSize:12,fontWeight:600,cursor:"pointer"}},v,"%")))),
+        React.createElement("div",null,
+          React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em",display:"block",marginBottom:8}},"Estado general"),
+          React.createElement("div",{style:{display:"flex",gap:7,flexWrap:"wrap"}},
+            ["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button",{key:e,onClick:()=>set("estado",e),style:{padding:"7px 14px",borderRadius:99,border:`1.5px solid ${f.estado===e?ESTADO_CFG[e]?.dot:"#E2E8F0"}`,background:f.estado===e?ESTADO_CFG[e]?.bg:"#F8FAFC",color:f.estado===e?ESTADO_CFG[e]?.text:"#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},e)))),
+        React.createElement("div",null,
+          React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em",display:"block",marginBottom:8}},"Prioridad"),
+          React.createElement("div",{style:{display:"flex",gap:7}},
+            ["Alta","Media","Baja"].map(p=>React.createElement("button",{key:p,onClick:()=>set("prioridad",p),style:{flex:1,padding:"7px 0",borderRadius:99,border:`1.5px solid ${f.prioridad===p?PRIO_CFG[p]?.text:"#E2E8F0"}`,background:f.prioridad===p?PRIO_CFG[p]?.bg:"#F8FAFC",color:f.prioridad===p?PRIO_CFG[p]?.text:"#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},p)))),
+        React.createElement("div",null,
+          React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em",display:"block",marginBottom:8}},"Comentarios"),
+          React.createElement("textarea",{value:f.comentarios,onChange:e=>set("comentarios",e.target.value),rows:3,placeholder:"Notas, aclaraciones o proximos pasos...",style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 13px",fontSize:13,color:"#0F172A",resize:"vertical",fontFamily:"inherit",background:"#F8FAFC"}}))),
+      React.createElement("div",{style:{display:"flex",gap:10,padding:"0 22px 22px"}},
+        React.createElement("button",{onClick:onClose,style:{flex:1,padding:"11px",border:"1.5px solid #E2E8F0",borderRadius:10,background:"#F8FAFC",color:"#64748B",fontSize:14,fontWeight:600,cursor:"pointer"}},"Cancelar"),
+        React.createElement("button",{onClick:handleGuardar,disabled:saving,style:{flex:2,padding:"11px",border:"none",borderRadius:10,background:saving?"#94A3B8":COLOR_PRIMARY,color:"#fff",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer"}},saving?"Guardando...":"Guardar cambios"))));
+}
+
+// ─── PANEL ADMIN ──────────────────────────────────────────────────────────────
+function PanelAdmin({ usuarios, onUpdate, onClose }) {
+  const [lista, setLista] = useState(usuarios.map(u=>({...u})));
+  const [editando, setEditando] = useState(null);
+  const [form, setForm] = useState(null);
+  const [nuevo, setNuevo] = useState(false);
+  const abrirEditar = u => { setEditando(u.id); setForm({...u}); setNuevo(false); };
+  const abrirNuevo = () => { const id="u_"+Date.now(); setForm({id,nombre:"",rol:"vendedor",zona:"",pin:"",email:"",esAdmin:false}); setEditando(id); setNuevo(true); };
+  const setF = (k,v) => setForm(p=>({...p,[k]:v}));
+  const guardar = () => { if(!form.nombre||!form.pin) return; if(nuevo) setLista(p=>[...p,form]); else setLista(p=>p.map(u=>u.id===form.id?form:u)); setEditando(null); setForm(null); setNuevo(false); };
+  const eliminar = id => { setLista(p=>p.filter(u=>u.id!==id)); setEditando(null); setForm(null); };
+  const guardarTodo = () => { onUpdate(lista); onClose(); };
+  const rolColor = { director:"#15803D", admin:"#1D4ED8", lider:"#7C3AED", vendedor:COLOR_PRIMARY, marketing:"#DB2777", demanda:"#D97706", ops:"#64748B" };
+  return React.createElement("div",{style:{position:"fixed",inset:0,background:"rgba(15,23,42,.6)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(4px)"}},
+    React.createElement("div",{style:{background:"#fff",borderRadius:20,width:"100%",maxWidth:620,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,.3)"}},
+      React.createElement("div",{style:{padding:"20px 24px",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:"#fff",zIndex:10}},
+        React.createElement("div",null,
+          React.createElement("div",{style:{fontSize:17,fontWeight:800,color:"#0F172A"}},"Administracion de usuarios"),
+          React.createElement("div",{style:{fontSize:12,color:"#64748B",marginTop:2}},lista.length," usuarios")),
+        React.createElement("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#94A3B8"}},"x")),
+      React.createElement("div",{style:{padding:"16px 24px"}},
+        lista.map(u=>{
+          const isEdit=editando===u.id;
+          const rc=rolColor[u.rol]||"#64748B";
+          return React.createElement("div",{key:u.id,style:{border:`1.5px solid ${isEdit?COLOR_PRIMARY:"#E2E8F0"}`,borderRadius:14,marginBottom:10,overflow:"hidden"}},
+            React.createElement("div",{onClick:()=>!isEdit&&abrirEditar(u),style:{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",cursor:"pointer",background:isEdit?"#FFF5F3":"#fff"}},
+              React.createElement("span",{style:{width:32,height:32,borderRadius:"50%",background:rc+"22",color:rc,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800}},u.nombre[0]||"?"),
+              React.createElement("div",{style:{flex:1}},
+                React.createElement("div",{style:{fontSize:14,fontWeight:700,color:"#0F172A"}},u.nombre||"Sin nombre"),
+                React.createElement("div",{style:{fontSize:11,color:"#64748B"}},u.email||"—")),
+              React.createElement("span",{style:{fontSize:11,background:rc+"22",color:rc,borderRadius:99,padding:"2px 9px",fontWeight:700}},u.rol),
+              !isEdit&&React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"Editar")),
+            isEdit&&form&&React.createElement("div",{style:{padding:"16px",borderTop:"1px solid #F1F5F9",display:"flex",flexDirection:"column",gap:12,background:"#FAFAFA"}},
+              React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+                React.createElement("div",null,
+                  React.createElement("label",{style:{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:4}},"Nombre"),
+                  React.createElement("input",{value:form.nombre,onChange:e=>setF("nombre",e.target.value),style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13}})),
+                React.createElement("div",null,
+                  React.createElement("label",{style:{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:4}},"Email"),
+                  React.createElement("input",{value:form.email,onChange:e=>setF("email",e.target.value),style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13}})),
+                React.createElement("div",null,
+                  React.createElement("label",{style:{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:4}},"Rol"),
+                  React.createElement("select",{value:form.rol,onChange:e=>setF("rol",e.target.value),style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13}},
+                    ["director","admin","lider","vendedor","marketing","demanda","ops"].map(r=>React.createElement("option",{key:r,value:r},r)))),
+                React.createElement("div",null,
+                  React.createElement("label",{style:{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:4}},"PIN (4 digitos)"),
+                  React.createElement("input",{value:form.pin,onChange:e=>setF("pin",e.target.value.replace(/\D/g,"").slice(0,4)),maxLength:4,style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13,letterSpacing:4}})),
+                React.createElement("div",null,
+                  React.createElement("label",{style:{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:4}},"Zona (si es vendedor)"),
+                  React.createElement("input",{value:form.zona||"",onChange:e=>setF("zona",e.target.value),placeholder:"ej: Vendedor 1",style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:13}})),
+                React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,paddingTop:20}},
+                  React.createElement("input",{type:"checkbox",id:"esAdmin_"+u.id,checked:!!form.esAdmin,onChange:e=>setF("esAdmin",e.target.checked)}),
+                  React.createElement("label",{htmlFor:"esAdmin_"+u.id,style:{fontSize:13,color:"#475569",fontWeight:600,cursor:"pointer"}},"Puede administrar usuarios"))),
+              React.createElement("div",{style:{display:"flex",gap:8}},
+                React.createElement("button",{onClick:()=>{setEditando(null);setForm(null);setNuevo(false);},style:{flex:1,padding:"9px",border:"1.5px solid #E2E8F0",borderRadius:8,background:"#fff",color:"#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},"Cancelar"),
+                !nuevo&&React.createElement("button",{onClick:()=>eliminar(u.id),style:{padding:"9px 14px",border:"1.5px solid #FCA5A5",borderRadius:8,background:"#FEF2F2",color:"#B91C1C",fontSize:13,fontWeight:600,cursor:"pointer"}},"Eliminar"),
+                React.createElement("button",{onClick:guardar,disabled:!form.nombre||!form.pin,style:{flex:2,padding:"9px",border:"none",borderRadius:8,background:!form.nombre||!form.pin?"#94A3B8":COLOR_PRIMARY,color:"#fff",fontSize:13,fontWeight:700,cursor:!form.nombre||!form.pin?"not-allowed":"pointer"}},nuevo?"Agregar":"Guardar"))));
+        }),
+        React.createElement("button",{onClick:abrirNuevo,style:{width:"100%",padding:"12px",border:`2px dashed ${COLOR_PRIMARY}`,borderRadius:12,background:"#FFF5F3",color:COLOR_PRIMARY,fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4}},
+          "+ Agregar usuario")),
+      React.createElement("div",{style:{padding:"16px 24px",borderTop:"1px solid #E2E8F0",display:"flex",gap:10,position:"sticky",bottom:0,background:"#fff"}},
+        React.createElement("button",{onClick:onClose,style:{flex:1,padding:"11px",border:"1.5px solid #E2E8F0",borderRadius:10,background:"#F8FAFC",color:"#64748B",fontSize:14,fontWeight:600,cursor:"pointer"}},"Cancelar"),
+        React.createElement("button",{onClick:guardarTodo,style:{flex:2,padding:"11px",border:"none",borderRadius:10,background:COLOR_SECONDARY,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}},"Guardar configuracion"))));
+}
+
+// ─── PANTALLA LOGIN ───────────────────────────────────────────────────────────
+function PantallaLogin({ onLogin, usuarios }) {
+  const [pin, setPin] = useState("");
+  const [err, setErr] = useState("");
+  const tryLogin = p => { const u=usuarios.find(u=>u.pin===p); if(u) onLogin(u); else { setErr("PIN incorrecto"); setPin(""); } };
+  const handleKey = d => { if(pin.length>=4) return; const n=pin+d; setPin(n); setErr(""); if(n.length===4) setTimeout(()=>tryLogin(n),120); };
+  const btnS = { padding:"16px 0", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#F8FAFC", fontSize:18, fontWeight:700, color:"#0F172A", cursor:"pointer" };
+  return React.createElement("div",{style:{minHeight:"100vh",background:"#F1F5F9",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}},
+    React.createElement("div",{style:{marginBottom:28,textAlign:"center"}},
+      React.createElement(LogoNextSiembra,{height:50}),
+      React.createElement("div",{style:{fontSize:11,color:"#94A3B8",fontWeight:600,letterSpacing:".1em",textTransform:"uppercase",marginTop:10}},NEGOCIO_SUB)),
+    React.createElement("div",{style:{background:"#fff",borderRadius:20,padding:"28px 24px 22px",width:"100%",maxWidth:320,boxShadow:"0 8px 32px rgba(0,0,0,.10)",border:"1px solid #E2E8F0"}},
+      React.createElement("div",{style:{height:4,background:`linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`,borderRadius:99,marginBottom:22}}),
+      React.createElement("div",{style:{textAlign:"center",marginBottom:16}},
+        React.createElement("div",{style:{fontSize:15,fontWeight:800,color:"#0F172A"}},"Ingresa tu PIN"),
+        React.createElement("div",{style:{fontSize:11,color:"#94A3B8"}},"4 digitos")),
+      React.createElement("div",{style:{display:"flex",gap:8,justifyContent:"center",marginBottom:16,height:52,alignItems:"center"}},
+        [0,1,2,3].map(i=>React.createElement("div",{key:i,style:{width:14,height:14,borderRadius:"50%",background:pin.length>i?"#0F172A":"#E2E8F0",transition:"background .15s"}}))),
+      err&&React.createElement("div",{style:{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#B91C1C",textAlign:"center",fontWeight:600,marginBottom:12}},err),
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}},
+        [1,2,3,4,5,6,7,8,9].map(d=>React.createElement("button",{key:d,onClick:()=>handleKey(String(d)),style:btnS},d))),
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}},
+        React.createElement("button",{onClick:()=>{setPin("");setErr("");},style:{...btnS,color:"#94A3B8",fontSize:13}},"Borrar"),
+        React.createElement("button",{onClick:()=>handleKey("0"),style:btnS},"0"),
+        React.createElement("button",{onClick:()=>{const p=pin.slice(0,-1);setPin(p);setErr("");},style:{...btnS,color:"#94A3B8",fontSize:16}},"<"))));
+}
+
+// ─── VISTAS ───────────────────────────────────────────────────────────────────
+function VistaEjecutiva({ tareas }) {
+  const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
+  const totalAv = avg(tareas.map(t=>t.avance));
+  const { bar, label } = colorAvance(totalAv);
+  const cerradas = tareas.filter(t=>t.estado==="Cerrada").length;
+  const enCurso = tareas.filter(t=>t.estado==="En curso").length;
+  const altas = tareas.filter(t=>t.prioridad==="Alta"&&t.estado!=="Cerrada").length;
+  return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:18}},
+    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12}},
+      [{label:"Avance General",val:pct(totalAv)+"%",sub:label,color:bar},{label:"Tareas Cerradas",val:cerradas+"/"+tareas.length,sub:"completadas",color:"#22C55E"},{label:"En Curso",val:enCurso,sub:"en ejecucion",color:"#3B82F6"},{label:"Alta Prioridad",val:altas,sub:"pendientes o en curso",color:"#EF4444"}]
+        .map(k=>React.createElement("div",{key:k.label,style:{background:"#fff",borderRadius:14,padding:"16px 18px",border:"1px solid #E2E8F0",boxShadow:"0 1px 4px rgba(0,0,0,.05)"}},
+          React.createElement("div",{style:{fontSize:11,color:"#64748B",fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}},k.label),
+          React.createElement("div",{style:{fontSize:28,fontWeight:900,color:k.color,lineHeight:1}},k.val),
+          React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginTop:4}},k.sub)))),
+    React.createElement("div",{style:{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #E2E8F0"}},
+      React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#0F172A",marginBottom:14}},"Avance por programa"),
+      programas.map((prog,i)=>{
+        const ts=tareas.filter(t=>t.programa===prog);
+        const av=avg(ts.map(t=>t.avance));
+        const {bar:b}=colorAvance(av);
+        return React.createElement("div",{key:prog,style:{marginBottom:14}},
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:6}},
+            React.createElement("span",{style:{fontSize:13,fontWeight:600,color:"#0F172A"}},prog),
+            React.createElement("span",{style:{fontSize:13,fontWeight:800,color:b}},pct(av),"%")),
+          React.createElement(BarraAvance,{valor:av,height:8}));
+      })));
+}
+
+function VistaProgramas({ tareas, onEditar }) {
+  const [abierto, setAbierto] = useState({});
+  const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
+  return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+    programas.map((prog,pi)=>{
+      const tsProg=tareas.filter(t=>t.programa===prog);
+      const avProg=avg(tsProg.map(t=>t.avance));
+      const {bar:b}=colorAvance(avProg);
+      const planes=[...new Set(tsProg.map(t=>t.plan))];
+      const isOpen=!!abierto[prog];
+      return React.createElement("div",{key:prog,style:{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden"}},
+        React.createElement("div",{onClick:()=>setAbierto(p=>({...p,[prog]:!p[prog]})),style:{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",cursor:"pointer"}},
+          React.createElement("div",{style:{width:10,height:10,borderRadius:"50%",background:PROG_COLORS[pi%PROG_COLORS.length],flexShrink:0}}),
+          React.createElement("div",{style:{flex:1}},
+            React.createElement("div",{style:{fontSize:15,fontWeight:700,color:"#0F172A"}},prog),
+            React.createElement("div",{style:{fontSize:11,color:"#94A3B8",marginTop:2}},tsProg.length," tareas · ",planes.length," planes")),
+          React.createElement("span",{style:{fontSize:14,fontWeight:800,color:b,minWidth:40,textAlign:"right"}},pct(avProg),"%"),
+          React.createElement("span",{style:{color:"#94A3B8",fontSize:14,marginLeft:8}},isOpen?"v":">")),
+        isOpen&&planes.map(plan=>{
+          const tsPlan=tsProg.filter(t=>t.plan===plan);
+          const avPlan=avg(tsPlan.map(t=>t.avance));
+          const {bar:bp}=colorAvance(avPlan);
+          const isPlanOpen=!!abierto[prog+"::"+plan];
+          return React.createElement("div",{key:plan,style:{borderTop:"1px solid #F1F5F9"}},
+            React.createElement("div",{onClick:()=>setAbierto(p=>({...p,[prog+"::"+plan]:!p[prog+"::"+plan]})),style:{display:"flex",alignItems:"center",gap:10,padding:"12px 20px 12px 36px",cursor:"pointer",background:"#FAFAFA"}},
+              React.createElement("div",{style:{fontSize:13,fontWeight:600,color:"#475569",flex:1}},plan),
+              React.createElement("span",{style:{fontSize:12,fontWeight:700,color:bp,minWidth:36,textAlign:"right"}},pct(avPlan),"%"),
+              React.createElement("span",{style:{color:"#CBD5E1",fontSize:12,marginLeft:8}},isPlanOpen?"v":">")),
+            isPlanOpen&&tsPlan.map(t=>{
+              const {bar:bt,bg:bgt,label:lt}=colorAvance(t.avance);
+              return React.createElement("div",{key:t.id,onClick:()=>onEditar(t),style:{display:"flex",alignItems:"center",gap:10,padding:"11px 20px 11px 52px",borderTop:"1px solid #F1F5F9",cursor:"pointer",background:"#fff"},onMouseEnter:e=>e.currentTarget.style.background="#FFF5F3",onMouseLeave:e=>e.currentTarget.style.background="#fff"},
+                React.createElement("div",{style:{flex:1}},
+                  React.createElement("div",{style:{fontSize:13,fontWeight:600,color:"#0F172A",marginBottom:3}},t.tarea),
+                  React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+                    React.createElement(Badge,{label:t.estado,tipo:"estado"}),
+                    React.createElement(Badge,{label:t.prioridad,tipo:"prioridad"}))),
+                React.createElement("div",{style:{textAlign:"right",minWidth:48}},
+                  React.createElement("div",{style:{fontSize:14,fontWeight:800,color:bt}},pct(t.avance),"%"),
+                  React.createElement("div",{style:{fontSize:10,color:bt,fontWeight:600}},lt)));
+            }));
+        }));
+    }));
+}
+
+function VistaTareas({ tareas, onEditar }) {
+  const [filtroEstado, setFiltroEstado] = useState("Todos");
+  const [filtroPrio, setFiltroPrio] = useState("Todos");
+  const [busqueda, setBusqueda] = useState("");
+  const filtradas = tareas.filter(t=>{
+    if(filtroEstado!=="Todos"&&t.estado!==filtroEstado) return false;
+    if(filtroPrio!=="Todos"&&t.prioridad!==filtroPrio) return false;
+    if(busqueda&&!t.tarea.toLowerCase().includes(busqueda.toLowerCase())&&!t.programa.toLowerCase().includes(busqueda.toLowerCase())) return false;
+    return true;
+  });
+  return React.createElement("div",null,
+    React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}},
+      React.createElement("input",{value:busqueda,onChange:e=>setBusqueda(e.target.value),placeholder:"Buscar tarea o programa...",style:{flex:1,minWidth:180,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"9px 13px",fontSize:13,background:"#fff"}}),
+      ["Todos","Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button",{key:e,onClick:()=>setFiltroEstado(e),style:{padding:"8px 14px",borderRadius:99,border:`1.5px solid ${filtroEstado===e?COLOR_PRIMARY:"#E2E8F0"}`,background:filtroEstado===e?"#FFF5F3":"#fff",color:filtroEstado===e?COLOR_PRIMARY:"#64748B",fontSize:12,fontWeight:600,cursor:"pointer"}},e)),
+      ["Todos","Alta","Media","Baja"].map(p=>React.createElement("button",{key:p,onClick:()=>setFiltroPrio(p),style:{padding:"8px 14px",borderRadius:99,border:`1.5px solid ${filtroPrio===p?"#475569":"#E2E8F0"}`,background:filtroPrio===p?"#F1F5F9":"#fff",color:filtroPrio===p?"#0F172A":"#64748B",fontSize:12,fontWeight:600,cursor:"pointer"}},p))),
+    React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+      filtradas.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"40px 0",color:"#94A3B8",fontSize:14}},"Sin resultados"),
+      filtradas.map(t=>{
+        const {bar}=colorAvance(t.avance);
+        return React.createElement("div",{key:t.id,onClick:()=>onEditar(t),style:{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12},onMouseEnter:e=>e.currentTarget.style.background="#FFF5F3",onMouseLeave:e=>e.currentTarget.style.background="#fff"},
+          React.createElement("div",{style:{flex:1}},
+            React.createElement("div",{style:{fontSize:11,color:"#94A3B8",fontWeight:600,marginBottom:3}},t.programa," · ",t.plan),
+            React.createElement("div",{style:{fontSize:14,fontWeight:600,color:"#0F172A",marginBottom:6}},t.tarea),
+            React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+              React.createElement(Badge,{label:t.estado,tipo:"estado"}),
+              React.createElement(Badge,{label:t.prioridad,tipo:"prioridad"}),
+              t.responsable&&React.createElement("span",{style:{fontSize:11,color:"#64748B",background:"#F1F5F9",borderRadius:99,padding:"2px 8px",fontWeight:600}},t.responsable))),
+          React.createElement("div",{style:{textAlign:"right",minWidth:56}},
+            React.createElement("div",{style:{fontSize:18,fontWeight:900,color:bar}},pct(t.avance),"%"),
+            React.createElement(BarraAvance,{valor:t.avance,height:6})));
+      })));
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function App() {
+  const [usuarios, setUsuarios] = useState(USUARIOS_INIT);
+  const [usuario, setUsuario] = useState(undefined);
+  const [tareas] = useState(()=>initTareas(DEMO));
+  const [tareasState, setTareasState] = useState(()=>initTareas(DEMO));
+  const [vista, setVista] = useState("ejecutivo");
+  const [modal, setModal] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const showToast = (msg,ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3000); };
+  const handleLogin = u => setUsuario(u);
+  const handleLogout = () => { setUsuario(undefined); setShowUserMenu(false); };
+  const handleEditar = t => { if(puedeEditar(usuario,t)) setModal(t); else showToast("No tenes permisos para editar esta tarea.",false); };
+  const guardar = useCallback(async form => {
+    setSaving(true);
+    try { setTareasState(prev=>prev.map(t=>t.id===form.id?form:t)); setModal(null); showToast("Cambio guardado"); }
+    finally { setSaving(false); }
+  },[]);
+
+  if (usuario===undefined) return React.createElement(PantallaLogin,{onLogin:handleLogin,usuarios});
+
+  const totalAv = avg(tareasState.map(t=>t.avance));
+  const { bar } = colorAvance(totalAv);
+  const TABS = [{id:"ejecutivo",label:"Resumen"},{id:"programas",label:"Programas"},{id:"tareas",label:"Tareas"}];
+
+  return React.createElement("div",{style:{minHeight:"100vh",background:"#F1F5F9",fontFamily:"system-ui,sans-serif"}},
+    React.createElement("style",null,"* { box-sizing:border-box; } select,input,textarea,button { font-family:inherit; }"),
+    toast&&React.createElement(Toast,{msg:toast.msg,ok:toast.ok}),
+    modal&&React.createElement(Modal,{tarea:modal,onSave:guardar,onClose:()=>setModal(null),saving,usuario}),
+    showAdmin&&usuario?.esAdmin&&React.createElement(PanelAdmin,{usuarios,onUpdate:lista=>{setUsuarios(lista);setShowAdmin(false);},onClose:()=>setShowAdmin(false)}),
+    React.createElement("div",{style:{background:"#fff",borderBottom:"1px solid #E2E8F0",position:"sticky",top:0,zIndex:100,boxShadow:"0 1px 8px rgba(0,0,0,.06)"}},
+      React.createElement("div",{style:{maxWidth:980,margin:"0 auto",padding:"0 16px"}},
+        React.createElement("div",{style:{height:4,background:`linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`,margin:"0 -16px"}}),
+        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0 0",flexWrap:"wrap",gap:10}},
+          React.createElement("div",{style:{display:"flex",alignItems:"center",gap:14}},
+            React.createElement(LogoNextSiembra,{height:40}),
+            React.createElement("div",{style:{borderLeft:"1px solid #E2E8F0",paddingLeft:14}},
+              React.createElement("div",{style:{fontSize:12,fontWeight:800,color:COLOR_PRIMARY}},NEGOCIO_LABEL),
+              React.createElement("div",{style:{fontSize:10,color:"#94A3B8",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase"}},TABLERO_NOMBRE))),
+          React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:10,padding:"7px 14px"}},
+              React.createElement("span",{style:{fontSize:12,color:"#64748B",fontWeight:600}},"Avance"),
+              React.createElement("span",{style:{fontSize:20,fontWeight:800,color:bar}},pct(totalAv),"%"),
+              React.createElement("div",{style:{width:60}},React.createElement(BarraAvance,{valor:totalAv,height:6}))),
+            React.createElement("div",{style:{position:"relative"}},
+              React.createElement("button",{onClick:()=>setShowUserMenu(v=>!v),style:{display:"flex",alignItems:"center",gap:6,background:"#F8FAFC",border:`1.5px solid ${COLOR_PRIMARY}`,borderRadius:99,padding:"6px 12px",cursor:"pointer"}},
+                React.createElement("span",{style:{width:8,height:8,borderRadius:"50%",background:COLOR_PRIMARY}}),
+                React.createElement("span",{style:{fontSize:12,fontWeight:700,color:COLOR_PRIMARY}},usuario.nombre),
+                React.createElement("span",{style:{fontSize:10,background:COLOR_PRIMARY,color:"#fff",borderRadius:99,padding:"1px 6px",fontWeight:700}},usuario.rol)),
+              showUserMenu&&React.createElement("div",{style:{position:"absolute",right:0,top:"calc(100% + 6px)",background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 24px rgba(0,0,0,.12)",minWidth:200,zIndex:200,overflow:"hidden"}},
+                usuario?.esAdmin&&React.createElement("button",{onClick:()=>{setShowAdmin(true);setShowUserMenu(false);},style:{width:"100%",padding:"11px 16px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",fontWeight:600},onMouseEnter:e=>e.currentTarget.style.background="#F8FAFC",onMouseLeave:e=>e.currentTarget.style.background="none"},"Administrar usuarios"),
+                React.createElement("div",{style:{height:1,background:"#F1F5F9"}}),
+                React.createElement("button",{onClick:handleLogout,style:{width:"100%",padding:"11px 16px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",fontWeight:600},onMouseEnter:e=>e.currentTarget.style.background="#FEF2F2",onMouseLeave:e=>e.currentTarget.style.background="none"},"Cerrar sesion"))))),
+        React.createElement("div",{style:{display:"flex",gap:0,marginTop:10}},
+          TABS.map(tab=>React.createElement("button",{key:tab.id,onClick:()=>setVista(tab.id),style:{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:700,color:vista===tab.id?COLOR_PRIMARY:"#64748B",borderBottom:`3px solid ${vista===tab.id?COLOR_PRIMARY:"transparent"}`,marginBottom:-1,transition:"color .15s"}},tab.label)),
+          React.createElement("span",{style:{marginLeft:"auto",display:"flex",alignItems:"center",fontSize:11,color:COLOR_PRIMARY,background:"#FFF5F3",border:`1px solid ${COLOR_PRIMARY}44`,borderRadius:99,padding:"3px 10px",marginBottom:8,fontWeight:700,alignSelf:"center"}},"DEMO")))),
+    React.createElement("div",{style:{maxWidth:980,margin:"0 auto",padding:"22px 14px 60px"}},
+      vista==="ejecutivo"&&React.createElement(VistaEjecutiva,{tareas:tareasState,onEditar:handleEditar}),
+      vista==="programas"&&React.createElement(VistaProgramas,{tareas:tareasState,onEditar:handleEditar}),
+      vista==="tareas"&&React.createElement(VistaTareas,{tareas:tareasState,onEditar:handleEditar})));
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+  </script>
+</body>
+</html>
