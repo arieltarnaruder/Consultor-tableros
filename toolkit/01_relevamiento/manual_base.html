@@ -1,1 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — Plataforma de Diagnóstico Comercial</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --t-dark:#1D4E3A;--t-mid:#2A6B50;--t-light:#E8F2ED;--t-accent:#4CAF82;
+  --t-sand:#F7F4EF;--t-border:#C8DDD5;
+  --text:#1a1a18;--text2:#5a5a56;--text3:#9a9a96;
+  --bg:#fff;--border:#e0dfd8;--radius:10px;--radius-lg:16px
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f2f0ea;color:var(--text);line-height:1.7;font-size:15px}
+.page{max-width:860px;margin:0 auto;padding:2rem 1rem}
 
+/* HEADER */
+.doc-header{background:var(--t-dark);border-radius:var(--radius-lg);padding:2rem 2.5rem;color:#fff;margin-bottom:2rem;position:relative;overflow:hidden}
+.doc-header::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,0.04)}
+.doc-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+.logo-row{display:flex;align-items:center;gap:10px}
+.logo-box{width:32px;height:32px;background:rgba(255,255,255,0.15);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-box svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2}
+.logo-name{font-size:14px;font-weight:500;color:#fff}
+.logo-name span{color:rgba(255,255,255,0.6);font-weight:400}
+.doc-badge{font-size:10px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:3px 10px;border-radius:20px;letter-spacing:0.06em;text-transform:uppercase}
+.doc-title{font-size:26px;font-weight:500;margin-bottom:6px}
+.doc-subtitle{font-size:13px;color:rgba(255,255,255,0.65)}
+
+/* TOC */
+.toc{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:1.5rem 2rem;margin-bottom:2rem}
+.toc h2{font-size:14px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem}
+.toc ol{padding-left:1.25rem;display:flex;flex-direction:column;gap:6px}
+.toc li{font-size:14px}
+.toc a{color:var(--t-dark);text-decoration:none;font-weight:500}
+.toc a:hover{text-decoration:underline}
+
+/* SECTIONS */
+.section{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:2rem 2.5rem;margin-bottom:1.5rem}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:0.5px solid var(--border)}
+.section-num{min-width:36px;height:36px;background:var(--t-dark);color:#fff;border-radius:8px;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-title{font-size:20px;font-weight:500;color:var(--text)}
+h3{font-size:16px;font-weight:500;color:var(--t-dark);margin:1.5rem 0 0.75rem}
+h4{font-size:14px;font-weight:500;color:var(--text);margin:1rem 0 0.5rem}
+p{margin-bottom:0.9rem;color:var(--text2)}
+p:last-child{margin-bottom:0}
+ul,ol{padding-left:1.25rem;margin-bottom:0.9rem;color:var(--text2);display:flex;flex-direction:column;gap:5px}
+li{font-size:14px;line-height:1.6}
+strong{color:var(--text);font-weight:500}
+
+/* CALLOUTS */
+.callout{border-radius:var(--radius);padding:12px 16px;margin:1rem 0;font-size:13px;line-height:1.6}
+.callout-tip{background:#E8F2ED;border-left:3px solid var(--t-accent);color:var(--t-dark)}
+.callout-warn{background:#FAEEDA;border-left:3px solid #FAC775;color:#854F0B}
+.callout-info{background:#EEF5FC;border-left:3px solid #378ADD;color:#185FA5}
+.callout-title{font-weight:500;margin-bottom:3px}
+
+/* STEPS */
+.steps{display:flex;flex-direction:column;gap:14px;margin:1rem 0}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-dot{min-width:28px;height:28px;border-radius:50%;background:var(--t-dark);color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-content{font-size:14px;color:var(--text2);line-height:1.6;padding-top:4px}
+.step-content strong{color:var(--text)}
+
+/* FAQ */
+.faq-item{border-bottom:0.5px solid var(--border);padding:1rem 0}
+.faq-item:last-child{border-bottom:none}
+.faq-q{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
+.faq-a{font-size:13px;color:var(--text2);line-height:1.6}
+
+/* PRINT BUTTON */
+.print-bar{display:flex;justify-content:flex-end;margin-bottom:1.5rem;gap:10px}
+.btn-print{padding:9px 20px;background:var(--t-dark);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-print:hover{background:var(--t-mid)}
+
+@media print{
+  body{background:#fff}
+  .page{padding:0}
+  .print-bar{display:none}
+  .section{border:0.5px solid #ccc;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="print-bar">
+  <button class="btn-print" onclick="window.print()">⬇ Descargar / Imprimir PDF</button>
+</div>
+
+<div class="doc-header">
+  <div class="doc-header-top">
+    <div class="logo-row">
+      <div class="logo-box"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="logo-name">Teplitz &amp; Asociados <span>· Consultería Comercial</span></div>
+    </div>
+    <div class="doc-badge">Manual de Usuario · v1.0</div>
+  </div>
+  <div class="doc-title">Manual de Usuario</div>
+  <div class="doc-subtitle">Plataforma de Diagnóstico Comercial Base</div>
+</div>
+
+<div class="toc">
+  <h2>Contenido</h2>
+  <ol>
+    <li><a href="#bienvenida">Bienvenida</a></li>
+    <li><a href="#antes">Antes de empezar</a></li>
+    <li><a href="#primeros-pasos">Primeros pasos — Registro e ingreso</a></li>
+    <li><a href="#operacion">Operación — Completar el diagnóstico</a></li>
+    <li><a href="#archivos">Subir archivos compartidos</a></li>
+    <li><a href="#finalizar">Finalizar y enviar</a></li>
+    <li><a href="#modificar">Revisar y modificar respuestas</a></li>
+    <li><a href="#faq">Preguntas frecuentes y troubleshooting</a></li>
+  </ol>
+</div>
+
+<div class="section" id="bienvenida">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <div class="section-title">Bienvenida</div>
+  </div>
+  <p>Este manual te guía en el uso de la <strong>Plataforma de Diagnóstico Comercial</strong> de Teplitz &amp; Asociados.</p>
+  <p>El objetivo de esta plataforma es recopilar la información necesaria para que el equipo consultor pueda elaborar un diagnóstico preciso de la operación comercial de tu empresa. Tu participación es fundamental para que el proceso sea exitoso.</p>
+  <div class="callout callout-tip">
+    <div class="callout-title">💡 Tip</div>
+    Podés completar el diagnóstico a tu ritmo, en varias sesiones. Tu progreso se guarda automáticamente — no vas a perder nada si cerrás el navegador.
+  </div>
+</div>
+
+<div class="section" id="antes">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <div class="section-title">Antes de empezar</div>
+  </div>
+  
+  <h3>¿Qué necesitás?</h3>
+  <ul>
+    <li><strong>Navegador Chrome</strong> (recomendado) o Edge actualizado. El dictado por voz solo funciona en Chrome.</li>
+    <li><strong>Conexión a internet</strong> — la plataforma funciona online.</li>
+    <li><strong>Una cuenta de Google</strong> — <strong>no es necesaria</strong> para subir archivos si usás el enlace directo provisto por la consultoría.</li>
+    <li><strong>Tu email corporativo o personal</strong> — lo usarás para identificarte al ingresar.</li>
+  </ul>
+
+  <h3>¿Qué vas a encontrar?</h3>
+  <p>La plataforma tiene <strong>11 bloques temáticos</strong> que cubren todos los aspectos de la operación comercial:</p>
+  <ul>
+    <li>Entorno Comercial y Mercado</li>
+    <li>Estrategia y Plan Comercial</li>
+    <li>Plan de Marketing</li>
+    <li>Performance Comercial y KPIs</li>
+    <li>Organización Comercial</li>
+    <li>Comunicación y Clientes</li>
+    <li>Portfolio de Productos</li>
+    <li>Precios y Condiciones</li>
+    <li>Proveedores y Abastecimiento</li>
+    <li>Sistemas e Información</li>
+    <li>Logística y Distribución</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <div class="callout-title">ℹ️ Tiempo estimado</div>
+    El diagnóstico completo toma aproximadamente 45 minutos. Podés dividirlo en varias sesiones.
+  </div>
+</div>
+
+<div class="section" id="primeros-pasos">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <div class="section-title">Primeros pasos — Registro e ingreso</div>
+  </div>
+
+  <h3>Primera vez — Registro</h3>
+  <p>La primera vez que entrés vas a ver la pantalla de registro. Completá tus datos (Nombre, Cargo, Email y Empresa) para continuar.</p>
+
+  <h3>Acuerdo de Confidencialidad (NDA)</h3>
+  <p>Antes de comenzar, vas a ver la sección de <strong>Seguridad y confidencialidad de datos</strong>. Es necesario tildar la casilla de aceptación del Acuerdo de Confidencialidad (NDA) para poder avanzar.</p>
+</div>
+
+<div class="section" id="operacion">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <div class="section-title">Operación — Completar el diagnóstico</div>
+  </div>
+
+  <h3>Navegación por bloques</h3>
+  <p>El diagnóstico está organizado en 11 bloques. Podés navegar entre ellos usando las pastillas numeradas en la parte superior, o con los botones de la barra inferior.</p>
+
+  <h3>Responder preguntas de texto y Dictado por voz</h3>
+  <p>Podés escribir directamente o usar el dictado por voz haciendo clic en el ícono del <strong>micrófono</strong> (🎙) a la derecha del campo. El navegador te pedirá permiso para usarlo (hacé clic en "Permitir"). Al terminar de hablar, volvé a presionar el micrófono para detener la transcripción.</p>
+</div>
+
+<div class="section" id="archivos">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <div class="section-title">Subir archivos compartidos</div>
+  </div>
+  <p>Algunas preguntas requieren adjuntar archivos. El botón del formulario te abrirá la carpeta remota asignada en una pestaña nueva para que arrastres tus documentos con total seguridad.</p>
+</div>
+
+<div class="section" id="finalizar">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <div class="section-title">Finalizar y enviar</div>
+  </div>
+  <p>Al terminar, hacé clic en <strong>"Finalizar →"</strong>. El mensaje verde confirmará que las respuestas se guardaron con éxito en el servidor de la consultoría.</p>
+</div>
+
+<div class="section" id="faq">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <div class="section-title">Preguntas frecuentes</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Qué pasa si cierro el navegador antes de terminar?</div>
+    <div class="faq-a">Tus respuestas se guardan automáticamente en tu navegador. Podés retomar en cualquier momento desde el mismo dispositivo.</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
