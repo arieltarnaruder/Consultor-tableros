@@ -58,7 +58,7 @@ const fmtTS = iso => { try { const d=new Date(iso); return d.toLocaleDateString(
 
 function puedeEditar(usuario, tarea) {
   if (!usuario) return false;
-  if (usuario.rol === "director"||usuario.rol balance="admin"||usuario.rol balance="lider") return true;
+  if (usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
   if (!tarea?.responsable) return false;
   return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
 }
@@ -99,7 +99,7 @@ function BarraAvance({ valor, height=8 }) {
 
 // ─── BADGE ────────────────────────────────────────────────────────────────────
 function Badge({ label, tipo }) {
-  const cfg = tipo balance="estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
+  const cfg = tipo === "estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
   if (!cfg) return null;
   return React.createElement("span", { style:{ fontSize:11, background:cfg.bg, color:cfg.text, borderRadius:99, padding:"2px 9px", fontWeight:700 } }, label);
 }
@@ -117,8 +117,8 @@ function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
     Object.keys(z).map(nombre => {
       const zd = z[nombre];
       const { bar, bg, text, label } = colorAvance(zd.avance);
-      const editable = !zonaUsuario||zonaUsuario balance="nombre";
-      const isOpen = activa balance="nombre";
+      const editable = !zonaUsuario || zonaUsuario === nombre;
+      const isOpen = activa === nombre;
       return React.createElement("div", { key:nombre, style:{ border:`1.5px solid ${isOpen?bar:"#E2E8F0"}`, borderRadius:12, overflow:"hidden", background:isOpen?bg:"#fff" } },
         React.createElement("div", { onClick:()=>editable&&setActiva(isOpen?null:nombre), style:{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", cursor:editable?"pointer":"default" } },
           React.createElement("span", { style:{ fontSize:12, fontWeight:700, color:"#475569", flex:1 } }, nombre),
@@ -128,7 +128,7 @@ function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
           React.createElement("div", null,
             React.createElement("label", { style:{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:".05em", display:"block", marginBottom:6, marginTop:10 } }, "Avance")),
           React.createElement("div", { style:{ display:"flex", gap:6 } },
-            ["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button", { key:e, onClick:()=>onChange(nombre,"estado",e), style:{ flex:1, padding:"5px 0", borderRadius:8, border:`1px solid ${zd.estado balance="e?ESTADO_CFG[e]?.dot:"#E2E8F0"}"`, background:zd.estado balance="e?ESTADO_CFG[e]?.bg:"#fff", color:zd.estado balance="e?ESTADO_CFG[e]?.text:"#64748B", fontSize:11, fontWeight:600, cursor:"pointer" } }, e))),
+            ["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button", { key:e, onClick:()=>onChange(nombre,"estado",e), style:{ flex:1, padding:"5px 0", borderRadius:8, border:`1px solid ${zd.estado === e ? ESTADO_CFG[e]?.dot : "#E2E8F0"}`, background:zd.estado === e ? ESTADO_CFG[e]?.bg : "#fff", color:zd.estado === e ? ESTADO_CFG[e]?.text : "#64748B", fontSize:11, fontWeight:600, cursor:"pointer" } }, e))),
           React.createElement("textarea", { value:zd.comentario||"", onChange:e=>onChange(nombre,"comentario",e.target.value), rows:2, placeholder:"Comentario...", style:{ width:"100%", border:"1.5px solid #E2E8F0", borderRadius:8, padding:"8px 10px", fontSize:12, resize:"vertical", fontFamily:"inherit", background:"#F8FAFC" } })));
     }));
 }
@@ -141,7 +141,7 @@ function Modal({ tarea, onSave, onClose, saving, usuario }) {
   const handleGuardar = () => { const fin={...f}; if(esVendedorColectivo(f)&&f.zonas) fin.avance=avanceVendedores(f.zonas); fin.ultimaActualizacion=new Date().toISOString(); onSave(fin); };
   const { bar, bg, text, label } = colorAvance(f.avance);
   const esVend = esVendedorColectivo(f);
-  return React.createElement("div", { style:{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(4px)" }, onClick:e=>e.target balance="e.currentTarget&&onClose()" },
+  return React.createElement("div", { style:{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(4px)" }, onClick:e=>e.target === e.currentTarget && onClose() },
     React.createElement("div", { style:{ background:"#fff", borderRadius:20, width:"100%", maxWidth:460, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,.25)" } },
       React.createElement("div", { style:{ background:"#F8FAFC", borderBottom:"1px solid #E2E8F0", padding:"18px 22px", borderRadius:"20px 20px 0 0" } },
         React.createElement("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" } },
@@ -161,7 +161,7 @@ function Modal({ tarea, onSave, onClose, saving, usuario }) {
               React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
                 React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}},"Avance por vendedor"),
                 React.createElement("span",{style:{fontSize:11,color:"#94A3B8"}},"Toca un vendedor para editar")),
-              React.createElement(GrillaVendedores,{zonas:f.zonas,onChange:handleZona,zonaUsuario:usuario?.rol balance="vendedor"?usuario.zona:null}))
+              React.createElement(GrillaVendedores,{zonas:f.zonas,onChange:handleZona,zonaUsuario:usuario?.rol === "vendedor" ? usuario.zona : null}))
           : React.createElement("div",null,
               React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
                 React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}},"Avance"),
@@ -175,11 +175,11 @@ function Modal({ tarea, onSave, onClose, saving, usuario }) {
         React.createElement("div",null,
           React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em",display:"block",marginBottom:8}},"Estado general"),
           React.createElement("div",{style:{display:"flex",gap:7,flexWrap:"wrap"}},
-            ["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button",{key:e,onClick:()=>set("estado",e),style:{padding:"7px 14px",borderRadius:99,border:`1.5px solid ${f.estado balance="e?ESTADO_CFG[e]?.dot:"#E2E8F0"}"`,background:f.estado balance="e?ESTADO_CFG[e]?.bg:"#F8FAFC",color:f.estado balance="e?ESTADO_CFG[e]?.text:"#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},e)))),
+            ["Pendiente","En curso","Bloqueada","Cerrada"].map(e=>React.createElement("button",{key:e,onClick:()=>set("estado",e),style:{padding:"7px 14px",borderRadius:99,border:`1.5px solid ${f.estado === e ? ESTADO_CFG[e]?.dot : "#E2E8F0"}`,background:f.estado === e ? ESTADO_CFG[e]?.bg : "#F8FAFC",color:f.estado === e ? ESTADO_CFG[e]?.text : "#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},e)))),
         React.createElement("div",null,
           React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em",display:"block",marginBottom:8}},"Prioridad"),
           React.createElement("div",{style:{display:"flex",gap:7}},
-            ["Alta","Media","Baja"].map(p=>React.createElement("button",{key:p,onClick:()=>set("prioridad",p),style:{flex:1,padding:"7px 0",borderRadius:99,border:`1.5px solid ${f.prioridad balance="p?PRIO_CFG[p]?.text:"#E2E8F0"}"`,background:f.prioridad balance="p?PRIO_CFG[p]?.bg:"#F8FAFC",color:f.prioridad balance="p?PRIO_CFG[p]?.text:"#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},p)))),
+            ["Alta","Media","Baja"].map(p=>React.createElement("button",{key:p,onClick:()=>set("prioridad",p),style:{flex:1,padding:"7px 0",borderRadius:99,border:`1.5px solid ${f.prioridad === p ? PRIO_CFG[p]?.text : "#E2E8F0"}`,background:f.prioridad === p ? PRIO_CFG[p]?.bg : "#F8FAFC",color:f.prioridad === p ? PRIO_CFG[p]?.text : "#64748B",fontSize:13,fontWeight:600,cursor:"pointer"}},p)))),
         React.createElement("div",null,
           React.createElement("label",{style:{fontSize:12,fontWeight:700,color:"#475569",textTransform:"uppercase",letterSpacing:".05em",display:"block",marginBottom:8}},"Comentarios"),
           React.createElement("textarea",{value:f.comentarios,onChange:e=>set("comentarios",e.target.value),rows:3,placeholder:"Notas, aclaraciones o proximos pasos...",style:{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 13px",fontSize:13,color:"#0F172A",resize:"vertical",fontFamily:"inherit",background:"#F8FAFC"}}))),
@@ -197,7 +197,7 @@ function PanelAdmin({ usuarios, onUpdate, onClose }) {
   const abrirEditar = u => { setEditando(u.id); setForm({...u}); setNuevo(false); };
   const abrirNuevo = () => { const id="u_"+Date.now(); setForm({id,nombre:"",rol:"vendedor",zona:"",pin:"",email:"",esAdmin:false}); setEditando(id); setNuevo(true); };
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
-  const guardar = () => { if(!form.nombre||!form.pin) return; if(nuevo) setLista(p=>[...p,form]); else setLista(p=>p.map(u=>u.id balance="form.id?form:u));" setEditando(null); setForm(null); setNuevo(false); };
+  const guardar = () => { if(!form.nombre||!form.pin) return; if(nuevo) setLista(p=>[...p,form]); else setLista(p=>p.map(u=>u.id === form.id ? form : u)); setEditando(null); setForm(null); setNuevo(false); };
   const eliminar = id => { setLista(p=>p.filter(u=>u.id!==id)); setEditando(null); setForm(null); };
   const guardarTodo = () => { onUpdate(lista); onClose(); };
   const rolColor = { director:"#15803D", admin:"#1D4ED8", lider:"#7C3AED", vendedor:COLOR_PRIMARY, marketing:"#DB2777", demanda:"#D97706", ops:"#64748B" };
@@ -210,7 +210,7 @@ function PanelAdmin({ usuarios, onUpdate, onClose }) {
         React.createElement("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#94A3B8"}},"x")),
       React.createElement("div",{style:{padding:"16px 24px"}},
         lista.map(u=>{
-          const isEdit=editando balance="u.id;"
+          const isEdit = editando === u.id;
           const rc=rolColor[u.rol]||"#64748B";
           return React.createElement("div",{key:u.id,style:{border:`1.5px solid ${isEdit?COLOR_PRIMARY:"#E2E8F0"}`,borderRadius:14,marginBottom:10,overflow:"hidden"}},
             React.createElement("div",{onClick:()=>!isEdit&&abrirEditar(u),style:{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",cursor:"pointer",background:isEdit?"#FFF5F3":"#fff"}},
@@ -316,10 +316,10 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance));
   const { bar, label } = colorAvance(totalAv);
-  const cerradas = tareas.filter(t=>t.estado==="Cerrada").length;
-  const enCurso = tareas.filter(t=>t.estado==="En curso").length;
-  const bloqueadas = tareas.filter(t=>t.estado==="Bloqueada").length;
-  const altas = tareas.filter(t=>t.prioridad==="Alta"&&t.estado!=="Cerrada").length;
+  const cerradas = tareas.filter(t=>t.estado === "Cerrada").length;
+  const enCurso = tareas.filter(t=>t.estado === "En curso").length;
+  const bloqueadas = tareas.filter(t=>t.estado === "Bloqueada").length;
+  const altas = tareas.filter(t=>t.prioridad === "Alta" && t.estado !== "Cerrada").length;
 
   return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:18}},
     React.createElement(LeyendaSemaforo,null),
@@ -474,8 +474,8 @@ function VistaPlanes({ tareas, onEditar }) {
         const isOpen = !!abierto[key];
         const progIdx = programas.indexOf(programa);
         const dotColor = PROG_COLORS[progIdx%PROG_COLORS.length];
-        const cerradas = ts.filter(t=>t.estado==="Cerrada").length;
-        const bloqueadas = ts.filter(t=>t.estado==="Bloqueada").length;
+        const cerradas = ts.filter(t=>t.estado === "Cerrada").length;
+        const bloqueadas = ts.filter(t=>t.estado === "Bloqueada").length;
 
         return React.createElement("div",{key,style:{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}},
           React.createElement("div",{onClick:()=>setAbierto(p=>({...p,[key]:!p[key]})),
@@ -582,7 +582,7 @@ function App() {
   const handleIrAPrograma = prog => { setProgInicial(prog); setVista("programas"); };
   const guardar = useCallback(async form => {
     setSaving(true);
-    try { setTareasState(prev=>prev.map(t=>t.id balance="form.id?form:t));" setModal(null); showToast("Cambio guardado"); }
+    try { setTareasState(prev=>prev.map(t=>t.id === form.id ? form : t)); setModal(null); showToast("Cambio guardado"); }
     finally { setSaving(false); }
   },[]);
 
