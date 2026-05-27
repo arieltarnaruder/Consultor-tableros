@@ -1,307 +1,325 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Next Siembra - Tablero PAC Dinámico</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:system-ui,sans-serif;background:#F1F5F9}
-    #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
-    .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #2E7D32;border-radius:50%;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Siembra - Tablero de Control PAC</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para Íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- React y ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
-<body>
-  <div id="root">
-    <div id="loading">
-      <div class="spinner"></div>
-      <span>Sincronizando matriz comercial con Google Sheets...</span>
-    </div>
-  </div>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+    <div id="root"></div>
 
-  <script>
-const { useState, useMemo, useEffect, useCallback } = React;
+    <script>
+        const { useState, useEffect, useMemo } = React;
 
-// CONFIGURACIONES VISUALES DEL CLIENTE (Mapeadas directo para Next Siembra)
-const COLOR_PRIMARY   = "#2E7D32"; 
-const COLOR_SECONDARY = "#2D2D2D";
-const COLOR_ACCENT    = "#0EA5E9";
-const NEGOCIO_LABEL   = "Next Siembra";
-const TABLERO_NOMBRE  = "Tablero PAC - Matriz de Control";
+        // CONFIGURACIÓN VISUAL ORIGINAL DEL CLIENTE
+        const CONFIG = {
+            primary: "#2E7D32",    // Verde Next Siembra
+            secondary: "#2D2D2D",  // Gris Oscuro
+            accent: "#0EA5E9",     // Azul Cielo
+            pinCorrecto: "2502"    // Tu clave original de acceso
+        };
 
-// URL de exportación CSV pública de la Google Sheet provista por el usuario
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
+        // URL de exportación CSV de tu Google Sheet
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
 
-// ─── HELPERS DE SEMÁFORO Y FORMATO ──────────────────────────────────────────
-function colorAvance(v) {
-  if (v >= 1.0) return { bar:"#3B82F6", bg:"#EFF6FF", text:"#1D4ED8", label:"Completa" };
-  if (v >= 0.80) return { bar:"#22C55E", bg:"#F0FDF4", text:"#15803D", label:"Avanzado" };
-  if (v >= 0.50) return { bar:"#EAB308", bg:"#FEFCE8", text:"#854D0E", label:"En marcha" };
-  if (v >= 0.10) return { bar:"#F97316", bg:"#FFF7ED", text:"#C2410C", label:"Iniciado" };
-  return { bar:"#EF4444", bg:"#FEF2F2", text:"#B91C1C", label:"Sin inicio" };
-}
-
-const ESTADO_CFG = {
-  "Pendiente": { bg:"#FFF7ED", text:"#C2410C", dot:"#F97316" },
-  "En curso":  { bg:"#EFF6FF", text:"#1D4ED8", dot:"#3B82F6" },
-  "Bloqueada": { bg:"#FFF1F2", text:"#BE123C", dot:"#F43F5E" },
-  "Cerrada":   { bg:"#F0FDF4", text:"#15803D", dot:"#22C55E" },
-};
-
-const PRIO_CFG = {
-  "Alta":  { bg:"#FEF2F2", text:"#B91C1C" },
-  "Media": { bg:"#FFFBEB", text:"#854D0E" },
-  "Baja":  { bg:"#F0FDF4", text:"#166534" },
-};
-
-const PROG_COLORS = [COLOR_PRIMARY, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899", "#64748B", "#F97316", "#0D9488"];
-const pct = v => Math.round(v * 100);
-const avg = arr => arr.length ? arr.reduce((a,b) => a + b, 0) / arr.length : 0;
-
-// PARSER MANUAL DE CSV RESISTENTE A COMAS DENTRO DE COMILLAS
-function parseCSV(text) {
-  const lines = [];
-  let row = [""];
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    const next = text[i+1];
-    if (c === '"') {
-      if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (c === ',' && !inQuotes) {
-      row.push("");
-    } else if ((c === '\r' || c === '\n') && !inQuotes) {
-      if (c === '\r' && next === '\n') { i++; }
-      lines.push(row);
-      row = [""];
-    } else {
-      row[row.length - 1] += c;
-    }
-  }
-  if (row.length > 1 || row[0] !== "") lines.push(row);
-  return lines;
-}
-
-// ─── COMPONENTES INTERNOS DE LA INTERFAZ ──────────────────────────────────────
-function LogoNextSiembra({ height = 40 }) {
-  return React.createElement("svg", { height, viewBox:"0 0 200 54", fill:"none" },
-    React.createElement("text", { x:"0", y:"38", fontFamily:"Arial Black,Impact,sans-serif", fontWeight:"900", fontSize:"38", fill:COLOR_PRIMARY, letterSpacing:"-1" }, "NEXT"),
-    React.createElement("text", { x:"2", y:"52", fontFamily:"Arial,sans-serif", fontWeight:"700", fontSize:"13", fill:COLOR_SECONDARY, letterSpacing:"4" }, "SIEMBRA"));
-}
-
-function BarraAvance({ valor, height = 8 }) {
-  const { bar } = colorAvance(valor);
-  return React.createElement("div", { style:{ background:"#E2E8F0", borderRadius:99, height, overflow:"hidden" } },
-    React.createElement("div", { style:{ width:`${pct(valor)}%`, height:"100%", background:bar, borderRadius:99, transition:"width .4s" } }));
-}
-
-function Badge({ label, tipo }) {
-  const cfg = tipo === "estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
-  if (!cfg) return React.createElement("span", { style:{ fontSize:11, background:"#F1F5F9", color:"#475569", borderRadius:99, padding:"2px 9px" } }, label);
-  return React.createElement("span", { style:{ fontSize:11, background:cfg.bg, color:cfg.text, borderRadius:99, padding:"2px 9px", fontWeight:700 } }, label);
-}
-
-// CORRECCIÓN: Definición explícita de los argumentos recibidos para evitar fallos de referencia
-function CirculoAvance({ valor, size = 52 }) {
-  const { bar } = colorAvance(valor);
-  const r = (size - 6) / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = circ * valor;
-  return React.createElement("svg", { width:size, height:size, viewBox:`0 0 ${size} ${size}` },
-    React.createElement("circle", { cx:size/2, cy:size/2, r, fill:"none", stroke:"#E2E8F0", strokeWidth:4 }),
-    React.createElement("circle", { cx:size/2, cy:size/2, r, fill:"none", stroke:bar, strokeWidth:4, strokeDasharray:`${dash} ${circ}`, strokeLinecap:"round", transform:`rotate(-90 ${size/2} ${size/2})`, style:{transition:"stroke-dasharray .4s"} }),
-    React.createElement("text", { x:size/2, y:size/2 + 1, textAnchor:"middle", dominantBaseline:"middle", fontSize:size > 44 ? 11 : 9, fontWeight:800, fill:bar }, pct(valor) + "%"));
-}
-
-function LeyendaSemaforo() {
-  const items = [
-    {color:"#EF4444", label:"Sin inicio"},
-    {color:"#F97316", label:"Iniciado"},
-    {color:"#EAB308", label:"En marcha"},
-    {color:"#22C55E", label:"Avanzado"},
-    {color:"#3B82F6", label:"Completa"},
-  ];
-  return React.createElement("div", { style:{ display:"flex", flexWrap:"wrap", gap:12, alignItems:"center", padding:"10px 16px", background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, marginBottom:16 } },
-    React.createElement("span", { style:{ fontSize:11, fontWeight:700, color:"#64748B", textTransform:"uppercase" } }, "Métricas:"),
-    items.map(it => React.createElement("span", { key:it.label, style:{ display:"flex", alignItems:"center", gap:5, fontSize:12, color:"#475569" } },
-      React.createElement("span", { style:{ width:10, height:10, borderRadius:"50%", background:it.color, display:"inline-block" } }), it.label)));
-}
-
-// ─── VISTA RESUMEN ────────────────────────────────────────────────────────────
-function VistaEjecutiva({ tareas, onIrAPrograma }) {
-  const programas = useMemo(() => [...new Set(tareas.map(t => t.programa))], [tareas]);
-  const totalAv = avg(tareas.map(t => t.avance));
-  const { bar, label } = colorAvance(totalAv);
-  
-  const cerradas = tareas.filter(t => t.estado === "Cerrada").length;
-  const enCurso = tareas.filter(t => t.estado === "En curso").length;
-  const bloqueadas = tareas.filter(t => t.estado === "Bloqueada").length;
-
-  return React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:16 } },
-    React.createElement(LeyendaSemaforo),
-    React.createElement("div", { style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:12 } },
-      [
-        { label:"Avance PAC", val:pct(totalAv) + "%", sub:label, color:bar },
-        { label:"Tareas Completas", val:cerradas + "/" + tareas.length, sub:"Ejecutadas", color:"#22C55E" },
-        { label:"En Proceso", val:enCurso, sub:"Activas", color:"#3B82F6" },
-        { label:"Bloqueadas / Alertas", val:bloqueadas, sub:"Frenadas", color:"#F43F5E" }
-      ].map(k => React.createElement("div", { key:k.label, style:{ background:"#fff", borderRadius:12, padding:"16px", border:"1px solid #E2E8F0", borderTop:`3px solid ${k.color}` } },
-        React.createElement("div", { style:{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase", marginBottom:4 } }, k.label),
-        React.createElement("div", { style:{ fontSize:24, fontWeight:900, color:k.color, marginBottom:2 } }, k.val),
-        React.createElement("div", { style:{ fontSize:11, color:"#94A3B8" } }, k.sub)))),
-    React.createElement("div", { style:{ background:"#fff", borderRadius:12, padding:20, border:"1px solid #E2E8F0" } },
-      React.createElement("div", { style:{ fontSize:14, fontWeight:700, color:"#0F172A", marginBottom:8 } }, "Estructura Global del Plan Estratégico"),
-      React.createElement(BarraAvance, { valor:totalAv, height:10 })),
-    React.createElement("div", { style:{ background:"#fff", borderRadius:12, border:"1px solid #E2E8F0", overflow:"hidden" } },
-      React.createElement("div", { style:{ padding:"14px 16px", borderBottom:"1px solid #F1F5F9", fontSize:14, fontWeight:700, color:"#0F172A" } }, "Avance Consolidado por Programa"),
-      programas.map((prog, idx) => {
-        const ts = tareas.filter(t => t.programa === prog);
-        const av = avg(ts.map(t => t.avance));
-        return React.createElement("div", { key:prog, onClick:() => onIrAPrograma(prog), style:{ display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderBottom:idx < programas.length-1 ? "1px solid #F8FAFC" : "none", cursor:"pointer" } },
-          React.createElement("div", { style:{ width:10, height:10, borderRadius:"50%", background:PROG_COLORS[idx % PROG_COLORS.length] } }),
-          React.createElement("div", { style:{ flex:1 } },
-            React.createElement("div", { style:{ fontSize:13, fontWeight:700, color:"#0F172A", marginBottom:4 } }, prog),
-            React.createElement(BarraAvance, { valor:av, height:5 })),
-          React.createElement(CirculoAvance, { valor:av, size:42 }));
-      })));
-}
-
-// ─── VISTA DESGLOSADA POR PROGRAMA / PLAN ─────────────────────────────────────
-function VistaEstructura({ tareas, progFiltro }) {
-  const [abiertos, setAbiertos] = useState({});
-  const programas = useMemo(() => [...new Set(tareas.map(t => t.programa))], [tareas]);
-
-  const programasVisibles = useMemo(() => {
-    return progFiltro === "Todos" ? programas : programas.filter(p => p === progFiltro);
-  }, [programas, progFiltro]);
-
-  return React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:12 } },
-    programasVisibles.map((prog, pIdx) => {
-      const tsProg = tareas.filter(t => t.programa === prog);
-      const avProg = avg(tsProg.map(t => t.avance));
-      const planes = [...new Set(tsProg.map(t => t.plan))];
-
-      return React.createElement("div", { key:prog, style:{ background:"#fff", borderRadius:12, border:"1px solid #E2E8F0", overflow:"hidden" } },
-        React.createElement("div", { style:{ display:"flex", alignItems:"center", gap:12, padding:"14px 16px", background:"#FAFAFA", borderBottom:"1px solid #E2E8F0" } },
-          React.createElement("div", { style:{ width:12, height:12, borderRadius:"50%", background:PROG_COLORS[pIdx % PROG_COLORS.length] } }),
-          React.createElement("div", { style:{ flex:1 } },
-            React.createElement("div", { style:{ fontSize:15, fontWeight:800, color:"#0F172A" } }, prog),
-            React.createElement("div", { style:{ fontSize:11, color:"#64748B" } }, tsProg.length, " iniciativas comerciales")),
-          React.createElement(CirculoAvance, { valor:avProg, size:44 })),
-        planes.map(plan => {
-          const tsPlan = tsProg.filter(t => t.plan === plan);
-          const avPlan = avg(tsPlan.map(t => t.avance));
-          const key = prog + "::" + plan;
-          const isOpen = !!abiertos[key];
-
-          return React.createElement("div", { key:plan, style:{ borderBottom:"1px solid #F1F5F9" } },
-            React.createElement("div", { onClick:() => setAbiertos(p => ({...p, [key]: !p[key]})), style:{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px 12px 28px", cursor:"pointer", background:isOpen?"#FFFBFB":"#fff" } },
-              React.createElement("div", { style:{ flex:1 } },
-                React.createElement("div", { style:{ fontSize:13, fontWeight:700, color:"#334155" } }, plan),
-                React.createElement("div", { style:{ fontSize:11, color:"#94A3B8" } }, tsPlan.length, " acciones estratégicas")),
-              React.createElement(CirculoAvance, { valor:avPlan, size:36 }),
-              React.createElement("span", { style:{ color:"#94A3B8", fontSize:12, marginLeft:4 } }, isOpen ? "▲" : "▼")),
-            isOpen && React.createElement("div", { style:{ background:"#FCFDFD", padding:"4px 0" } },
-              tsPlan.map(t => React.createElement("div", { key:t.id, style:{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px 10px 44px", borderTop:"1px solid #F8FAFC" } },
-                React.createElement("div", { style:{ flex:1 } },
-                  React.createElement("div", { style:{ fontSize:13, fontWeight:500, color:"#1E293B", marginBottom:4 } }, t.tarea),
-                  React.createElement("div", { style:{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" } },
-                    React.createElement(Badge, { label:t.estado, tipo:"estado" }),
-                    React.createElement(Badge, { label:t.prioridad, tipo:"prioridad" }),
-                    t.responsable && React.createElement("span", { style:{ fontSize:11, color:"#475569", background:"#E2E8F0", padding:"1px 6px", borderRadius:4 } }, t.responsable))),
-                React.createElement(CirculoAvance, { valor:t.avance, size:34 }))))
-          );
-        }));
-    }));
-}
-
-// ─── COMPONENTE RAÍZ PRINCIPAL ────────────────────────────────────────────────
-function App() {
-  const [tareas, setTareas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [vista, setVista] = useState("ejecutivo");
-  const [progFiltro, setProgFiltro] = useState("Todos");
-
-  useEffect(() => {
-    fetch(SHEET_CSV_URL)
-      .then(res => { if (!res.ok) throw new Error("No se pudo conectar con la base de datos."); return res.text(); })
-      .then(csvText => {
-        const lineas = parseCSV(csvText);
-        if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
-        
-        const encabezados = lineas[0].map(h => h.trim().toLowerCase());
-        const rawTareas = [];
-
-        for (let i = 1; i < lineas.length; i++) {
-          const fila = lineas[i];
-          if (fila.length < 3 || !fila[0]) continue; 
-
-          const t = {};
-          encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
-          
-          // Formateo de métricas numéricas fijando base segura
-          let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
-          if (avNum > 1) avNum = avNum / 100;
-
-          rawTareas.push({
-            id: i,
-            programa: t.programa || "Sin Programa",
-            plan: t.plan || "Sin Plan",
-            tarea: t.tarea || "Acción sin nombre",
-            responsable: t.responsable || "",
-            estado: t.estado || "Pendiente",
-            prioridad: t.prioridad || "Media",
-            avance: isNaN(avNum) ? 0 : avNum,
-            comentarios: t.comentarios || ""
-          });
+        // PARSER DE CSV RESISTENTE
+        function parseCSV(text) {
+            const lines = [];
+            let row = [""];
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                const next = text[i+1];
+                if (c === '"') {
+                    if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+                    else { inQuotes = !inQuotes; }
+                } else if (c === ',' && !inQuotes) {
+                    row.push("");
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') { i++; }
+                    lines.push(row);
+                    row = [""];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== "") lines.push(row);
+            return lines;
         }
-        setTareas(rawTareas);
-        setLoading(false);
-      })
-      .catch(err => { console.error(err); setError(err.message); setLoading(false); });
-  }, []);
 
-  // CORRECCIÓN SINTÁCTICA: Alineado exacto con el parámetro esperado por el componente hijo
-  const handleIrAPrograma = prog => { setProgFiltro(prog); setVista("detallado"); };
+        const avg = arr => arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
 
-  if (loading) return React.createElement("div", { id:"loading" }, React.createElement("div", { className:"spinner" }), React.createElement("span", null, "Sincronizando matriz comercial con Google Sheets..."));
-  if (error) return React.createElement("div", { style:{ padding:40, textAlign:"center", color:"#B91C1C", fontWeight:700 } }, "Error de conexión: ", error);
+        function obtenerSemaforo(valor) {
+            if (valor >= 1.0) return { color: "#3B82F6", texto: "Completa", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" };
+            if (valor >= 0.80) return { color: "#22C55E", texto: "Avanzado", bg: "bg-green-50", text: "text-green-700", border: "border-green-200" };
+            if (valor >= 0.50) return { color: "#EAB308", texto: "En marcha", bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" };
+            if (valor >= 0.10) return { color: "#F97316", texto: "Iniciado", bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200" };
+            return { color: "#EF4444", texto: "Sin inicio", bg: "bg-red-50", text: "text-red-700", border: "border-red-200" };
+        }
 
-  const programasUnicos = [...new Set(tareas.map(t => t.programa))];
+        // ─── PANTALLA DE LOGIN (RESTAURADA) ───────────────────────────────────
+        function Login({ onLogin }) {
+            const [pin, setPin] = useState("");
+            const [error, setError] = useState(false);
 
-  return React.createElement("div", { style:{ minHeight:"100vh", background:"#F1F5F9" } },
-    React.createElement("div", { style:{ background:"#fff", borderBottom:"1px solid #E2E8F0", position:"sticky", top:0, zIndex:100 } },
-      React.createElement("div", { style:{ maxWidth:960, margin:"0 auto", padding:"0 16px" } },
-        React.createElement("div", { style:{ height:4, background:`linear-gradient(90deg, ${COLOR_PRIMARY}, ${COLOR_ACCENT})`, margin:"0 -16px" } }),
-        React.createElement("div", { style:{ display:"flex", justifyDcontent:"space-between", alignItems:"center", padding:"12px 0" } },
-          React.createElement(LogoNextSiembra),
-          React.createElement("div", { style:{ textAlign:"right" } },
-            React.createElement("div", { style:{ fontSize:13, fontWeight:800, color:COLOR_PRIMARY } }, NEGOCIO_LABEL),
-            React.createElement("div", { style:{ fontSize:11, color:"#94A3B8", fontWeight:600 } }, TABLERO_NOMBRE))),
-        React.createElement("div", { style:{ display:"flex", gap:16, marginTop:8 } },
-          React.createElement("button", { onClick:() => setVista("ejecutivo"), style:{ padding:"10px 14px", background:"none", border:"none", fontSize:13, fontWeight:700, color:vista==="ejecutivo"?COLOR_PRIMARY:"#64748B", borderBottom:`3px solid ${vista==="ejecutivo"?COLOR_PRIMARY:"transparent"}`, cursor:"pointer" } }, "Vista Ejecutiva"),
-          React.createElement("button", { onClick:() => setVista("detallado"), style:{ padding:"10px 14px", background:"none", border:"none", fontSize:13, fontWeight:700, color:vista==="detallado"?COLOR_PRIMARY:"#64748B", borderBottom:`3px solid ${vista==="detallado"?COLOR_PRIMARY:"transparent"}`, cursor:"pointer" } }, "Matriz de Programas")))),
-    
-    React.createElement("div", { style:{ maxWidth:960, margin:"0 auto", padding:"20px 16px 60px" } },
-      vista === "ejecutivo" 
-        ? React.createElement(VistaEjecutiva, { tareas, onIrAPrograma: handleIrAPrograma })
-        : React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:14 } },
-            React.createElement("div", { style:{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center", marginBottom:4 } },
-              React.createElement("span", { style:{ fontSize:12, fontWeight:700, color:"#64748B" } }, "Filtrar por sección:"),
-              React.createElement("button", { onClick:() => setProgFiltro("Todos"), style:{ padding:"6px 12px", borderRadius:20, border:`1px solid ${progFiltro==="Todos"?COLOR_PRIMARY:"#E2E8F0"}`, background:progFiltro==="Todos"?"#FFF5F3":"#fff", color:progFiltro==="Todos"?COLOR_PRIMARY:"#475569", fontSize:12, fontWeight:600, cursor:"pointer" } }, "Todos"),
-              programasUnicos.map(p => React.createElement("button", { key:p, onClick:() => setProgFiltro(p), style:{ padding:"6px 12px", borderRadius:20, border:`1px solid ${progFiltro===p?COLOR_PRIMARY:"#E2E8F0"}`, background:progFiltro===p?"#FFF5F3":"#fff", color:progFiltro===p?COLOR_PRIMARY:"#475569", fontSize:12, fontWeight:600, cursor:"pointer" } }, p))),
-            React.createElement(VistaEstructura, { tareas, progFiltro }))
-    )
-  );
-}
+            const manejarSubmit = (e) => {
+                e.preventDefault();
+                if (pin === CONFIG.pinCorrecto) {
+                    onLogin();
+                } else {
+                    setError(true);
+                    setPin("");
+                }
+            };
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
-  </script>
+            return React.createElement("div", { class: "min-h-screen flex items-center justify-center bg-gray-900 px-4" },
+                React.createElement("div", { class: "bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8", style: { borderColor: CONFIG.primary } },
+                    React.createElement("div", { class: "text-center mb-8" },
+                        React.createElement("h2", { class: "text-3xl font-black tracking-tight", style: { color: CONFIG.primary } }, "NEXT SIEMBRA"),
+                        React.createElement("p", { class: "text-gray-500 text-sm mt-1 uppercase tracking-widest font-bold" }, "Tablero de Control PAC")),
+                    React.createElement("form", { onSubmit: manejarSubmit, class: "space-y-6" },
+                        React.createElement("div", null,
+                            React.createElement("label", { class: "block text-sm font-bold text-gray-700 mb-2" }, "Código de Acceso Consultor"),
+                            React.createElement("input", {
+                                type: "password",
+                                maxLength: 4,
+                                value: pin,
+                                onChange: (e) => { setError(false); setPin(e.target.value); },
+                                placeholder: "••••",
+                                class: `w-full text-center text-2xl tracking-widest p-3 border-2 rounded-xl focus:outline-none transition-all ${error ? "border-red-500 bg-red-50 animate-shake" : "border-gray-300 focus:border-green-600"}`
+                            })),
+                        error && React.createElement("p", { class: "text-red-600 text-sm font-semibold text-center" }, "Código incorrecto. Intente nuevamente."),
+                        React.createElement("button", { type: "submit", class: "w-full text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all transform active:scale-95 hover:opacity-90", style: { background: CONFIG.primary } }, "Ingresar al Tablero")
+                    )
+                )
+            );
+        }
+
+        // ─── INTERFAZ PRINCIPAL RESTAURADA ────────────────────────────────────
+        function App() {
+            const [autorizado, setAutorizado] = useState(false);
+            const [tareas, setTareas] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [tabActiva, setTabActiva] = useState("resumen");
+
+            // Filtros de navegación originales
+            const [progSel, setProgSel] = useState("Todos");
+            const [planSel, setPlanSel] = useState("Todos");
+
+            useEffect(() => {
+                if (!autorizado) return;
+                fetch(SHEET_CSV_URL)
+                    .then(res => res.text())
+                    .then(csvText => {
+                        const lineas = parseCSV(csvText);
+                        if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
+                        const headers = lineas[0].map(h => h.trim().toLowerCase());
+                        const raw = [];
+                        for (let i = 1; i < lineas.length; i++) {
+                            const f = lineas[i];
+                            if (f.length < 3 || !f[0]) continue;
+                            const t = {};
+                            headers.forEach((h, idx) => { t[h] = f[idx] ? f[idx].trim() : ""; });
+                            
+                            let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
+                            if (avNum > 1) avNum = avNum / 100;
+
+                            raw.push({
+                                id: i,
+                                programa: t.programa || "Sin Programa",
+                                plan: t.plan || "Sin Plan",
+                                tarea: t.tarea || "Sin Nombre",
+                                responsable: t.responsable || "No asignado",
+                                estado: t.estado || "Pendiente",
+                                prioridad: t.prioridad || "Media",
+                                avance: isNaN(avNum) ? 0 : avNum,
+                                comentarios: t.comentarios || ""
+                            });
+                        }
+                        setTareas(raw);
+                        setLoading(false);
+                    })
+                    .catch(err => { console.error(err); setLoading(false); });
+            }, [autorizado]);
+
+            // Listados dinámicos para filtros originales
+            const programasUnicos = useMemo(() => ["Todos", ...new Set(tareas.map(t => t.programa))], [tareas]);
+            const planesUnicos = useMemo(() => {
+                const filtradas = progSel === "Todos" ? tareas : tareas.filter(t => t.programa === progSel);
+                return ["Todos", ...new Set(filtradas.map(t => t.plan))];
+            }, [tareas, progSel]);
+
+            // Mapeo final de tareas filtradas
+            const tareasFiltradas = useMemo(() => {
+                return tareas.filter(t => {
+                    const cumplaProg = progSel === "Todos" || t.programa === progSel;
+                    const cumplaPlan = planSel === "Todos" || t.plan === planSel;
+                    return cumplaProg && cumplaPlan;
+                });
+            }, [tareas, progSel, planSel]);
+
+            if (!autorizado) {
+                return React.createElement(Login, { onLogin: () => setAutorizado(true) });
+            }
+
+            if (loading) {
+                return React.createElement("div", { class: "min-h-screen flex flex-col items-center justify-center bg-gray-50" },
+                    React.createElement("div", { class: "w-12 h-12 border-4 border-gray-200 rounded-full animate-spin mb-4", style: { borderTopColor: CONFIG.primary } }),
+                    React.createElement("p", { class: "text-gray-600 font-bold" }, "Sincronizando con Google Sheets...")
+                );
+            }
+
+            const avanceGlobal = avg(tareas.map(t => t.avance));
+
+            return React.createElement("div", { class: "min-h-screen flex flex-col bg-gray-50" },
+                // Header Original de Ariel
+                React.createElement("header", { class: "bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm" },
+                    React.createElement("div", { class: "max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4" },
+                        React.createElement("div", { class: "flex items-center gap-3" },
+                            React.createElement("div", { class: "w-10 h-10 rounded-xl flex items-center justify-center text-white text-xl font-black shadow-md", style: { background: CONFIG.primary } }, "NS"),
+                            React.createElement("div", null,
+                                React.createElement("h1", { class: "text-2xl font-black tracking-tight text-gray-900" }, "NEXT SIEMBRA"),
+                                React.createElement("p", { class: "text-xs font-bold text-gray-400 uppercase tracking-widest" }, "Tablero Estratégico PAC"))),
+                        React.createElement("div", { class: "flex items-center gap-4 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200" },
+                            React.createElement("div", { class: "text-right" },
+                                React.createElement("p", { class: "text-xs font-bold text-gray-400 uppercase" }, "Consultor Senior"),
+                                React.createElement("p", { class: "text-sm font-bold text-gray-800" }, "Ariel Tarnaruder")),
+                            React.createElement("div", { class: "w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold text-xs border border-gray-400" }, "AT")))),
+
+                // Menú de Navegación por Solapas Original (Resumen, Programas, Planes, Tareas)
+                React.createElement("div", { class: "bg-white border-b border-gray-200 shadow-inner" },
+                    React.createElement("div", { class: "max-w-7xl mx-auto px-4 flex space-x-1" },
+                        [
+                            { id: "resumen", label: "Resumen Ejecutivo", icon: "fa-chart-pie" },
+                            { id: "programas", label: "Programas", icon: "fa-layer-group" },
+                            { id: "planes", label: "Planes de Acción", icon: "fa-route" },
+                            { id: "tareas", label: "Hojas de Ruta (Tareas)", icon: "fa-list-check" }
+                        ].map(tab => React.createElement("button", {
+                            key: tab.id,
+                            onClick: () => setTabActiva(tab.id),
+                            class: `flex items-center gap-2 px-5 py-4 border-b-4 font-bold text-sm transition-all ${tabActiva === tab.id ? "text-green-700 border-green-700 bg-green-50/50" : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"}`
+                        }, React.createElement("i", { class: `fa-solid ${tab.icon}` }), tab.label)))),
+
+                // Contenedor Central de Contenido
+                React.createElement("main", { class: "flex-1 max-w-7xl w-full mx-auto px-4 py-8" },
+                    
+                    // SOLAPA 1: RESUMEN EJECUTIVO
+                    tabActiva === "resumen" && React.createElement("div", { class: "space-y-6 animate-fadeIn" },
+                        React.createElement("div", { class: "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6" },
+                            React.createElement("div", { class: "space-y-2 text-center md:text-left" },
+                                React.createElement("h3", { class: "text-xl font-bold text-gray-900" }, "Estado de Avance General del PAC"),
+                                React.createElement("p", { class: "text-sm text-gray-500" }, "Métrica consolidada en tiempo real desde la matriz de control operativa de Google Sheets.")),
+                            React.createElement("div", { class: "flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200" },
+                                React.createElement("span", { class: "text-3xl font-black text-green-700" }, Math.round(avanceGlobal * 100) + "%"),
+                                React.createElement("div", { class: "w-48 bg-gray-200 rounded-full h-4 overflow-hidden" },
+                                    React.createElement("div", { class: "bg-green-600 h-full rounded-full transition-all duration-500", style: { width: `${avanceGlobal * 100}%` } })))),
+                        
+                        React.createElement("div", { class: "grid grid-cols-1 md:grid-cols-3 gap-6" },
+                            [
+                                { title: "Tareas Pendientes / En curso", count: tareas.filter(t => t.estado !== "Cerrada" && t.estado !== "Bloqueada").length, icon: "fa-clock", color: "text-orange-600", bg: "bg-orange-50" },
+                                { title: "Acciones Completadas", count: tareas.filter(t => t.estado === "Cerrada").length, icon: "fa-circle-check", color: "text-green-600", bg: "bg-green-50" },
+                                { title: "Alertas / Bloqueadas", count: tareas.filter(t => t.estado === "Bloqueada").length, icon: "fa-circle-exclamation", color: "text-red-600", bg: "bg-red-50" }
+                            ].map((card, idx) => React.createElement("div", { key: idx, class: "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between" },
+                                React.createElement("div", null,
+                                    React.createElement("p", { class: "text-xs font-bold text-gray-400 uppercase tracking-wider mb-1" }, card.title),
+                                    React.createElement("p", { class: "text-3xl font-black text-gray-900" }, card.count)),
+                                React.createElement("div", { class: `w-12 h-12 rounded-xl flex items-center justify-center text-xl ${card.bg} ${card.color}` }, React.createElement("i", { class: `fa-solid ${card.icon}` })))))
+                    ),
+
+                    // SOLAPA 2: VISTA DE PROGRAMAS
+                    tabActiva === "programas" && React.createElement("div", { class: "space-y-6 animate-fadeIn" },
+                        React.createElement("div", { class: "grid grid-cols-1 gap-4" },
+                            [...new Set(tareas.map(t => t.programa))].map((prog, idx) => {
+                                const ts = tareas.filter(t => t.programa === prog);
+                                const av = avg(ts.map(t => t.avance));
+                                const sem = obtenerSemaforo(av);
+                                return React.createElement("div", { key: idx, class: "bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" },
+                                    React.createElement("div", null,
+                                        React.createElement("h4", { class: "text-base font-black text-gray-900" }, prog),
+                                        React.createElement("p", { class: "text-xs text-gray-400 mt-1 font-semibold" }, ts.length, " acciones integradas en este bloque")),
+                                    React.createElement("div", { class: "flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end" },
+                                        React.createElement("div", { class: "w-32 bg-gray-200 h-2 rounded-full overflow-hidden" },
+                                            React.createElement("div", { class: "h-full rounded-full", style: { width: `${av*100}%`, backgroundColor: sem.color } })),
+                                        React.createElement("span", { class: `text-xs font-bold px-3 py-1 rounded-full border ${sem.bg} ${sem.text} ${sem.border}` }, sem.texto, " (", Math.round(av*100), "%)")));
+                            }))
+                    ),
+
+                    // SOLAPA 3: VISTA DE PLANES DE ACCIÓN
+                    tabActiva === "planes" && React.createElement("div", { class: "space-y-6 animate-fadeIn" },
+                        React.createElement("div", { class: "grid grid-cols-1 gap-4" },
+                            [...new Set(tareas.map(t => t.plan))].map((plan, idx) => {
+                                const ts = tareas.filter(t => t.plan === plan);
+                                const av = avg(ts.map(t => t.avance));
+                                const sem = obtenerSemaforo(av);
+                                return React.createElement("div", { key: idx, class: "bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" },
+                                    React.createElement("div", null,
+                                        React.createElement("h4", { class: "text-sm font-black text-gray-800" }, plan),
+                                        React.createElement("p", { class: "text-xs text-gray-400 mt-0.5" }, ts[0]?.programa)),
+                                    React.createElement("div", { class: "flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end" },
+                                        React.createElement("span", { class: `text-xs font-bold px-3 py-1 rounded-full border ${sem.bg} ${sem.text} ${sem.border}` }, sem.texto, " (", Math.round(av*100), "%)")));
+                            }))
+                    ),
+
+                    // SOLAPA 4: HOJAS DE RUTA (TAREAS OPERATIVAS CON FILTROS ORIGINALES)
+                    tabActiva === "tareas" && React.createElement("div", { class: "space-y-6 animate-fadeIn" },
+                        // Barra de Filtros Cruzados Originales
+                        React.createElement("div", { class: "bg-white p-4 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-4" },
+                            React.createElement("div", null,
+                                React.createElement("label", { class: "block text-xs font-bold text-gray-400 uppercase mb-1" }, "Filtrar por Programa"),
+                                React.createElement("select", {
+                                    value: progSel,
+                                    onChange: (e) => { setProgSel(e.target.value); setPlanSel("Todos"); },
+                                    class: "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm font-medium focus:outline-none focus:border-green-600"
+                                }, programasUnicos.map(p => React.createElement("option", { key: p, value: p }, p)))),
+                            React.createElement("div", null,
+                                React.createElement("label", { class: "block text-xs font-bold text-gray-400 uppercase mb-1" }, "Filtrar por Plan de Acción"),
+                                React.createElement("select", {
+                                    value: planSel,
+                                    onChange: (e) => setPlanSel(e.target.value),
+                                    class: "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm font-medium focus:outline-none focus:border-green-600"
+                                }, planesUnicos.map(pl => React.createElement("option", { key: pl, value: pl }, pl))))),
+
+                        // Tabla de Tareas Operativas Dinámicas
+                        React.createElement("div", { class: "bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" },
+                            React.createElement("div", { class: "overflow-x-auto" },
+                                React.createElement("table", { class: "w-full text-left border-collapse" },
+                                    React.createElement("thead", { class: "bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-400 uppercase tracking-wider" },
+                                        React.createElement("tr", null,
+                                            React.createElement("th", { class: "p-4" }, "Tarea / Acción"),
+                                            React.createElement("th", { class: "p-4" }, "Responsable"),
+                                            React.createElement("th", { class: "p-4" }, "Estado"),
+                                            React.createElement("th", { class: "p-4 text-center" }, "Avance"))),
+                                    React.createElement("tbody", { class: "divide-y divide-gray-100 text-sm" },
+                                        tareasFiltradas.length === 0 ? React.createElement("tr", null, React.createElement("td", { colSpan: 4, class: "p-8 text-center text-gray-400 font-medium" }, "No se encontraron acciones comerciales cargadas con este filtro.")) :
+                                        tareasFiltradas.map(t => {
+                                            const sem = obtenerSemaforo(t.avance);
+                                            return React.createElement("tr", { key: t.id, class: "hover:bg-gray-50/50 transition-all" },
+                                                React.createElement("td", { class: "p-4" },
+                                                    React.createElement("p", { class: "font-bold text-gray-900" }, t.tarea),
+                                                    React.createElement("p", { class: "text-xs text-gray-400 mt-0.5 font-medium" }, t.plan)),
+                                                React.createElement("td", { class: "p-4 font-semibold text-gray-600" }, t.responsable),
+                                                React.createElement("td", { class: "p-4" },
+                                                    React.createElement("span", { class: `text-xs font-bold px-2.5 py-1 rounded-full border ${sem.bg} ${sem.text} ${sem.border}` }, t.estado)),
+                                                React.createElement("td", { class: "p-4 text-center font-bold text-gray-800" }, Math.round(t.avance * 100) + "%")
+                                            );
+                                        })
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+    </script>
 </body>
 </html>
