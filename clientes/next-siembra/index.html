@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tablero PAC - Next Siembra</title>
+  <title>Tablero de Generacion de Demanda</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:system-ui,sans-serif;background:#F1F5F9}
@@ -19,11 +19,14 @@
   <script>
     const {useState,useMemo,useEffect,useCallback,useRef} = React;
 
-// ─── CONFIGURACIONES DE IDENTIDAD Y NEGOCIO ──────────────────────────────────
-const COLOR_PRIMARY   = "#F05A28"; 
-const COLOR_SECONDARY = "#2D2D2D"; 
+// ─── CONFIGURACIONES DE IDENTIDAD Y ENLACE DE CONEXIÓN ───────────────────────
+const COLOR_PRIMARY   = "#F05A28"; // Naranja oficial NEXT
+const COLOR_SECONDARY = "#2D2D2D"; // Gris oscuro SIEMBRA
 const COLOR_ACCENT    = "#F5A623"; 
 const TABLERO_NOMBRE  = "Tablero de Generacion de Demanda";
+
+// URL de exportación CSV pública de tu Google Sheet Maestra
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
 
 const USUARIOS_INIT = [
   { id:"ariel",  nombre:"Ariel Tarnaruder",  rol:"director",  zona:null,         pin:"2502", email:"ariel@consultor.com"    },
@@ -40,41 +43,6 @@ const USUARIOS_INIT = [
 
 const VENDEDORES = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
 
-// ─── MATRIZ DE DATOS ESTÁTICA CON NOMBRES ORIGINALES PROTEGIDOS ──────────────
-const DEMO = [
-  // GRUPOS CREA
-  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Definir reunión pre Agroactiva (Fecha, participantes y checklist)", responsable:"adrian bimbi jerry", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-15", comentarios:"Definir tipo de evento y regalos corporativos." },
-  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Convocar y asegurar participación activa del segmento", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-06-20", comentarios:"Redactar convocatoria formal y coordinar canal de envío." },
-  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Implementar base unificada de productores CREA", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-05", comentarios:"Diseñar y estructurar base de contactos tácticos." },
-  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Definir propuesta de valor resumida e impacto económico", responsable:"adrian jerry", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-30", comentarios:"Documento sintético centrado en Matermacc, EA Vision y Bosch." },
-  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Estructurar carpetas técnicas y alternativas de disertación", responsable:"jerry bimbi", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Esquemas de retroalimentación post-reunión para capturar dolores." },
-
-  // REFERENTES
-  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto formal y validación con Lisandro Repetto", responsable:"adrian", estado:"En curso", prioridad:"Media", avance:0.25, fechaVencimiento:"2026-07-01", comentarios:"Vincular ensayos e informes técnicos formales." },
-  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto estratégico con Néstor D.", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Establecer red de recomendadores científicos." },
-  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Acuerdo institucional con Colegio de Agrónomos", responsable:"adrian bimbi", estado:"En curso", prioridad:"Media", avance:0.10, fechaVencimiento:"2026-07-20", comentarios:"Organizar jornadas de actualización con aval técnico." },
-  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Monitorear y proveer datos de ahorro a economistas de la red", responsable:"jimena jerry", estado:"Pendiente", prioridad:"Baja", avance:0.00, fechaVencimiento:"2026-08-01", comentarios:"Fomentar publicaciones y análisis de rentabilidad financiera." },
-
-  // VISITAS A CAMPO
-  { programa:"VISITAS A CAMPO", plan:"Cronograma", tarea:"Determinar localidades clave y campos anfitriones (Campaña Fina)", responsable:"adrian vendedor", estado:"En curso", prioridad:"Alta", avance:0.35, fechaVencimiento:"2026-06-30", comentarios:"Circuito coordinado para demostraciones vecinales dinámicas." },
-  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Logística y calibración de unidad Matermacc con IPS Bosch", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-15", comentarios:"Recorrido planificado por las cuencas productivas núcleo." },
-  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Planificar protocolos de vuelo y seguridad para Drones EA Vision", responsable:"bimbi", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Exhibición empírica de pulverización y mapeo en condiciones reales." },
-
-  // OPERACION GD
-  { programa:"OPERACION GD", plan:"Acciones GD en fabricas", tarea:"Diseñar el programa institucional 'Fábrica Abierta'", responsable:"adrian jerry", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-25", comentarios:"Visitas de comitivas corporativas de concesionarios y grandes clientes." },
-  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Capacitación comercial en punto de venta para salones comerciales", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.60, fechaVencimiento:"2026-06-25", comentarios:"Transferir herramientas argumentativas de integración tecnológica." },
-  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Proveer tótems interactivos POP y material de exhibición obligatorio", responsable:"jimena", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Instalación física en la red de distribución." },
-  { programa:"OPERACION GD", plan:"Acciones GD en productores", tarea:"Desarrollar mesas técnicas cerradas de asesoramiento personalizado", responsable:"vendedor x4", estado:"En curso", prioridad:"Alta", avance:0.20, fechaVencimiento:"Constante", comentarios:"Espacios de cercanía para analizar retorno de inversión." },
-  { programa:"OPERACION GD", plan:"Acciones GD con referentes", tarea:"Organizar mesas redondas regionales de intercambio técnico", responsable:"adrian demanda", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-05", comentarios:"Debatir resultados de ensayos recolectados por Next Siembra." },
-
-  // IMPLEMENTACION GD
-  { programa:"IMPLEMENTACION GD", plan:"Cronograma de Acciones por vendedor", tarea:"Estructurar KPIs de control y efectividad de visitas a campo", responsable:"adrian lider", estado:"En curso", prioridad:"Alta", avance:0.70, fechaVencimiento:"2026-06-10", comentarios:"Alineación operativa semanal de la fuerza de venta." },
-  { programa:"IMPLEMENTACION GD", plan:"Sistema de seguimiento", tarea:"Configurar embudo y reporte ágil para testeo a campo", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-20", comentarios:"Mapear tasa de conversión de asistentes a compradores definitivos." },
-  { programa:"IMPLEMENTACION GD", plan:"Acciones con Fabricas", tarea:"Planificar co-mercadotecnia y propuestas de valor conjuntas", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-30", comentarios:"" },
-  { programa:"IMPLEMENTACION GD", plan:"Acciones con Concesionarios", tarea:"Esquema de co-financiación de charlas técnicas locales", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-10", comentarios:"Presupuesto compartido con distribuidores zonales." },
-  { programa:"IMPLEMENTACION GD", plan:"Acciones con Productores", tarea:"Facilitar unidades de prueba controladas a productores seleccionados", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-20", comentarios:"Acelerar decisiones de compra del usuario final." }
-];
-
 const ESTADO_CFG = {
     "Pendiente": { bg: "#FFF7ED", text: "#C2410C", dot: "#F97316" },
     "En curso": { bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
@@ -88,14 +56,14 @@ const PRIO_CFG = {
 };
 const PROG_COLORS = [COLOR_PRIMARY, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899"];
 
-// ─── CONTROLADORES LOGICOS Y HELPERS COMPLETOS ──────────────────────────────
+// ─── UTILS Y CONTROLES LÓGICOS DE SEGURIDAD ──────────────────────────────────
 const pct = v => Math.round(v * 100);
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
 
 function puedeEditar(usuario, tarea) {
   if (!usuario) return false;
-  if (usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
+  if (usuario.role === "director" || usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
   if (!tarea?.responsable) return false;
   return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
 }
@@ -114,32 +82,26 @@ function vendedorDefault() {
   };
 }
 
-function initTareas(arr) {
-  return arr.map((t, i) => {
-    const base = { ...t, id: i, rowIndex: i + 2, ultimaActualizacion: null };
-    if (esRZNColectivo(t)) base.zonas = vendedorDefault();
-    return base;
-  });
+function parseCSV(text) {
+  const lines = []; let row = [""]; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]; const next = text[i+1];
+    if (c === '"') { if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; } else { inQuotes = !inQuotes; } }
+    else if (c === ',' && !inQuotes) { row.push(""); }
+    else if ((c === '\r' || c === '\n') && !inQuotes) { if (c === '\r' && next === '\n') { i++; } lines.push(row); row = [""]; }
+    else { row[row.length - 1] += c; }
+  }
+  if (row.length > 1 || row[0] !== "") lines.push(row); return lines;
 }
 
-function colorAvance(v) {
-  if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" };
-  if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" };
-  if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" };
-  if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" };
-  return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
-}
-
-// ─── LOGOTIPO CORPORATIVO CORREGIDO (next-siembra_2.png) ─────────────────────
+// ─── LOGOTIPO CORPORATIVO REDIBUJADO EN SVG PURO ─────────────────────────────
 function LogoNextSiembra({ height = 40 }) {
-  return React.createElement("img", { 
-    src: "next-siembra_2.png", 
-    alt: "Next Siembra", 
-    style: { height: height, width: "auto", display: "block" } 
-  });
+  return React.createElement("svg", { height: height, viewBox: "0 0 200 54", fill: "none", style: { display: "block" } },
+    React.createElement("text", { x: "0", y: "38", fontFamily: "Arial Black,sans-serif", fontWeight: "900", fontSize: "36", fill: COLOR_PRIMARY, letterSpacing: "-1" }, "NEXT"),
+    React.createElement("text", { x: "2", y: "51", fontFamily: "Arial,sans-serif", fontWeight: "700", fontSize: "12", fill: "#2D2D2D", letterSpacing: "4" }, "SIEMBRA"));
 }
 
-// ─── COMPONENTES GRÁFICOS INTERNOS Y BADGES ──────────────────────────────────
+// ─── COMPONENTS VISUALES SECUNDARIOS ─────────────────────────────────────────
 function LeyendaSemaforo() {
   const items = [
     {color:"#EF4444",label:"Sin inicio",rango:"0-9%"},
@@ -158,7 +120,7 @@ function LeyendaSemaforo() {
 function BarraAvance({ valor, height = 8 }) {
     const { bar } = colorAvance(valor);
     return (React.createElement("div", { style: { background: "#E2E8F0", borderRadius: 99, height, overflow: "hidden", width: "100%" } },
-        React.createElement("div", { style: { width: `${pct(valor)}%`, background: bar, height: "100%", borderRadius: 99, transition: "width .4s" } })));
+        React.createElement("div", { style: { width: `${pct(valor)}%`, background: bar, height: "100%", borderRadius: 99 } })));
 }
 
 function PctBadge({ valor, size = 44 }) {
@@ -182,13 +144,11 @@ function Card({ children, onClick, accent, style = {} }) {
     return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children));
 }
 
-// ─── COMPONENTE PANTALLA DE LOGIN CON PARÁMETROS ACCESIBLES CORREGIDOS ──────
+// ─── INTERFAZ DE LOGIN LIMPIA SIN ARRASTRE DE ERRORES ────────────────────────
 function PantallaLogin({ onLogin, usuarios }) {
-    const [pin, setPin] = useState("");
-    const [err, setErr] = useState("");
+    const [pin, setPin] = useState(""); const [err, setErr] = useState("");
     const handleKey = d => {
-        if (pin.length >= 4) return;
-        const n = pin + d; setPin(n); setErr("");
+        if (pin.length >= 4) return; const n = pin + d; setPin(n); setErr("");
         if (n.length === 4) {
             const u = usuarios.find(u => u.pin === n);
             if (u) setTimeout(() => onLogin(u), 150);
@@ -202,7 +162,7 @@ function PantallaLogin({ onLogin, usuarios }) {
         React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
             React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_SECONDARY})`, borderRadius: 99, marginBottom: 20 } }),
             React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN")),
             React.createElement("div", { style: { display: "flex", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
                 [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
             err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
@@ -214,8 +174,7 @@ function PantallaLogin({ onLogin, usuarios }) {
 }
 
 function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
-    const [activa, setActiva] = useState(null);
-    const z = zonas || vendedorDefault();
+    const [activa, setActiva] = useState(null); const z = zonas || vendedorDefault();
     return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
         Object.keys(z).map(nombre => {
             const zd = z[nombre]; const { bar, bg, text } = colorAvance(zd.avance);
@@ -232,8 +191,7 @@ function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
 }
 
 function Modal({ tarea, onSave, onClose, usuario }) {
-  const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || vendedorDefault() });
-  const esVend = esRZNColectivo(f);
+  const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || vendedorDefault() }); const esVend = esRZNColectivo(f);
   const avanceEfectivo = esVend ? avg(Object.values(f.zonas).map(z=>z.avance)) : f.avance;
   const { bar, bg, text, label } = colorAvance(avanceEfectivo);
   return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
@@ -267,7 +225,7 @@ function Modal({ tarea, onSave, onClose, usuario }) {
         React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: COLOR_PRIMARY, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
 }
 
-// ─── VISTAS OPERATIVAS DEL DASHBOARD ─────────────────────────────────────────
+// ─── RENDERIZADOS OPERATIVOS DEL DASHBOARD INTERNO ───────────────────────────
 function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance)); const { bar, label } = colorAvance(totalAv);
@@ -298,18 +256,15 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
       })));
 }
 
-function VistaProgramas({ tareas, onEditar, progInicial }) {
-    const [abiertoP, setAbiertoP] = useState(() => progInicial ? { [progInicial]: true } : {});
-    const [abiertoL, setAbiertoL] = useState({});
+function VistaProgramas({ tareas, abiertoP, abiertoL, onToggleP, onToggleL, onEditar }) {
     const programas = useMemo(() => [...new Set(tareas.map(t => t.programa))], [tareas]);
-    useEffect(() => { if (progInicial) setAbiertoP(p => ({ ...p, [progInicial]: true })); }, [progInicial]);
     return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
         React.createElement(LeyendaSemaforo),
         programas.map((prog, pi) => {
             const tsProg = tareas.filter(t => t.programa === prog); const avProg = avg(tsProg.map(t => t.avance));
             const planes = [...new Set(tsProg.map(t => t.plan))]; const isOpen = !!abiertoP[prog];
             return React.createElement("div", { key: prog, style: { background: "#fff", borderRadius: 14, border: "1px solid #E2E8F0", overflow: "hidden" } },
-                React.createElement("div", { onClick: () => setAbiertoP(p => ({ ...p, [prog]: !p[prog] })), style: { display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", cursor: "pointer", background: isOpen ? "#FFF5F3" : "#fff" } },
+                React.createElement("div", { onClick: () => onToggleP(prog), style: { display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", cursor: "pointer", background: isOpen ? "#FFF5F3" : "#fff" } },
                     React.createElement("div", { style: { width: 10, height: 10, borderRadius: "50%", background: PROG_COLORS[pi % PROG_COLORS.length], flexShrink: 0 } }),
                     React.createElement("div", { style: { flex: 1, minWidth: 0, paddingRight: "12px" } },
                         React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: "#0F172A" } }, prog),
@@ -320,13 +275,11 @@ function VistaProgramas({ tareas, onEditar, progInicial }) {
                     const tsPlan = tsProg.filter(t => t.plan === plan); const avPlan = avg(tsPlan.map(t => t.avance));
                     const isPlanOpen = !!abiertoL[prog + "::" + plan];
                     return React.createElement("div", { key: plan, style: { borderTop: "1px solid #F1F5F9" } },
-                        React.createElement("div", { onClick: () => setAbiertoL(p => ({ ...p, [prog + "::" + plan]: !p[prog + "::" + plan] })), style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 20px 12px 34px", cursor: "pointer", background: isPlanOpen ? "#FAFAFA" : "#fff" } },
+                        React.createElement("div", { onClick: () => onToggleL(prog + "::" + plan), style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 20px 12px 34px", cursor: "pointer", background: isPlanOpen ? "#FAFAFA" : "#fff" } },
                             React.createElement("div", { style: { flex: 1, minWidth: 0, paddingRight: "12px" } },
                                 React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#334155" } }, plan)),
                             React.createElement(PctBadge, { valor: avPlan, size: 34 }),
                             React.createElement("span", { style: { color: "#CBD5E1", fontSize: 12, marginLeft: 8 } }, isPlanOpen ? "▼" : "▶")),
-                        
-                        // CORRECCIÓN DEFECTO CONSOLA: Se vinculó onEditar apuntando directamente al prop raíz de ejecución
                         isPlanOpen && tsPlan.map(t => React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 20px 12px 48px", borderTop: "1px solid #F8FAFC", cursor: "pointer", background: "#fff" } },
                             React.createElement("div", { style: { flex: 1, minWidth: 0, paddingRight: "12px" } },
                                 React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: "#0F172A", marginBottom: 5 } }, t.tarea),
@@ -365,22 +318,66 @@ function VistaTareas({ tareas, onEditar }) {
                     React.createElement(PctBadge, { valor: t.avance, size: 38 }))))));
 }
 
-// ─── CONTROLADOR NÚCLEO CENTRAL (CORE GENERAL) ───────────────────────────────
+// ─── CONTROLADOR CORE GENERAL NUCLEO DINÁMICO ────────────────────────────────
 function App() {
     const [usuario, setUsuario] = useState(undefined);
-    const [tareas, setTareas] = useState(() => initTareas(DEMO));
+    const [tareas, setTareas] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [vista, setVista] = useState("ejecutivo");
-    const [progInicial, setProgInicial] = useState(null);
     const [modal, setModal] = useState(null);
     const [toast, setToast] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
 
+    const [abiertoP, setAbiertoP] = useState({});
+    const [abiertoL, setAbiertoL] = useState({});
+
     const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
     const handleLogout = () => { setUsuario(undefined); setShowUserMenu(false); };
 
-    if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: u => setUsuario(u), usuarios: USUARIOS_INIT });
+    // ALIMENTACIÓN COMPLETA DESDE TU GOOGLE SHEETS EN TIEMPO REAL
+    useEffect(() => {
+        if (usuario === undefined) return;
+        fetch(SHEET_CSV_URL)
+            .then(res => res.text())
+            .then(csvText => {
+                const lineas = parseCSV(csvText);
+                if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
+                
+                // Mapear encabezados dinámicamente según tu Google Sheet real
+                const encabezados = lineas[0].map(h => h.trim().toLowerCase());
+                const rawTareas = [];
 
-    const totalAv = avg(tareas.map(t => t.avance));
+                for (let i = 1; i < lineas.length; i++) {
+                    const fila = lineas[i];
+                    if (fila.length < 3 || !fila[0]) continue;
+
+                    const t = {};
+                    encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
+                    
+                    let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
+                    if (avNum > 1) avNum = avNum / 100;
+
+                    rawTareas.push({
+                        id: i,
+                        programa: t.programa || "Sin Programa",
+                        plan: t.plan || "Sin Plan",
+                        tarea: t.tarea || "Acción sin nombre",
+                        responsable: t.responsable || "No asignado",
+                        estado: t.estado || "Pendiente",
+                        prioridad: t.prioridad || "Media",
+                        avance: isNaN(avNum) ? 0 : avNum,
+                        comentarios: t.comentarios || ""
+                    });
+                }
+                setTareas(initTareas(rawTareas));
+                setLoading(false);
+            })
+            .catch(err => { console.error(err); setLoading(false); });
+    }, [usuario]);
+
+    if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: u => setUsuario(u), usuarios: USUARIOS_INIT });
+    if (loading) return React.createElement("div", { id:"loading" }, React.createElement("div", { className:"spinner" }), React.createElement("span", null, "Sincronizando con Google Sheets Maestra..."));
+
     const TABS = [{ id: "ejecutivo", label: "Resumen" }, { id: "programas", label: "Programas" }, { id: "planes", label: "Planes" }, { id: "tareas", label: "Tareas" }];
 
     return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
@@ -401,11 +398,19 @@ function App() {
                 React.createElement("div", { style: { display: "flex", gap: 0, marginTop: 6 } },
                     TABS.map(t => React.createElement("button", { key: t.id, onClick: () => setVista(t.id), style: { padding: "10px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === t.id ? COLOR_PRIMARY : "#64748B", borderBottom: `3px solid ${vista === t.id ? COLOR_PRIMARY : "transparent"}`, marginBottom: -1 } }, t.label))))),
         React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "20px 16px" } },
-            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas, onEditar: handleEditar, onIrAPrograma: id => { setProgInicial(id); setVista("programas"); } }),
-            vista === "programas" && React.createElement(VistaProgramas, { tareas, onEditar: handleEditar, progInicial }),
+            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas, onEditar: handleEditar, onIrAPrograma: id => { setAbiertoP(p => ({ ...p, [id]: true })); setVista("programas"); } }),
+            vista === "programas" && React.createElement(VistaProgramas, { tareas, abiertoP, abiertoL, onToggleP: id => setAbiertoP(p => ({ ...p, [id]: !p[id] })), onToggleL: id => setAbiertoL(p => ({ ...p, [id]: !p[id] })), onEditar: handleEditar }),
             vista === "planes" && React.createElement(VistaPlanesAll, { tareas, onEditar: handleEditar }),
             vista === "tareas" && React.createElement(VistaTareas, { tareas, onEditar: handleEditar }))
     );
+}
+
+function colorAvance(v) {
+  if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" };
+  if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" };
+  if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" };
+  if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" };
+  return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
