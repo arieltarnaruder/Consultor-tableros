@@ -23,43 +23,49 @@
 const COLOR_PRIMARY   = "#F05A28"; 
 const COLOR_SECONDARY = "#2D2D2D"; 
 const COLOR_ACCENT    = "#F5A623"; 
-const NEGOCIO_LABEL   = "Siembra";
-const TABLERO_NOMBRE  = "Tablero GD - Generacion de Demanda";
-
-const VENDEDORES = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
+const TABLERO_NOMBRE  = "Tablero de Generacion de Demanda";
 
 const USUARIOS_INIT = [
-  { id:"ariel",  nombre:"Ariel Tarnaruder",  rol:"director",  zona:null,         pin:"2502", email:"ariel@consultor.com",    esAdmin:true  },
-  { id:"maxi",   nombre:"Maxi Donolo",       rol:"director",  zona:null,         pin:"1111", email:"maxi@nextsiembra.com",   esAdmin:true  },
-  { id:"adrian", nombre:"Adrián Bonfiglio",  rol:"lider",     zona:null,         pin:"2222", email:"adrian@nextsiembra.com", esAdmin:false },
-  { id:"v1",     nombre:"Vendedor 1",        rol:"vendedor",  zona:"Vendedor 1", pin:"1001", email:"v1@nextsiembra.com",     esAdmin:false },
-  { id:"v2",     nombre:"Vendedor 2",        rol:"vendedor",  zona:"Vendedor 2", pin:"1002", email:"v2@nextsiembra.com",     esAdmin:false },
-  { id:"v3",     nombre:"Vendedor 3",        rol:"vendedor",  zona:"Vendedor 3", pin:"1003", email:"v3@nextsiembra.com",     esAdmin:false },
-  { id:"v4",     nombre:"Vendedor 4",        rol:"vendedor",  zona:"Vendedor 4", pin:"1004", email:"v4@nextsiembra.com",     esAdmin:false },
-  { id:"jimena", nombre:"Jimena",            rol:"marketing", zona:null,         pin:"2001", email:"jimena@nextsiembra.com", esAdmin:false },
-  { id:"bimbi",  nombre:"Bimbi Agüero",      rol:"demanda",   zona:null,         pin:"2002", email:"bimbi@nextsiembra.com",  esAdmin:false },
-  { id:"jerry",  nombre:"Jerry",             rol:"ops",       zona:null,         pin:"2003", email:"jerry@nextsiembra.com",  esAdmin:false }
+  { id:"ariel",  nombre:"Ariel Tarnaruder",  rol:"director",  zona:null,         pin:"2502", email:"ariel@consultor.com"    },
+  { id:"maxi",   nombre:"Maxi Donolo",       rol:"director",  zona:null,         pin:"1111", email:"maxi@nextsiembra.com"   },
+  { id:"adrian", nombre:"Adrián Bonfiglio",  rol:"lider",     zona:null,         pin:"2222", email:"adrian@nextsiembra.com" },
+  { id:"v1",     nombre:"Vendedor 1",        rol:"vendedor",  zona:"Vendedor 1", pin:"1001", email:"v1@nextsiembra.com"     },
+  { id:"v2",     nombre:"Vendedor 2",        rol:"vendedor",  zona:"Vendedor 2", pin:"1002", email:"v2@nextsiembra.com"     },
+  { id:"v3",     nombre:"Vendedor 3",        rol:"vendedor",  zona:"Vendedor 3", pin:"1003", email:"v3@nextsiembra.com"     },
+  { id:"v4",     nombre:"Vendedor 4",        rol:"vendedor",  zona:"Vendedor 4", pin:"1004", email:"v4@nextsiembra.com"     },
+  { id:"jimena", nombre:"Jimena",            rol:"marketing", zona:null,         pin:"2001", email:"jimena@nextsiembra.com" },
+  { id:"bimbi",  nombre:"Bimbi Agüero",      rol:"demanda",   zona:null,         pin:"2002", email:"bimbi@nextsiembra.com"  },
+  { id:"jerry",  nombre:"Jerry",             rol:"ops",       zona:null,         pin:"2003", email:"jerry@nextsiembra.com"  }
 ];
 
-// ─── TAREAS EXTRACTADAS DEL PLAN MAESTRO ──────────────────────────────────────
+// ─── MATRIZ DE DATOS ESTÁTICA SIN ALTERAR TÍTULOS ────────────────────────────
 const DEMO = [
+  // GRUPOS CREA
   { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Definir reunión pre Agroactiva (Fecha, participantes y checklist)", responsable:"adrian bimbi jerry", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-15", comentarios:"Definir tipo de evento y regalos corporativos." },
   { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Convocar y asegurar participación activa del segmento", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-06-20", comentarios:"Redactar convocatoria formal y coordinar canal de envío." },
   { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Implementar base unificada de productores CREA", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-05", comentarios:"Diseñar y estructurar base de contactos tácticos." },
   { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Definir propuesta de valor resumida e impacto económico", responsable:"adrian jerry", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-30", comentarios:"Documento sintético centrado en Matermacc, EA Vision y Bosch." },
   { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Estructurar carpetas técnicas y alternativas de disertación", responsable:"jerry bimbi", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Esquemas de retroalimentación post-reunión para capturar dolores." },
+
+  // REFERENTES
   { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto formal y validación con Lisandro Repetto", responsable:"adrian", estado:"En curso", prioridad:"Media", avance:0.25, fechaVencimiento:"2026-07-01", comentarios:"Vincular ensayos e informes técnicos formales." },
   { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto estratégico con Néstor D.", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Establecer red de recomendadores científicos." },
   { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Acuerdo institucional con Colegio de Agrónomos", responsable:"adrian bimbi", estado:"En curso", prioridad:"Media", avance:0.10, fechaVencimiento:"2026-07-20", comentarios:"Organizar jornadas de actualización con aval técnico." },
   { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Monitorear y proveer datos de ahorro a economistas de la red", responsable:"jimena jerry", estado:"Pendiente", prioridad:"Baja", avance:0.00, fechaVencimiento:"2026-08-01", comentarios:"Fomentar publicaciones y análisis de rentabilidad financiera." },
+
+  // VISITAS A CAMPO
   { programa:"VISITAS A CAMPO", plan:"Cronograma", tarea:"Determinar localidades clave y campos anfitriones (Campaña Fina)", responsable:"adrian vendedor", estado:"En curso", prioridad:"Alta", avance:0.35, fechaVencimiento:"2026-06-30", comentarios:"Circuito coordinado para demostraciones vecinales dinámicas." },
   { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Logística y calibración de unidad Matermacc con IPS Bosch", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-15", comentarios:"Recorrido planificado por las cuencas productivas núcleo." },
   { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Planificar protocolos de vuelo y seguridad para Drones EA Vision", responsable:"bimbi", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Exhibición empírica de pulverización y mapeo en condiciones reales." },
+
+  // OPERACION GD
   { programa:"OPERACION GD", plan:"Acciones GD en fabricas", tarea:"Diseñar el programa institucional 'Fábrica Abierta'", responsable:"adrian jerry", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-25", comentarios:"Visitas de comitivas corporativas de concesionarios y grandes clientes." },
   { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Capacitación comercial en punto de venta para salones comerciales", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.60, fechaVencimiento:"2026-06-25", comentarios:"Transferir herramientas argumentativas de integración tecnológica." },
   { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Proveer tótems interactivos POP y material de exhibición obligatorio", responsable:"jimena", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Instalación física en la red de distribución." },
   { programa:"OPERACION GD", plan:"Acciones GD en productores", tarea:"Desarrollar mesas técnicas cerradas de asesoramiento personalizado", responsable:"vendedor x4", estado:"En curso", prioridad:"Alta", avance:0.20, fechaVencimiento:"Constante", comentarios:"Espacios de cercanía para analizar retorno de inversión." },
-  { programa:"OPERACION GD", plan:"Acciones GD con referentes", tarea:"Organizar mesas redondas regionales de intercambio técnico", responsable:"adrian demanda", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-05", comentarios:"Debatír resultados de ensayos recolectados por Next Siembra." },
+  { programa:"OPERACION GD", plan:"Acciones GD con referentes", tarea:"Organizar mesas redondas regionales de intercambio técnico", responsable:"adrian demanda", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-05", comentarios:"Debatir resultados de ensayos recolectados por Next Siembra." },
+
+  // IMPLEMENTACION GD
   { programa:"IMPLEMENTACION GD", plan:"Cronograma de Acciones por vendedor", tarea:"Estructurar KPIs de control y efectividad de visitas a campo", responsable:"adrian lider", estado:"En curso", prioridad:"Alta", avance:0.70, fechaVencimiento:"2026-06-10", comentarios:"Alineación operativa semanal de la fuerza de venta." },
   { programa:"IMPLEMENTACION GD", plan:"Sistema de seguimiento", tarea:"Configurar embudo y reporte ágil para testeo a campo", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-20", comentarios:"Mapear tasa de conversión de asistentes a compradores definitivos." },
   { programa:"IMPLEMENTACION GD", plan:"Acciones con Fabricas", tarea:"Planificar co-mercadotecnia y propuestas de valor conjuntas", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-30", comentarios:"" },
@@ -67,7 +73,6 @@ const DEMO = [
   { programa:"IMPLEMENTACION GD", plan:"Acciones con Productores", tarea:"Facilitar unidades de prueba controladas a productores seleccionados", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-20", comentarios:"Acelerar decisiones de compra del usuario final." }
 ];
 
-// ─── CONFIGURACIONES DE CONTROL VISUAL ───────────────────────────────────────
 const ESTADO_CFG = {
     "Pendiente": { bg: "#FFF7ED", text: "#C2410C", dot: "#F97316" },
     "En curso": { bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
@@ -81,7 +86,11 @@ const PRIO_CFG = {
 };
 const PROG_COLORS = [COLOR_PRIMARY, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899"];
 
-// ─── LÓGICA DE PROCESAMIENTO INICIAL ─────────────────────────────────────────
+// ─── UTILS Y FUNCIONES DE CONTROL LOGICO SEGURAS ─────────────────────────────
+const pct = v => Math.round(v * 100);
+const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
+
 function puedeEditar(usuario, tarea) {
   if (!usuario) return false;
   if (usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
@@ -95,7 +104,12 @@ function esRZNColectivo(tarea) {
 }
 
 function vendedorDefault() {
-  return VENDEDORES.reduce((acc, z) => ({ ...acc, [z]: { avance: 0, estado: "Pendiente", comentario: "" } }), {});
+  return {
+    "Vendedor 1": { avance: 0, estado: "Pendiente", comentario: "" },
+    "Vendedor 2": { avance: 0, estado: "Pendiente", comentario: "" },
+    "Vendedor 3": { avance: 0, estado: "Pendiente", comentario: "" },
+    "Vendedor 4": { avance: 0, estado: "Pendiente", comentario: "" }
+  };
 }
 
 function initTareas(arr) {
@@ -114,7 +128,7 @@ function colorAvance(v) {
   return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
 }
 
-// ─── RENDERS E INTERFACES COMPARTIDAS ────────────────────────────────────────
+// ─── RENDERS VISUALES COMPARTIDOS ────────────────────────────────────────────
 function LogoNextSiembra({ height = 40 }) {
   return React.createElement("img", { 
     src: "next-siembra.png", 
@@ -165,7 +179,7 @@ function Card({ children, onClick, accent, style = {} }) {
     return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children));
 }
 
-// ─── COMPONENTE LOGIN ────────────────────────────────────────────────────────
+// ─── PANTALLA LOGIN COMPATIBLE DE PUNTA A PUNTA ──────────────────────────────
 function PantallaLogin({ onLogin, usuarios }) {
     const [pin, setPin] = useState("");
     const [err, setErr] = useState("");
@@ -181,12 +195,11 @@ function PantallaLogin({ onLogin, usuarios }) {
     return (React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
         React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
             React.createElement(LogoNextSiembra, { height: 48 }),
-            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", marginTop: 8 } }, "Plan de Acción Comercial")),
+            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", marginTop: 8 } }, TABLERO_NOMBRE)),
         React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
-            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`, borderRadius: 99, marginBottom: 20 } }),
+            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_SECONDARY})`, borderRadius: 99, marginBottom: 20 } }),
             React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN Consultor"),
-                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8" } }, "Código táctico de 4 dígitos")),
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
             React.createElement("div", { style: { display: "flex", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
                 [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
             err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
@@ -197,7 +210,6 @@ function PantallaLogin({ onLogin, usuarios }) {
                 React.createElement("button", { onClick: () => onLogin(null), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 11, color: "#64748B", cursor: "pointer" } }, "Lectura")))));
 }
 
-// ─── GRILLA DE SEGUIMIENTO EN MODAL ──────────────────────────────────────────
 function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
     const [activa, setActiva] = useState(null);
     const z = zonas || vendedorDefault();
@@ -252,7 +264,6 @@ function Modal({ tarea, onSave, onClose, usuario }) {
         React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: COLOR_PRIMARY, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
 }
 
-// ─── VISTAS DE PANELES OPERATIVOS ────────────────────────────────────────────
 function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance)); const { bar, label } = colorAvance(totalAv);
@@ -334,33 +345,7 @@ function VistaPlanesAll({ tareas, onEditar }) {
         }));
 }
 
-function VistaEquipos({ tareas, onEditar }) {
-    const respMap = useMemo(() => { const m = {}; tareas.forEach(t => { if (!t.responsable) return; if (!m[t.responsable]) m[t.responsable] = []; m[t.responsable].push(t); }); return m; }, [tareas]);
-    return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
-        Object.keys(respMap).map(resp => {
-            const ts = respMap[resp]; const av = avg(ts.map(t => t.avance));
-            return React.createElement(Card, { key: resp, accent: COLOR_PRIMARY },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: 13 } },
-                    React.createElement("span", null, resp), React.createElement("span", null, pct(av), "%")),
-                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 4 } }, ts.length, " iniciativas bajo órbita"));
-        }));
-}
-
-function VistaTareas({ tareas, onEditar }) {
-    const [q, setQ] = useState("");
-    const filtradas = tareas.filter(t => t.tarea.toLowerCase().includes(q.toLowerCase()) || t.plan.toLowerCase().includes(q.toLowerCase()));
-    return React.createElement("div", null,
-        React.createElement("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "🔍 Buscar acción de campo...", style: { width: "100%", padding: "10px", border: "1.5px solid #E2E8F0", borderRadius: 10, marginBottom: 12, outline: "none" } }),
-        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-            filtradas.map(t => React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(t.avance).bar },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                    React.createElement("div", { style: { minWidth: 0, flex: 1, paddingRight: "16px" } },
-                        React.createElement("p", { style: { fontWeight: 700, fontSize: 13, color: "#0F172A" } }, t.tarea),
-                        React.createElement("p", { style: { fontSize: 11, color: "#94A3B8", marginTop: 3 } }, t.plan)),
-                    React.createElement(PctBadge, { valor: t.avance, size: 38 }))))));
-}
-
-// ─── CONTROLADOR NÚCLEO CENTRAL ──────────────────────────────────────────────
+// ─── CONTROLADOR NÚCLEO CENTRAL (CORE GENERAL) ───────────────────────────────
 function App() {
     const [usuario, setUsuario] = useState(undefined);
     const [tareas, setTareas] = useState(() => initTareas(DEMO));
@@ -376,14 +361,14 @@ function App() {
     if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: u => setUsuario(u), usuarios: USUARIOS_INIT });
 
     const totalAv = avg(tareas.map(t => t.avance));
-    const TABS = [{ id: "ejecutivo", label: "Resumen" }, { id: "programas", label: "Programas" }, { id: "planes", label: "Planes" }, { id: "equipos", label: "Equipos" }, { id: "tareas", label: "Tareas" }];
+    const TABS = [{ id: "ejecutivo", label: "Resumen" }, { id: "programas", label: "Programas" }, { id: "planes", label: "Planes" }, { id: "tareas", label: "Tareas" }];
 
     return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
         toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
         modal && React.createElement(Modal, { tarea: modal, onSave: f => { setTareas(prev => prev.map(t => t.id === f.id ? f : t)); setModal(null); showToast("Progreso guardado"); }, onClose: () => setModal(null), usuario }),
         React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
             React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "0 16px" } },
-                React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`, margin: "0 -16px" } }),
+                React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_SECONDARY})`, margin: "0 -16px" } }),
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" } },
                     React.createElement(LogoNextSiembra),
                     React.createElement("div", { style: { position: "relative" } },
@@ -398,9 +383,7 @@ function App() {
         React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "20px 16px" } },
             vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas, onEditar: handleEditar, onIrAPrograma: id => { setProgInicial(id); setVista("programas"); } }),
             vista === "programas" && React.createElement(VistaProgramas, { tareas, onEditar: handleEditar, progInicial }),
-            vista === "planes" && React.createElement(VistaPlanesAll, { tareas, onEditar: handleEditar }),
-            vista === "equipos" && React.createElement(VistaEquipos, { tareas, onEditar: handleEditar }),
-            vista === "tareas" && React.createElement(VistaTareas, { tareas, onEditar: handleEditar }))
+            vista === "planes" && React.createElement(VistaPlanesAll, { tareas, onEditar: handleEditar }))
     );
 }
 
