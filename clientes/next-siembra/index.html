@@ -20,8 +20,8 @@
     const {useState,useMemo,useEffect,useCallback,useRef} = React;
 
 // ─── CONFIGURACIONES DE IDENTIDAD Y ENLACE DE CONEXIÓN ───────────────────────
-const COLOR_PRIMARY   = "#F05A28"; // Naranja oficial NEXT
-const COLOR_SECONDARY = "#2D2D2D"; // Gris oscuro SIEMBRA
+const COLOR_PRIMARY   = "#F05A28"; 
+const COLOR_SECONDARY = "#2D2D2D"; 
 const COLOR_ACCENT    = "#F5A623"; 
 const TABLERO_NOMBRE  = "Tablero de Generacion de Demanda";
 
@@ -63,7 +63,7 @@ const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { d
 
 function puedeEditar(usuario, tarea) {
   if (!usuario) return false;
-  if (usuario.role === "director" || usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
+  if (usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
   if (!tarea?.responsable) return false;
   return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
 }
@@ -92,6 +92,22 @@ function parseCSV(text) {
     else { row[row.length - 1] += c; }
   }
   if (row.length > 1 || row[0] !== "") lines.push(row); return lines;
+}
+
+function colorAvance(v) {
+  if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" };
+  if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" };
+  if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" };
+  if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" };
+  return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
+}
+
+function initTareas(arr) {
+  return arr.map((t, i) => {
+    const base = { ...t, id: i, rowIndex: i + 2, ultimaActualizacion: null };
+    if (esRZNColectivo(t)) base.zonas = vendedorDefault();
+    return base;
+  });
 }
 
 // ─── LOGOTIPO CORPORATIVO REDIBUJADO EN SVG PURO ─────────────────────────────
@@ -123,28 +139,7 @@ function BarraAvance({ valor, height = 8 }) {
         React.createElement("div", { style: { width: `${pct(valor)}%`, background: bar, height: "100%", borderRadius: 99 } })));
 }
 
-function PctBadge({ valor, size = 44 }) {
-    const { bar, text } = colorAvance(valor);
-    const r = (size / 2) - 4, circ = 2 * Math.PI * r, offset = circ - (pct(valor) / 100) * circ;
-    return (React.createElement("div", { style: { position: "relative", width: size, height: size, flexShrink: 0 } },
-        React.createElement("svg", { width: size, height: size, style: { position: "absolute", inset: 0 } },
-            React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: "#E2E8F0", strokeWidth: 4 }),
-            React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})` })),
-        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: text } }, pct(valor), "%")));
-}
-
-function Badge({ label, tipo }) {
-    const cfg = tipo === "estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
-    if (!cfg) return null;
-    return (React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.text, borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 700 } }, label));
-}
-
-function Card({ children, onClick, accent, style = {} }) {
-    const [hov, setHov] = useState(false);
-    return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children));
-}
-
-// ─── INTERFAZ DE LOGIN LIMPIA SIN ARRASTRE DE ERRORES ────────────────────────
+// ─── INTERFAZ DE LOGIN ───────────────────────────────────────────────────────
 function PantallaLogin({ onLogin, usuarios }) {
     const [pin, setPin] = useState(""); const [err, setErr] = useState("");
     const handleKey = d => {
@@ -162,7 +157,7 @@ function PantallaLogin({ onLogin, usuarios }) {
         React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
             React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_SECONDARY})`, borderRadius: 99, marginBottom: 20 } }),
             React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN")),
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
             React.createElement("div", { style: { display: "flex", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
                 [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
             err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
@@ -225,7 +220,7 @@ function Modal({ tarea, onSave, onClose, usuario }) {
         React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: COLOR_PRIMARY, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
 }
 
-// ─── RENDERIZADOS OPERATIVOS DEL DASHBOARD INTERNO ───────────────────────────
+// ─── VISTAS DE PANELES OPERATIVOS DEL DASHBOARD ──────────────────────────────
 function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance)); const { bar, label } = colorAvance(totalAv);
@@ -333,8 +328,8 @@ function App() {
 
     const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
     const handleLogout = () => { setUsuario(undefined); setShowUserMenu(false); };
+    const handleEditar = t => { if(puedeEditar(usuario,t)) setModal(t); else showToast("Acceso de solo lectura para tu rol.",false); };
 
-    // ALIMENTACIÓN COMPLETA DESDE TU GOOGLE SHEETS EN TIEMPO REAL
     useEffect(() => {
         if (usuario === undefined) return;
         fetch(SHEET_CSV_URL)
@@ -343,7 +338,6 @@ function App() {
                 const lineas = parseCSV(csvText);
                 if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
                 
-                // Mapear encabezados dinámicamente según tu Google Sheet real
                 const encabezados = lineas[0].map(h => h.trim().toLowerCase());
                 const rawTareas = [];
 
@@ -403,14 +397,6 @@ function App() {
             vista === "planes" && React.createElement(VistaPlanesAll, { tareas, onEditar: handleEditar }),
             vista === "tareas" && React.createElement(VistaTareas, { tareas, onEditar: handleEditar }))
     );
-}
-
-function colorAvance(v) {
-  if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" };
-  if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" };
-  if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" };
-  if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" };
-  return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
