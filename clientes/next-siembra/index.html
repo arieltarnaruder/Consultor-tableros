@@ -19,14 +19,15 @@
   <script>
     const {useState,useMemo,useEffect,useCallback,useRef} = React;
 
-// ─── IDENTIDAD CORPORATIVA ORIGINAL ──────────────────────────────────────────
-const COLOR_PRIMARY   = "#F05A28"; // Naranja oficial NEXT
-const COLOR_SECONDARY = "#2D2D2D"; // Gris oscuro SIEMBRA
+// ─── CONFIGURACIONES DE IDENTIDAD Y NEGOCIO ──────────────────────────────────
+const COLOR_PRIMARY   = "#F05A28"; 
+const COLOR_SECONDARY = "#2D2D2D"; 
 const COLOR_ACCENT    = "#F5A623"; 
 const NEGOCIO_LABEL   = "Siembra";
 const TABLERO_NOMBRE  = "Tablero GD - Generacion de Demanda";
 
-// ─── MATRIZ DE USUARIOS CON CONTROLES DE ACCESO ──────────────────────────────
+const VENDEDORES = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
+
 const USUARIOS_INIT = [
   { id:"ariel",  nombre:"Ariel Tarnaruder",  rol:"director",  zona:null,         pin:"2502", email:"ariel@consultor.com",    esAdmin:true  },
   { id:"maxi",   nombre:"Maxi Donolo",       rol:"director",  zona:null,         pin:"1111", email:"maxi@nextsiembra.com",   esAdmin:true  },
@@ -40,9 +41,33 @@ const USUARIOS_INIT = [
   { id:"jerry",  nombre:"Jerry",             rol:"ops",       zona:null,         pin:"2003", email:"jerry@nextsiembra.com",  esAdmin:false }
 ];
 
-const VENDEDORES = ["Vendedor 1","Vendedor 2","Vendedor 3","Vendedor 4"];
+// ─── TAREAS EXTRACTADAS DEL PLAN MAESTRO ──────────────────────────────────────
+const DEMO = [
+  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Definir reunión pre Agroactiva (Fecha, participantes y checklist)", responsable:"adrian bimbi jerry", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-15", comentarios:"Definir tipo de evento y regalos corporativos." },
+  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Convocar y asegurar participación activa del segmento", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-06-20", comentarios:"Redactar convocatoria formal y coordinar canal de envío." },
+  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Implementar base unificada de productores CREA", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-05", comentarios:"Diseñar y estructurar base de contactos tácticos." },
+  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Definir propuesta de valor resumida e impacto económico", responsable:"adrian jerry", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-30", comentarios:"Documento sintético centrado en Matermacc, EA Vision y Bosch." },
+  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Estructurar carpetas técnicas y alternativas de disertación", responsable:"jerry bimbi", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Esquemas de retroalimentación post-reunión para capturar dolores." },
+  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto formal y validación con Lisandro Repetto", responsable:"adrian", estado:"En curso", prioridad:"Media", avance:0.25, fechaVencimiento:"2026-07-01", comentarios:"Vincular ensayos e informes técnicos formales." },
+  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto estratégico con Néstor D.", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Establecer red de recomendadores científicos." },
+  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Acuerdo institucional con Colegio de Agrónomos", responsable:"adrian bimbi", estado:"En curso", prioridad:"Media", avance:0.10, fechaVencimiento:"2026-07-20", comentarios:"Organizar jornadas de actualización con aval técnico." },
+  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Monitorear y proveer datos de ahorro a economistas de la red", responsable:"jimena jerry", estado:"Pendiente", prioridad:"Baja", avance:0.00, fechaVencimiento:"2026-08-01", comentarios:"Fomentar publicaciones y análisis de rentabilidad financiera." },
+  { programa:"VISITAS A CAMPO", plan:"Cronograma", tarea:"Determinar localidades clave y campos anfitriones (Campaña Fina)", responsable:"adrian vendedor", estado:"En curso", prioridad:"Alta", avance:0.35, fechaVencimiento:"2026-06-30", comentarios:"Circuito coordinado para demostraciones vecinales dinámicas." },
+  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Logística y calibración de unidad Matermacc con IPS Bosch", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-15", comentarios:"Recorrido planificado por las cuencas productivas núcleo." },
+  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Planificar protocolos de vuelo y seguridad para Drones EA Vision", responsable:"bimbi", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Exhibición empírica de pulverización y mapeo en condiciones reales." },
+  { programa:"OPERACION GD", plan:"Acciones GD en fabricas", tarea:"Diseñar el programa institucional 'Fábrica Abierta'", responsable:"adrian jerry", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-25", comentarios:"Visitas de comitivas corporativas de concesionarios y grandes clientes." },
+  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Capacitación comercial en punto de venta para salones comerciales", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.60, fechaVencimiento:"2026-06-25", comentarios:"Transferir herramientas argumentativas de integración tecnológica." },
+  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Proveer tótems interactivos POP y material de exhibición obligatorio", responsable:"jimena", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Instalación física en la red de distribución." },
+  { programa:"OPERACION GD", plan:"Acciones GD en productores", tarea:"Desarrollar mesas técnicas cerradas de asesoramiento personalizado", responsable:"vendedor x4", estado:"En curso", prioridad:"Alta", avance:0.20, fechaVencimiento:"Constante", comentarios:"Espacios de cercanía para analizar retorno de inversión." },
+  { programa:"OPERACION GD", plan:"Acciones GD con referentes", tarea:"Organizar mesas redondas regionales de intercambio técnico", responsable:"adrian demanda", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-05", comentarios:"Debatír resultados de ensayos recolectados por Next Siembra." },
+  { programa:"IMPLEMENTACION GD", plan:"Cronograma de Acciones por vendedor", tarea:"Estructurar KPIs de control y efectividad de visitas a campo", responsable:"adrian lider", estado:"En curso", prioridad:"Alta", avance:0.70, fechaVencimiento:"2026-06-10", comentarios:"Alineación operativa semanal de la fuerza de venta." },
+  { programa:"IMPLEMENTACION GD", plan:"Sistema de seguimiento", tarea:"Configurar embudo y reporte ágil para testeo a campo", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-20", comentarios:"Mapear tasa de conversión de asistentes a compradores definitivos." },
+  { programa:"IMPLEMENTACION GD", plan:"Acciones con Fabricas", tarea:"Planificar co-mercadotecnia y propuestas de valor conjuntas", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-30", comentarios:"" },
+  { programa:"IMPLEMENTACION GD", plan:"Acciones con Concesionarios", tarea:"Esquema de co-financiación de charlas técnicas locales", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-10", comentarios:"Presupuesto compartido con distribuidores zonales." },
+  { programa:"IMPLEMENTACION GD", plan:"Acciones con Productores", tarea:"Facilitar unidades de prueba controladas a productores seleccionados", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-20", comentarios:"Acelerar decisiones de compra del usuario final." }
+];
 
-// ─── PALETA SEMÁFORO UNIVERSAL ───────────────────────────────────────────────
+// ─── CONFIGURACIONES DE CONTROL VISUAL ───────────────────────────────────────
 const ESTADO_CFG = {
     "Pendiente": { bg: "#FFF7ED", text: "#C2410C", dot: "#F97316" },
     "En curso": { bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
@@ -56,11 +81,7 @@ const PRIO_CFG = {
 };
 const PROG_COLORS = [COLOR_PRIMARY, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899"];
 
-// ─── HELPERS AUXILIARES ──────────────────────────────────────────────────────
-const pct = v => Math.round(v * 100);
-const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
-
+// ─── LÓGICA DE PROCESAMIENTO INICIAL ─────────────────────────────────────────
 function puedeEditar(usuario, tarea) {
   if (!usuario) return false;
   if (usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
@@ -93,7 +114,7 @@ function colorAvance(v) {
   return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
 }
 
-// ─── LOGOTIPO CORPORATIVO REAL ───────────────────────────────────────────────
+// ─── RENDERS E INTERFACES COMPARTIDAS ────────────────────────────────────────
 function LogoNextSiembra({ height = 40 }) {
   return React.createElement("img", { 
     src: "next-siembra.png", 
@@ -102,39 +123,6 @@ function LogoNextSiembra({ height = 40 }) {
   });
 }
 
-// ─── PANTALLA LOGIN CON PIN (DECLARADA EN ORDEN) ──────────────────────────────
-function PantallaLogin({ onLogin, usuarios }) {
-    const [pin, setPin] = useState("");
-    const [err, setErr] = useState("");
-    const handleKey = d => {
-        if (pin.length >= 4) return;
-        const n = pin + d; setPin(n); setErr("");
-        if (n.length === 4) {
-            const u = usuarios.find(u => u.pin === n);
-            if (u) setTimeout(() => onLogin(u), 150);
-            else setTimeout(() => { setErr("PIN incorrecto"); setPin(""); }, 150);
-        }
-    };
-    return (React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
-        React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
-            React.createElement(LogoNextSiembra, { height: 48 }),
-            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", marginTop: 8 } }, "Plan de Acción Comercial")),
-        React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
-            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`, borderRadius: 99, marginBottom: 20 } }),
-            React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN Consultor"),
-                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8" } }, "Código táctico de 4 dígitos")),
-            React.createElement("div", { style: { display: "flex", justifyDcontent: "center", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
-                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
-            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
-                [1,2,3,4,5,6,7,8,9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, cursor: "pointer" } }, d)),
-                React.createElement("button", { onClick: () => setPin(""), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 12, color: "#64748B", cursor: "pointer" } }, "Borrar"),
-                React.createElement("button", { onClick: () => handleKey("0"), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, cursor: "pointer" } }, "0"),
-                React.createElement("button", { onClick: () => onLogin(null), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 11, color: "#64748B", cursor: "pointer" } }, "Lectura")))));
-}
-
-// ─── COMPONENTES GRÁFICOS INTERNOS ───────────────────────────────────────────
 function LeyendaSemaforo() {
   const items = [
     {color:"#EF4444",label:"Sin inicio",rango:"0-9%"},
@@ -162,7 +150,7 @@ function PctBadge({ valor, size = 44 }) {
     return (React.createElement("div", { style: { position: "relative", width: size, height: size, flexShrink: 0 } },
         React.createElement("svg", { width: size, height: size, style: { position: "absolute", inset: 0 } },
             React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: "#E2E8F0", strokeWidth: 4 }),
-            React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeOuterarray: circ, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})` })),
+            React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})` })),
         React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: text } }, pct(valor), "%")));
 }
 
@@ -177,6 +165,39 @@ function Card({ children, onClick, accent, style = {} }) {
     return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children));
 }
 
+// ─── COMPONENTE LOGIN ────────────────────────────────────────────────────────
+function PantallaLogin({ onLogin, usuarios }) {
+    const [pin, setPin] = useState("");
+    const [err, setErr] = useState("");
+    const handleKey = d => {
+        if (pin.length >= 4) return;
+        const n = pin + d; setPin(n); setErr("");
+        if (n.length === 4) {
+            const u = usuarios.find(u => u.pin === n);
+            if (u) setTimeout(() => onLogin(u), 150);
+            else setTimeout(() => { setErr("PIN incorrecto"); setPin(""); }, 150);
+        }
+    };
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
+        React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
+            React.createElement(LogoNextSiembra, { height: 48 }),
+            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", marginTop: 8 } }, "Plan de Acción Comercial")),
+        React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
+            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`, borderRadius: 99, marginBottom: 20 } }),
+            React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN Consultor"),
+                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8" } }, "Código táctico de 4 dígitos")),
+            React.createElement("div", { style: { display: "flex", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
+                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
+            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
+                [1,2,3,4,5,6,7,8,9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, cursor: "pointer" } }, d)),
+                React.createElement("button", { onClick: () => setPin(""), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 12, color: "#64748B", cursor: "pointer" } }, "Borrar"),
+                React.createElement("button", { onClick: () => handleKey("0"), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, cursor: "pointer" } }, "0"),
+                React.createElement("button", { onClick: () => onLogin(null), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 11, color: "#64748B", cursor: "pointer" } }, "Lectura")))));
+}
+
+// ─── GRILLA DE SEGUIMIENTO EN MODAL ──────────────────────────────────────────
 function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
     const [activa, setActiva] = useState(null);
     const z = zonas || vendedorDefault();
@@ -231,7 +252,7 @@ function Modal({ tarea, onSave, onClose, usuario }) {
         React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: COLOR_PRIMARY, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
 }
 
-// ─── VISTAS OPERATIVAS DEL MODELO ────────────────────────────────────────────
+// ─── VISTAS DE PANELES OPERATIVOS ────────────────────────────────────────────
 function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance)); const { bar, label } = colorAvance(totalAv);
@@ -279,7 +300,7 @@ function VistaProgramas({ tareas, onEditar, progInicial }) {
                         React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: "#0F172A" } }, prog),
                         React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 2 } }, tsProg.length, " tareas")),
                     React.createElement(PctBadge, { valor: avProg, size: 40 }),
-                    React.createElement("span", { style: { color: "#94A3B8", fontSize: 14, marginLeft: 4 } }, isOpen ? "▼" : "▶")),
+                    React.createElement("span", { style: { color: "#94A3B8", fontSize: 16, marginLeft: 4 } }, isOpen ? "▼" : "▶")),
                 isOpen && planes.map(plan => {
                     const tsPlan = tsProg.filter(t => t.plan === plan); const avPlan = avg(tsPlan.map(t => t.avance));
                     const isPlanOpen = !!abiertoL[prog + "::" + plan];
@@ -339,7 +360,7 @@ function VistaTareas({ tareas, onEditar }) {
                     React.createElement(PctBadge, { valor: t.avance, size: 38 }))))));
 }
 
-// ─── CONTROLADOR NÚCLEO (RAÍZ PRINCIPAL) ──────────────────────────────────────
+// ─── CONTROLADOR NÚCLEO CENTRAL ──────────────────────────────────────────────
 function App() {
     const [usuario, setUsuario] = useState(undefined);
     const [tareas, setTareas] = useState(() => initTareas(DEMO));
@@ -383,8 +404,7 @@ function App() {
     );
 }
 
-// LA FUNCIÓN SE DECLARA AL FINAL PARA EVITAR ERRORES DE REFERENCIA SINTÁCTICA
-const JERRY_PLAN = []; 
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
   </script>
 </body>
 </html>
