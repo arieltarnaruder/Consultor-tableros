@@ -19,7 +19,7 @@
   <script>
     const {useState,useMemo,useEffect,useCallback,useRef} = React;
 
-// ─── IDENTIDAD CORPORATIVA ORIGINAL DE ARIEL ─────────────────────────────────
+// ─── IDENTIDAD CORPORATIVA ORIGINAL ──────────────────────────────────────────
 const COLOR_PRIMARY   = "#F05A28"; // Naranja oficial NEXT
 const COLOR_SECONDARY = "#2D2D2D"; // Gris oscuro SIEMBRA
 const COLOR_ACCENT    = "#F5A623"; 
@@ -42,74 +42,12 @@ const USUARIOS_INIT = [
 
 const VENDEDORES = ["Vendedor 1","Vendedor 2","Vendedor 3","Vendedor 4"];
 
-function puedeEditar(usuario, tarea) {
-  if (!usuario) return false;
-  if (usuario.rol==="director"||usuario.rol==="admin"||usuario.rol==="lider") return true;
-  if (!tarea?.responsable) return false;
-  return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
-}
-
-function esRZNColectivo(tarea) {
-  const r = tarea?.responsable?.toLowerCase()||"";
-  return r.includes("vendedor") && (r.includes("x4")||r.includes("x 4"));
-}
-
-// ─── TUS TÍTULOS ORIGINALES FIJOS COMPLETADOS CON LAS TAREAS DE JERRY ────────
-const DEMO = [
-  // GRUPOS CREA
-  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Definir reunión pre Agroactiva (Fecha, participantes y checklist)", responsable:"adrian bimbi jerry", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-15", comentarios:"Definir tipo de evento y regalos corporativos." },
-  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Convocar y asegurar participación activa del segmento", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-06-20", comentarios:"Redactar convocatoria formal y coordinar canal de envío." },
-  { programa:"GRUPOS CREA", plan:"Relacion con Region Sur Santa Fe", tarea:"Implementar base unificada de productores CREA", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-05", comentarios:"Diseñar y estructurar base de contactos tácticos." },
-  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Definir propuesta de valor resumida e impacto económico", responsable:"adrian jerry", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-30", comentarios:"Documento sintético centrado en Matermacc, EA Vision y Bosch." },
-  { programa:"GRUPOS CREA", plan:"Vincularse con CREA", tarea:"Estructurar carpetas técnicas y alternativas de disertación", responsable:"jerry bimbi", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Esquemas de retroalimentación post-reunión para capturar dolores." },
-
-  // REFERENTES
-  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto formal y validación con Lisandro Repetto", responsable:"adrian", estado:"En curso", prioridad:"Media", avance:0.25, fechaVencimiento:"2026-07-01", comentarios:"Vincular ensayos e informes técnicos formales." },
-  { programa:"REFERENTES", plan:"Referentes academicos", tarea:"Contacto estratégico con Néstor D.", responsable:"adrian", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Establecer red de recomendadores científicos." },
-  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Acuerdo institucional con Colegio de Agrónomos", responsable:"adrian bimbi", estado:"En curso", prioridad:"Media", avance:0.10, fechaVencimiento:"2026-07-20", comentarios:"Organizar jornadas de actualización con aval técnico." },
-  { programa:"REFERENTES", plan:"Colegios profesionales", tarea:"Monitorear y proveer datos de ahorro a economistas de la red", responsable:"jimena jerry", estado:"Pendiente", prioridad:"Baja", avance:0.00, fechaVencimiento:"2026-08-01", comentarios:"Fomentar publicaciones y análisis de rentabilidad financiera." },
-
-  // VISITAS A CAMPO
-  { programa:"VISITAS A CAMPO", plan:"Cronograma", tarea:"Determinar localidades clave y campos anfitriones (Campaña Fina)", responsable:"adrian vendedor", estado:"En curso", prioridad:"Alta", avance:0.35, fechaVencimiento:"2026-06-30", comentarios:"Circuito coordinado para demostraciones vecinales dinámicas." },
-  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Logística y calibración de unidad Matermacc con IPS Bosch", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.50, fechaVencimiento:"2026-06-15", comentarios:"Recorrido planificado por las cuencas productivas núcleo." },
-  { programa:"VISITAS A CAMPO", plan:"Implementar sembradora itinerante", tarea:"Planificar protocolos de vuelo y seguridad para Drones EA Vision", responsable:"bimbi", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-10", comentarios:"Exhibición empírica de pulverización y mapeo en condiciones reales." },
-
-  // OPERACION GD
-  { programa:"OPERACION GD", plan:"Acciones GD en fabricas", tarea:"Diseñar el programa institucional 'Fábrica Abierta'", responsable:"adrian jerry", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-25", comentarios:"Visitas de comitivas corporativas de concesionarios y grandes clientes." },
-  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Capacitación comercial en punto de venta para salones comerciales", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.60, fechaVencimiento:"2026-06-25", comentarios:"Transferir herramientas argumentativas de integración tecnológica." },
-  { programa:"OPERACION GD", plan:"Acciones GD en concesionarios", tarea:"Proveer tótems interactivos POP y material de exhibición obligatorio", responsable:"jimena", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-07-15", comentarios:"Instalación física en la red de distribución." },
-  { programa:"OPERACION GD", plan:"Acciones GD en productores", tarea:"Desarrollar mesas técnicas cerradas de asesoramiento personalizado", responsable:"vendedor x4", estado:"En curso", prioridad:"Alta", avance:0.20, fechaVencimiento:"Constante", comentarios:"Espacios de cercanía para analizar retorno de inversión." },
-  { programa:"OPERACION GD", plan:"Acciones GD con referentes", tarea:"Organizar mesas redondas regionales de intercambio técnico", responsable:"adrian demanda", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-05", comentarios:"Debatír resultados de ensayos recolectados por Next Siembra." },
-
-  // IMPLEMENTACION GD
-  { programa:"IMPLEMENTACION GD", plan:"Cronograma de Acciones por vendedor", tarea:"Estructurar KPIs de control y efectividad de visitas a campo", responsable:"adrian lider", estado:"En curso", prioridad:"Alta", avance:0.70, fechaVencimiento:"2026-06-10", comentarios:"Alineación operativa semanal de la fuerza de venta." },
-  { programa:"IMPLEMENTACION GD", plan:"Sistema de seguimiento", tarea:"Configurar embudo y reporte ágil para testeo a campo", responsable:"adrian", estado:"En curso", prioridad:"Alta", avance:0.40, fechaVencimiento:"2026-06-20", comentarios:"Mapear tasa de conversión de asistentes a compradores definitivos." },
-  { programa:"IMPLEMENTACION GD", plan:"Acciones con Fabricas", tarea:"Planificar co-mercadotecnia y propuestas de valor conjuntas", responsable:"vendedor x4", estado:"Pendiente", prioridad: "Media", avance:0.00, fechaVencimiento:"2026-07-30", comentarios: "" },
-  { programa:"IMPLEMENTACION GD", plan:"Acciones con Concesionarios", tarea:"Esquema de co-financiación de charlas técnicas locales", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Media", avance:0.00, fechaVencimiento:"2026-08-10", comentarios:"Presupuesto compartido con distribuidores zonales." },
-  { programa:"IMPLEMENTACION GD", plan:"Acciones con Productores", tarea:"Facilitar unidades de prueba controladas a productores seleccionados", responsable:"vendedor x4", estado:"Pendiente", prioridad:"Alta", avance:0.00, fechaVencimiento:"2026-07-20", comentarios:"Acelerar decisiones de compra del usuario final." }
-];
-
-const pct = v => Math.round(v * 100);
-const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
-
-function vendedorDefault() {
-  return VENDEDORES.reduce((acc,z)=>({...acc,[z]:{avance:0,estado:"Pendiente",comentario:""}}),{});
-}
-function initTareas(arr) {
-  return arr.map((t,i)=>{
-    const base = {...t,id:i,rowIndex:i+2,ultimaActualizacion:null};
-    if (esRZNColectivo(t)) base.zonas = vendedorDefault();
-    return base;
-  });
-}
-
 // ─── PALETA SEMÁFORO UNIVERSAL ───────────────────────────────────────────────
 const ESTADO_CFG = {
     "Pendiente": { bg: "#FFF7ED", text: "#C2410C", dot: "#F97316" },
     "En curso": { bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
     "Bloqueada": { bg: "#FFF1F2", text: "#BE123C", dot: "#F43F5E" },
-    "Cerrada": { bg: "#F0FDF4", text: "#15803D", dot: "#222C55E" },
+    "Cerrada": { bg: "#F0FDF4", text: "#15803D", dot: "#22C55E" },
 };
 const PRIO_CFG = {
     "Alta": { bg: "#FEF2F2", text: "#B91C1C" },
@@ -118,7 +56,44 @@ const PRIO_CFG = {
 };
 const PROG_COLORS = [COLOR_PRIMARY, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899"];
 
-// ─── LOGOTIPO CORPORATIVO REAL (next-siembra.png) ────────────────────────────
+// ─── HELPERS AUXILIARES ──────────────────────────────────────────────────────
+const pct = v => Math.round(v * 100);
+const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
+
+function puedeEditar(usuario, tarea) {
+  if (!usuario) return false;
+  if (usuario.rol === "director" || usuario.rol === "admin" || usuario.rol === "lider") return true;
+  if (!tarea?.responsable) return false;
+  return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
+}
+
+function esRZNColectivo(tarea) {
+  const r = tarea?.responsable?.toLowerCase() || "";
+  return r.includes("vendedor") && (r.includes("x4") || r.includes("x 4"));
+}
+
+function vendedorDefault() {
+  return VENDEDORES.reduce((acc, z) => ({ ...acc, [z]: { avance: 0, estado: "Pendiente", comentario: "" } }), {});
+}
+
+function initTareas(arr) {
+  return arr.map((t, i) => {
+    const base = { ...t, id: i, rowIndex: i + 2, ultimaActualizacion: null };
+    if (esRZNColectivo(t)) base.zonas = vendedorDefault();
+    return base;
+  });
+}
+
+function colorAvance(v) {
+  if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" };
+  if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" };
+  if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" };
+  if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" };
+  return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
+}
+
+// ─── LOGOTIPO CORPORATIVO REAL ───────────────────────────────────────────────
 function LogoNextSiembra({ height = 40 }) {
   return React.createElement("img", { 
     src: "next-siembra.png", 
@@ -127,7 +102,54 @@ function LogoNextSiembra({ height = 40 }) {
   });
 }
 
-// ─── COMPONENTES GRÁFICOS Y BADGES ───────────────────────────────────────────
+// ─── PANTALLA LOGIN CON PIN (DECLARADA EN ORDEN) ──────────────────────────────
+function PantallaLogin({ onLogin, usuarios }) {
+    const [pin, setPin] = useState("");
+    const [err, setErr] = useState("");
+    const handleKey = d => {
+        if (pin.length >= 4) return;
+        const n = pin + d; setPin(n); setErr("");
+        if (n.length === 4) {
+            const u = usuarios.find(u => u.pin === n);
+            if (u) setTimeout(() => onLogin(u), 150);
+            else setTimeout(() => { setErr("PIN incorrecto"); setPin(""); }, 150);
+        }
+    };
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
+        React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
+            React.createElement(LogoNextSiembra, { height: 48 }),
+            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", marginTop: 8 } }, "Plan de Acción Comercial")),
+        React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
+            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`, borderRadius: 99, marginBottom: 20 } }),
+            React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN Consultor"),
+                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8" } }, "Código táctico de 4 dígitos")),
+            React.createElement("div", { style: { display: "flex", justifyDcontent: "center", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
+                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
+            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
+                [1,2,3,4,5,6,7,8,9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, cursor: "pointer" } }, d)),
+                React.createElement("button", { onClick: () => setPin(""), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 12, color: "#64748B", cursor: "pointer" } }, "Borrar"),
+                React.createElement("button", { onClick: () => handleKey("0"), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, cursor: "pointer" } }, "0"),
+                React.createElement("button", { onClick: () => onLogin(null), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 11, color: "#64748B", cursor: "pointer" } }, "Lectura")))));
+}
+
+// ─── COMPONENTES GRÁFICOS INTERNOS ───────────────────────────────────────────
+function LeyendaSemaforo() {
+  const items = [
+    {color:"#EF4444",label:"Sin inicio",rango:"0-9%"},
+    {color:"#F97316",label:"Iniciado",rango:"10-49%"},
+    {color:"#EAB308",label:"En marcha",rango:"50-79%"},
+    {color:"#22C55E",label:"Avanzado",rango:"80-99%"},
+    {color:"#3B82F6",label:"Completa",rango:"100%"},
+  ];
+  return React.createElement("div",{style:{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",padding:"10px 16px",background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:10,marginBottom:18}},
+    React.createElement("span",{style:{fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:".05em",marginRight:4}},"Avance:"),
+    items.map(it=>React.createElement("span",{key:it.label,style:{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#475569"}},
+      React.createElement("span",{style:{width:10,height:10,borderRadius:"50%",background:it.color,display:"inline-block"}}),
+      it.label," ",React.createElement("span",{style:{color:"#94A3B8",fontSize:11}},it.rango))));
+}
+
 function BarraAvance({ valor, height = 8 }) {
     const { bar } = colorAvance(valor);
     return (React.createElement("div", { style: { background: "#E2E8F0", borderRadius: 99, height, overflow: "hidden", width: "100%" } },
@@ -140,7 +162,7 @@ function PctBadge({ valor, size = 44 }) {
     return (React.createElement("div", { style: { position: "relative", width: size, height: size, flexShrink: 0 } },
         React.createElement("svg", { width: size, height: size, style: { position: "absolute", inset: 0 } },
             React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: "#E2E8F0", strokeWidth: 4 }),
-            React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})` })),
+            React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeOuterarray: circ, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})` })),
         React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: text } }, pct(valor), "%")));
 }
 
@@ -168,21 +190,20 @@ function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
                     React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: bar, minWidth: 36, textAlign: "right" } }, pct(zd.avance), "%")),
                 isOpen && editable && React.createElement("div", { style: { padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid #F1F5F9" } },
                     React.createElement("input", { type: "range", min: 0, max: 100, value: pct(zd.avance), onChange: e => onChange(nombre, "avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginTop: 10 } }),
-                    React.createElement("div", { style: { display: "flex", gap: 6 } }, ["Pendiente", "En curso", "Bloqueada", "Cerrada"].map(e => React.createElement("button", { key: e, onClick: () => onChange(nombre, "state", e), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${zd.estado === e ? COLOR_PRIMARY : "#E2E8F0"}`, fontSize: 11, fontWeight: 600 } }, e))),
-                    React.createElement("textarea", { value: zd.comentario || "", onChange: e => onChange(nombre, "comentario", e.target.value), rows: 2, placeholder: "Observación zónal...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "8px 10px", fontSize: 12 } })));
+                    React.createElement("div", { style: { display: "flex", gap: 6 } }, ["Pendiente", "En curso", "Bloqueada", "Cerrada"].map(e => React.createElement("button", { key: e, onClick: () => onChange(nombre, "estado", e), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${zd.estado === e ? COLOR_PRIMARY : "#E2E8F0"}`, fontSize: 11, fontWeight: 600 } }, e))),
+                    React.createElement("textarea", { value: zd.comentario || "", onChange: e => onChange(nombre, "comentario", e.target.value), rows: 2, placeholder: "Observación zonal...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "8px 10px", fontSize: 12 } })));
         }));
 }
 
-// ─── MODAL TÁCTIL DE EDICIÓN ──────────────────────────────────────────────────
 function Modal({ tarea, onSave, onClose, usuario }) {
   const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || vendedorDefault() });
   const esVend = esRZNColectivo(f);
-  const avanceEfectivo = esVend ? avanceZonas(f.zonas) : f.avance;
+  const avanceEfectivo = esVend ? avg(Object.values(f.zonas).map(z=>z.avance)) : f.avance;
   const { bar, bg, text, label } = colorAvance(avanceEfectivo);
   return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
     React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: esVend ? 540 : 460, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
       React.createElement("div", { style: { background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", padding: "18px 22px" } },
-        React.createElement("div", { style: { display: "flex", justifyDcontent: "space-between", alignItems: "flex-start" } },
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
           React.createElement("div", { style: { flex: 1, marginRight: 12 } },
             React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, marginBottom: 3 } }, f.plan),
             React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#0F172A", lineHeight: 1.35 } }, f.tarea)),
@@ -194,7 +215,7 @@ function Modal({ tarea, onSave, onClose, usuario }) {
       React.createElement("div", { style: { padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 } },
         esVend ? React.createElement(GrillaVendedores, { zonas: f.zonas, onChange: (n, c, v) => setF(p => ({ ...p, zonas: { ...p.zonas, [n]: { ...p.zonas[n], [c]: v } } })), zonaUsuario: usuario?.rol === "vendedor" ? usuario.zona : null }) :
         React.createElement("div", null,
-          React.createElement("div", { style: { display: "flex", justifyDcontent: "space-between", alignItems: "center", marginBottom: 10 } },
+          React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
             React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase" } }, "Grado de Avance"),
             React.createElement("span", { style: { fontSize: 22, fontWeight: 800, color: bar } }, pct(f.avance), "%")),
           React.createElement("input", { type: "range", min: 0, max: 100, value: pct(f.avance), onChange: e => setF(p => ({ ...p, avance: Number(e.target.value) / 100 })), style: { width: "100%", accentColor: bar, marginBottom: 6 } }),
@@ -207,10 +228,10 @@ function Modal({ tarea, onSave, onClose, usuario }) {
           React.createElement("textarea", { value: f.comentarios || "", onChange: e => setF(p => ({ ...p, comentarios: e.target.value })), rows: 3, placeholder: "Notas operativas a campo...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "10px 13px", fontSize: 13, background: "#F8FAFC" } }))),
       React.createElement("div", { style: { display: "flex", gap: 10, padding: "0 22px 22px" } },
         React.createElement("button", { onClick: onClose, style: { flex: 1, padding: "11px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", fontSize: 14, fontWeight: 600 } }, "Cancelar"),
-        React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: CLIENTE.colorB, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
+        React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: COLOR_PRIMARY, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
 }
 
-// ─── VISTA EJECUTIVA (RESUMEN CORREGIDO SIN INVENTOS) ─────────────────────────
+// ─── VISTAS OPERATIVAS DEL MODELO ────────────────────────────────────────────
 function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance)); const { bar, label } = colorAvance(totalAv);
@@ -226,7 +247,6 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
           React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 4 } }, k.sub))
       ))),
     React.createElement("div", { style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "18px" } },
-      // CORRECCIÓN: Separación de textos y porcentajes para evitar encimados
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 } },
         React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14 } }, "Avance General del PAC"),
         React.createElement("span", { style: { fontSize: 18, fontWeight: 800, color: bar } }, pct(totalAv), "%")),
@@ -237,12 +257,11 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
         return React.createElement(Card, { key: prog, onClick: () => onIrAPrograma(prog), accent: b },
           React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
             React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 13, paddingRight: "16px" } }, prog),
-            React.createElement("span", { style: { aristocraticColor: b, fontWeight: 800, color: b, flexShrink: 0 } }, pct(av), "%")),
+            React.createElement("span", { style: { fontWeight: 800, color: b, flexShrink: 0 } }, pct(av), "%")),
           React.createElement(BarraAvance, { valor: av, height: 6 }));
       })));
 }
 
-// ─── VISTA PROGRAMAS DRILL-DOWN (TÍTULOS ORIGINALES PROTEGIDOS) ───────────────
 function VistaProgramas({ tareas, onEditar, progInicial }) {
     const [abiertoP, setAbiertoP] = useState(() => progInicial ? { [progInicial]: true } : {});
     const [abiertoL, setAbiertoL] = useState({});
@@ -346,8 +365,6 @@ function App() {
                 React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_ACCENT})`, margin: "0 -16px" } }),
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" } },
                     React.createElement(LogoNextSiembra),
-                    
-                    // CORRECCIÓN: Identidad del usuario visible y funcional en el menú táctil
                     React.createElement("div", { style: { position: "relative" } },
                         React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: `1.5px solid ${COLOR_PRIMARY}`, borderRadius: 99, padding: "6px 14px", cursor: "pointer" } },
                             React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: COLOR_PRIMARY } }),
@@ -366,15 +383,8 @@ function App() {
     );
 }
 
-function colorAvance(v) {
-  if (v >= 1.0) return { bar:"#3B82F6", bg:"#EFF6FF", text:"#1D4ED8", label:"Completa" };
-  if (v >= 0.80) return { bar:"#22C55E", bg:"#F0FDF4", text:"#15803D", label:"Avanzado" };
-  if (v >= 0.50) return { bar:"#EAB308", bg:"#FEFCE8", text:"#854D0E", label:"En marcha" };
-  if (v >= 0.10) return { bar:"#F97316", bg:"#FFF7ED", text:"#C2410C", label:"Iniciado" };
-  return { bar:"#EF4444", bg:"#FEF2F2", text:"#B91C1C", label:"Sin inicio" };
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+// LA FUNCIÓN SE DECLARA AL FINAL PARA EVITAR ERRORES DE REFERENCIA SINTÁCTICA
+const JERRY_PLAN = []; 
   </script>
 </body>
 </html>
