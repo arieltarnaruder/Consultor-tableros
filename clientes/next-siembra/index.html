@@ -24,7 +24,8 @@ const COLOR_SECONDARY = "#2D2D2D";
 const COLOR_ACCENT    = "#F5A623"; 
 const TABLERO_NOMBRE  = "Tablero de Generacion de Demanda";
 
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSbJs2tztYODXvSAeDHIL4fenwIH4EptULI-vfZCcEM4Wo9YNzB5zFjjeKeB5VKWg/pub?gid=1918072355&single=true&output=csv";
+// CORRECCIÓN ABSOLUTA: ID extraído directamente de la barra de direcciones de tu captura de pantalla real
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
 
 const USUARIOS_INIT = [
   { id:"ariel",  nombre:"Ariel Tarnaruder",  rol:"director",  zona:null,         pin:"2502", email:"ariel@consultor.com"    },
@@ -62,7 +63,6 @@ function puedeEditar(usuario, tarea) {
   return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
 }
 
-// CORRECCIÓN: Detecta el tag estricto 'vendedor x4' o 'vendedor' con múltiples asignaciones
 function esRZNColectivo(tarea) {
   const r = tarea?.responsable?.toLowerCase() || "";
   return r.includes("vendedor") && (r.includes("x4") || r.includes("x 4") || r.includes("vendedores"));
@@ -148,7 +148,6 @@ function Badge({ label, tipo }) {
     return (React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.text, borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 700 } }, label));
 }
 
-// CORRECCIÓN PADDING CARD: Evita cualquier solapamiento visual de textos largos
 function Card({ children, onClick, accent, style = {} }) {
     const [hov, setHov] = useState(false);
     return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "18px 20px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `5px solid ${accent}` : undefined, display: "flex", flexDirection: "column", gap: "8px", ...style } }, children));
@@ -302,7 +301,7 @@ function VistaProgramas({ tareas, abiertoP, abiertoL, onToggleP, onToggleL, onEd
 
 function VistaPlanesAll({ tareas, onEditar }) {
     const tree = useMemo(() => { const m = {}; tareas.forEach(t => { if (!m[t.plan]) m[t.plan] = []; m[t.plan].push(t); }); return m; }, [tareas]);
-    return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+    return React.createElement("div", { style: { display: "flex", columnGap: 10, flexDirection: "column", gap: 10 } },
         React.createElement(LeyendaSemaforo),
         Object.keys(tree).map(plan => {
             const ts = tree[plan]; const av = avg(ts.map(t => t.avance));
@@ -313,7 +312,6 @@ function VistaPlanesAll({ tareas, onEditar }) {
         }));
 }
 
-// CORRECCIÓN SECCIÓN BÚSQUEDA: Asegura que filtre correctamente sin crash por tipo de datos
 function VistaTareas({ tareas, onEditar }) {
     const [q, setQ] = useState("");
     const filtradas = tareas.filter(t => (t.tarea || "").toLowerCase().includes(q.toLowerCase()) || (t.plan || "").toLowerCase().includes(q.toLowerCase()));
