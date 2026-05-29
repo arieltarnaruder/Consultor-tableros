@@ -19,14 +19,12 @@
   <script>
     const {useState,useMemo,useEffect,useCallback,useRef} = React;
 
-// ─── CONFIGURACIONES ESTÉTICAS Y ENLACES ─────────────────────────────────────
 const COLOR_PRIMARY   = "#F05A28"; 
 const COLOR_SECONDARY = "#2D2D2D"; 
 const COLOR_ACCENT    = "#F5A623"; 
 const TABLERO_NOMBRE  = "Tablero de Generacion de Demanda";
 
-// URL CSV de tu Google Sheet
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSbJs2tztYODXvSAeDHIL4fenwIH4EptULI-vfZCcEM4Wo9YNzB5zFjjeKeB5VKWg/pub?gid=1918072355&single=true&output=csv";
 
 const USUARIOS_INIT = [
   { id:"ariel",  nombre:"Ariel Tarnaruder",  rol:"director",  zona:null,         pin:"2502", email:"ariel@consultor.com"    },
@@ -53,7 +51,6 @@ const PRIO_CFG = {
 };
 const PROG_COLORS = [COLOR_PRIMARY, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899"];
 
-// ─── LÓGICA DE PROCESAMIENTO Y PARSER CSV ────────────────────────────────────
 const pct = v => Math.round(v * 100);
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
@@ -65,9 +62,10 @@ function puedeEditar(usuario, tarea) {
   return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase());
 }
 
+// CORRECCIÓN: Detecta el tag estricto 'vendedor x4' o 'vendedor' con múltiples asignaciones
 function esRZNColectivo(tarea) {
   const r = tarea?.responsable?.toLowerCase() || "";
-  return r.includes("vendedor") && (r.includes("x4") || r.includes("x 4"));
+  return r.includes("vendedor") && (r.includes("x4") || r.includes("x 4") || r.includes("vendedores"));
 }
 
 function vendedorDefault() {
@@ -107,7 +105,6 @@ function parseCSV(text) {
   if (row.length > 1 || row[0] !== "") lines.push(row); return lines;
 }
 
-// ─── COMPONENTES GRÁFICOS COMPACTOS (CLAUDE) ──────────────────────────────────
 function LogoNextSiembra({ height = 40 }) {
   return React.createElement("svg", { height: height, viewBox: "0 0 200 54", fill: "none", style: { display: "block" } },
     React.createElement("text", { x: "0", y: "38", fontFamily: "Arial Black,sans-serif", fontWeight: "900", fontSize: "36", fill: COLOR_PRIMARY, letterSpacing: "-1" }, "NEXT"),
@@ -151,12 +148,12 @@ function Badge({ label, tipo }) {
     return (React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.text, borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 700 } }, label));
 }
 
+// CORRECCIÓN PADDING CARD: Evita cualquier solapamiento visual de textos largos
 function Card({ children, onClick, accent, style = {} }) {
     const [hov, setHov] = useState(false);
-    return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children));
+    return (React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "18px 20px", cursor: onClick ? "pointer" : "default", borderLeft: accent ? `5px solid ${accent}` : undefined, display: "flex", flexDirection: "column", gap: "8px", ...style } }, children));
 }
 
-// ─── ACCESO AUTENTICADO POR PIN INDIVIDUAL ───────────────────────────────────
 function PantallaLogin({ onLogin, usuarios }) {
     const [pin, setPin] = useState(""); const [err, setErr] = useState("");
     const handleKey = d => {
@@ -174,7 +171,7 @@ function PantallaLogin({ onLogin, usuarios }) {
         React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
             React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg,${COLOR_PRIMARY},${COLOR_SECONDARY})`, borderRadius: 99, marginBottom: 20 } }),
             React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN")),
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
             React.createElement("div", { style: { display: "flex", gap: 12, marginBottom: 16, width: "100%", justifyContent: "center", alignItems: "center" } }, 
                 [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? COLOR_PRIMARY : "#E2E8F0", margin: "0 4px" } }))),
             err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
@@ -185,7 +182,6 @@ function PantallaLogin({ onLogin, usuarios }) {
                 React.createElement("button", { onClick: () => onLogin(null), style: { padding: "14px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 11, color: "#64748B", cursor: "pointer" } }, "Lectura")))));
 }
 
-// ─── DESPLEGABLE TÁCTIL PARA PERFILES DE FUERZA DE VENTAS (AHORRO BASE) ──────
 function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
     const [activa, setActiva] = useState(null); const z = zonas || vendedorDefault();
     return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
@@ -203,7 +199,6 @@ function GrillaVendedores({ zonas, onChange, zonaUsuario }) {
         }));
 }
 
-// ─── MODAL TÁCTIL DE EDICIÓN OPERATIVA ────────────────────────────────────────
 function Modal({ tarea, onSave, onClose, usuario }) {
   const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || vendedorDefault() }); const esVend = esRZNColectivo(f);
   const avanceEfectivo = esVend ? avg(Object.values(f.zonas).map(z=>z.avance)) : f.avance;
@@ -240,7 +235,6 @@ function Modal({ tarea, onSave, onClose, usuario }) {
         React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo, ultimaActualizacion: new Date().toISOString() }), style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: COLOR_PRIMARY, color: "#fff", fontSize: 14, fontWeight: 700 } }, "Guardar Cambios"))));
 }
 
-// ─── INTERFACES DE PANELES OPERATIVOS (DRILL DOWN CLAUDE ORIGINAL) ────────────
 function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   const programas = useMemo(()=>[...new Set(tareas.map(t=>t.programa))],[tareas]);
   const totalAv = avg(tareas.map(t=>t.avance)); const { bar, label } = colorAvance(totalAv);
@@ -249,7 +243,7 @@ function VistaEjecutiva({ tareas, onEditar, onIrAPrograma }) {
   return React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:18 } },
     React.createElement(LeyendaSemaforo),
     React.createElement("div", { style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10 } },
-      [{ label: "Avance PAC", valor: `${pct(totalAv)}%`, color: bar, sub: label }, { label: "En curso", valor: est["En curso"], color: "#3B82F6", sub: "tareas activas" }, { label: "Bloqueadas", valor: est["Bloqueada"], color: "#EF4444", sub: "con alerta" }, { label: "Cerradas", valor: est["Cerrada"], color: "#22C55E", sub: "completadas" }].map(k => (
+      [{ label: "Avance Total", valor: `${pct(totalAv)}%`, color: bar, sub: label }, { label: "En curso", valor: est["En curso"], color: "#3B82F6", sub: "tareas activas" }, { label: "Bloqueadas", valor: est["Bloqueada"], color: "#EF4444", sub: "con alerta" }, { label: "Cerradas", valor: est["Cerrada"], color: "#22C55E", sub: "completadas" }].map(k => (
         React.createElement("div", { key: k.label, style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "14px", borderTop: `3px solid ${k.color}` } },
           React.createElement("div", { style: { fontSize: 10, color: "#64748B", marginBottom: 5, fontWeight: 700, textTransform: "uppercase" } }, k.label),
           React.createElement("div", { style: { fontSize: 26, fontWeight: 800, color: k.color, lineHeight: 1 } }, k.valor),
@@ -319,21 +313,21 @@ function VistaPlanesAll({ tareas, onEditar }) {
         }));
 }
 
+// CORRECCIÓN SECCIÓN BÚSQUEDA: Asegura que filtre correctamente sin crash por tipo de datos
 function VistaTareas({ tareas, onEditar }) {
     const [q, setQ] = useState("");
-    const filtradas = tareas.filter(t => t.tarea.toLowerCase().includes(q.toLowerCase()) || t.plan.toLowerCase().includes(q.toLowerCase()));
+    const filtradas = tareas.filter(t => (t.tarea || "").toLowerCase().includes(q.toLowerCase()) || (t.plan || "").toLowerCase().includes(q.toLowerCase()));
     return React.createElement("div", null,
         React.createElement("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "🔍 Buscar acción de campo...", style: { width: "100%", padding: "10px", border: "1.5px solid #E2E8F0", borderRadius: 10, marginBottom: 12, outline: "none" } }),
         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
             filtradas.map(t => React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(t.avance).bar },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" } },
                     React.createElement("div", { style: { minWidth: 0, flex: 1, paddingRight: "16px" } },
-                        React.createElement("p", { style: { fontWeight: 700, fontSize: 13, color: "#0F172A" } }, t.tarea),
+                        React.createElement("p", { style: { fontWeight: 700, fontSize: 13, color: "#0F172A", wordBreak: "break-word" } }, t.tarea),
                         React.createElement("p", { style: { fontSize: 11, color: "#94A3B8", marginTop: 3 } }, t.plan)),
                     React.createElement(PctBadge, { valor: t.avance, size: 38 }))))));
 }
 
-// ─── CONTROLADOR DINÁMICO RAÍZ CONECTADO A GOOGLE SHEETS ─────────────────────
 function App() {
     const [usuario, setUsuario] = useState(undefined);
     const [tareas, setTareas] = useState([]);
