@@ -45,7 +45,7 @@ const CLIENTE = {
 };
 
 // ════════════════════════════════════════════════════════════
-//  PERMISOS Y LOGICA DE NEGOCIO
+//  PERMISOS Y LOGICA DE NEGOCIO CONTROLADA
 // ════════════════════════════════════════════════════════════
 function puedeEditar(usuario, tarea) {
     if (!usuario) return false; 
@@ -161,6 +161,12 @@ function Card({ children, onClick, accent, style = {} }) {
 function Toast({ msg, ok }) {
     return (React.createElement("div", { style: { position: "fixed", bottom: 24, right: 24, zIndex: 3000, background: ok ? "#14532D" : "#7F1D1D", color: "#fff", borderRadius: 10, padding: "12px 20px", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 8 } },
         ok ? "✓" : "✕", " ", msg));
+}
+
+function LogoNextSiembra({ height = 40 }) {
+  return React.createElement("svg", { height: height, viewBox: "0 0 200 54", fill: "none", style: { display: "block" } },
+    React.createElement("text", { x: "0", y: "38", fontFamily: "Arial Black,sans-serif", fontWeight: "900", fontSize: "34", fill: CLIENTE.colorA, letterSpacing: "-1" }, "NEXT"),
+    React.createElement("text", { x: "2", y: "51", fontFamily: "Arial,sans-serif", fontWeight: "700", fontSize: "11", fill: "#2D2D2D", letterSpacing: "4" }, "SIEMBRA"));
 }
 
 // ════════════════════════════════════════════════════════════
@@ -458,7 +464,7 @@ function VistaPlanesAll({ tareas, onEditar, initProg, initPlan }) {
                             React.createElement("div", { style: { fontWeight: 700, fontSize: 14, marginTop: 2 } }, plan)),
                         React.createElement("span", { style: { fontWeight: 800, color: colorAvance(av).bar } }, pct(av), "%")),
                     abierto && React.createElement("div", { style: { background: "#F8FAFC", padding: 12, borderTop: "1px solid #E2E8F0" } }, ts.map(t => (
-                        React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { background: "#fff", padding: 10, borderRadius: 8, marginBottom: 4, cursor: "pointer", borderLeft: `3px solid ${colorAvance(t.avance).bar}` } },
+                        React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { background: "#fff", padding: 10, borderRadius: 8, marginBottom: 4, cursor: "pointer", borderLeft: `3px solid ${colorAvance(t.avance).bar}` },
                             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600 } },
                                 React.createElement("span", null, t.tarea),
                                 React.createElement("span", { style: { color: colorAvance(t.avance).bar } }, pct(t.avance), "%"))
@@ -637,6 +643,46 @@ function App() {
             vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
             vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar }),
             vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar }))));
+}
+
+function PantallaLogin({ onLogin, usuarios }) {
+    const [pin, setPin] = useState("");
+    const [err, setErr] = useState("");
+    
+    const tryLogin = (p) => { 
+        const u = usuarios.find(usr => usr.pin === p); 
+        if (u) onLogin(u);
+        else { setErr("PIN incorrecto"); setPin(""); } 
+    };
+    
+    const handleKey = (d) => { 
+        if (pin.length >= 4) return; 
+        const n = pin + d; 
+        setPin(n); 
+        setErr(""); 
+        if (n.length === 4) setTimeout(() => tryLogin(n), 120); 
+    };
+    
+    const btnS = { padding: "16px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, color: "#0F172A", cursor: "pointer" };
+    
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
+        React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
+            React.createElement(LogoNextSiembra, { height: 44 }),
+            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, marginTop: 8 } }, CLIENTE.subtitulo)),
+        React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.10)", border: "1px solid #E2E8F0" } },
+            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 20 } }),
+            React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
+            React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 } }, 
+                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 16, height: 16, borderRadius: "50%", background: i < pin.length ? CLIENTE.colorA : "#E2E8F0", border: `2px solid ${i < pin.length ? CLIENTE.colorA : "#CBD5E1"}` } }))),
+            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
+                [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: btnS }, d)),
+                React.createElement("button", { onClick: () => setPin(""), style: { ...btnS, fontSize: 12, color: "#64748B" } }, "Borrar"),
+                React.createElement("button", { onClick: () => handleKey("0"), style: btnS }, "0"),
+                React.createElement("button", { onClick: () => { setPin(p => p.slice(0, -1)); setErr(""); }, style: { ...btnS, fontSize: 16, color: "#64748B" } }, "x")),
+            React.createElement("div", { style: { borderTop: "1px solid #F1F5F9", marginTop: 12, paddingTop: 12, textAlign: "center" } },
+                React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "7px 16px", color: "#64748B", fontSize: 12, cursor: "pointer", fontWeight: 600 } }, "Solo lectura")))));
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
