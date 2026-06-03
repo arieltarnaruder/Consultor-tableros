@@ -11,7 +11,6 @@
     .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
     
-    /* Reglas para cuando se genera el PDF/Impresión */
     @media print {
         body { background: #fff !important; color: #000; }
         .no-print { display: none !important; }
@@ -52,7 +51,7 @@ const CLIENTE = {
 };
 
 // ════════════════════════════════════════════════════════════
-//  LOGICA BASE
+//  LOGICA BASE DE PERMISOS Y AVANCES
 // ════════════════════════════════════════════════════════════
 function puedeEditar(usuario, tarea) {
     if (!usuario) return false; 
@@ -108,7 +107,7 @@ function parseCSV(text) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  COMPONENTES VISUALES
+//  COMPONENTES VISUALES REUTILIZABLES
 // ════════════════════════════════════════════════════════════
 function LeyendaSemaforo({ totalAv }) {
     const items = [
@@ -120,15 +119,15 @@ function LeyendaSemaforo({ totalAv }) {
     ];
     return React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "10px 16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, marginBottom: 20 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" } },
-            React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: ".06em", marginRight: 4 } }, "Semaforo de Avance:"),
+            React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: ".06em", marginRight: 4 } }, "Semáforo de Avance:"),
             items.map(it => React.createElement("div", { key: it.label, style: { display: "flex", alignItems: "center", gap: 5 } },
                 React.createElement("span", { style: { width: 10, height: 10, borderRadius: "50%", background: it.color, flexShrink: 0 } }),
                 React.createElement("span", { style: { fontSize: 11, color: "#475569", fontWeight: 600 } }, it.label)
             ))
         ),
         totalAv !== undefined && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: "#fff", padding: "4px 12px", borderRadius: 8, border: "1px solid #E2E8F0" } },
-            React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase" } }, "Avance Total:"),
-            React.createElement("span", { style: { fontSize: 16, fontWeight: 900, color: colorAvance(totalAv).bar } }, pct(totalAv), "%")
+            React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: ".05em" } }, "Avance Total:"),
+            React.createElement("span", { style: { fontSize: 15, fontWeight: 900, color: colorAvance(totalAv).bar } }, pct(totalAv), "%")
         )
     );
 }
@@ -152,6 +151,15 @@ function PctBadge({ valor, size = 44 }) {
     );
 }
 
+function Badge({ label, tipo }) {
+    const cfg = tipo === "estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
+    if (!cfg) return null;
+    return React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.text, borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" } },
+        tipo === "estado" && React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 } }),
+        label
+    );
+}
+
 function Card({ children, onClick, accent, style = {} }) {
     const [hov, setHov] = useState(false);
     return React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", transition: "all .15s", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children);
@@ -166,82 +174,74 @@ function Breadcrumb({ items }) {
     );
 }
 
-function LogoNextSiembra({ height = 40 }) {
-  return React.createElement("svg", { height: height, viewBox: "0 0 200 54", fill: "none" },
-    React.createElement("text", { x: "0", y: "38", fontFamily: "system-ui,sans-serif", fontWeight: "900", fontSize: "36", fill: CLIENTE.colorA, letterSpacing: "-1.5" }, "NEXT"),
-    React.createElement("text", { x: "2", y: "51", fontFamily: "system-ui,sans-serif", fontWeight: "700", fontSize: "11", fill: "#2D2D2D", letterSpacing: "4" }, "SIEMBRA"));
-}
-
 // ════════════════════════════════════════════════════════════
-//  MODAL DE AYUDA (FOR DUMMIES)
+//  MODAL DE AYUDA EXHAUSTIVO (FOR DUMMIES)
 // ════════════════════════════════════════════════════════════
 const MANUAL_USUARIO = `MANUAL DE USUARIO - NEXT SIEMBRA
 
 1. ¿CÓMO ME MUEVO POR EL TABLERO?
-El tablero funciona como carpetas dentro de tu computadora. 
-Las pestañas de arriba te permiten ver la información desde lo más general (Resumen) hasta el mínimo detalle (Tareas).
+El tablero funciona como carpetas dentro de tu computadora de forma visual. 
+Las pestañas de la barra superior te permiten ver la información desde lo más general hasta el mínimo detalle.
 
 - Resumen: Un pantallazo general de cómo venimos.
-- Programas y Planes: Hacé clic en cualquier programa para ver qué planes lo componen. Arriba de todo siempre vas a tener la "ruta" escrita (Ej: Programa › Plan). Si hacés clic en esa ruta, volvés para atrás.
-- Equipo: Podés ver cómo viene cada persona o vendedor. Haciendo clic entrás a ver sus tareas.
+- Programas y Planes: Hacé clic en cualquier programa para ver qué planes lo componen. Arriba de todo siempre vas a tener la "ruta" escrita (Ej: Programa › Plan). Si haces clic directo en esa palabra de la ruta, volvés para atrás automáticamente sin clics extras.
+- Equipo: Podés ver cómo viene cada persona o el grupo de vendedores. Haciendo clic entrás a ver sus tareas específicas.
 
 2. EL SEMÁFORO (GRADOS DE AVANCE)
-Cada color representa un estado de avance real:
-Rojo (0 al 9%) -> Recién arranca o está frenado.
-Naranja (10 al 49%) -> Iniciado.
-Amarillo (50 al 79%) -> En marcha.
-Verde (80 al 99%) -> Muy avanzado.
-Azul (100%) -> Tarea completa.
+Cada color representa un estado de avance real de las tareas del Plan Maestro:
+- Rojo (0 al 9%) -> Recién arranca o está frenado.
+- Naranja (10 al 49%) -> Iniciado.
+- Amarillo (50 al 79%) -> En marcha.
+- Verde (80 al 99%) -> Muy avanzado.
+- Azul (100%) -> Tarea completa.
 
-3. ¿CÓMO ACTUALIZO MIS TAREAS? (Si sos vendedor/responsable)
-- Buscá la pestaña "Tareas" o "Equipo".
-- Hacé clic en la tarea que te toca hacer.
+3. ¿CÓMO CARGAR TUS AVANCES?
+- Buscá la pestaña "Tareas" o navega desde tu nombre en "Equipo".
+- Hacé clic en la tarea que te toca actualizar.
 - Se va a abrir un recuadro. Mové la barrita gris para indicar qué porcentaje ya avanzaste.
-- Abajo, cambiá el estado si hace falta (Pendiente, En curso, Bloqueada o Cerrada).
-- Si tenés algún problema, ponela como "Bloqueada" y dejá una nota en el cuadro de Comentarios.
+- Cambiá el estado general (Pendiente, En curso, Bloqueada o Cerrada).
 - Hacé clic en el botón naranja "Guardar cambios".`;
 
-const MANUAL_ADMIN = `ADMINISTRACIÓN Y ESPECIFICACIONES TÉCNICAS
+const MANUAL_ADMIN = `INSTRUCTIVO DE OPERACIÓN INTERNA Y ESPECIFICACIONES TÉCNICAS
 
-1. GESTIÓN DE DATOS EN LA NUBE
-El tablero no guarda la información internamente, sino que lee constantemente un archivo maestro de Google Sheets. 
+1. ARQUITECTURA DE DATOS
+Toda la información del Plan Maestro de Generación de Demanda se sincroniza en tiempo real mediante una conexión directa a la planilla externa de Google Sheets. No requiere mantenimiento de bases de datos internas.
 
-2. CÓMO AGREGAR PLANES O TAREAS NUEVAS
-- Abrí la planilla de Google Sheets conectada.
-- Agregá una fila nueva al final.
-- ATENCIÓN: Nunca borres ni cambies los nombres de las columnas de la Fila 1. Deben seguir diciendo textualmente: programa, plan, tarea, responsable, estado, prioridad, avance, comentarios. Todo en minúsculas.
-- Si ponés el nombre de un vendedor en la columna "responsable", la tarea aparecerá automáticamente en su tablero.
-
-3. ACTUALIZACIÓN DE INTERFAZ
-Cualquier cambio de estructura, botones o diseño que se modifique en el código HTML impactará en toda la red inmediatamente tras subirlo a Netlify.`;
+2. ESPECIFICACIONES DE LA PLANILLA (GOOGLE SHEETS)
+- Mantenimiento: Para agregar, quitar o cambiar iniciativas, solo debes editar las filas de la planilla de Sheets conectada.
+- Cabeceras Obligatorias: La Fila 1 de la hoja debe contener estrictamente los siguientes títulos en minúsculas y sin acentos:
+  "programa", "plan", "tarea", "responsable", "estado", "prioridad", "avance", "comentarios".
+- Formato de Avance: La columna "avance" lee números enteros del 0 al 100 o con formato de porcentaje (ej: 45%).
+- Actualización: Una vez guardados los cambios en Google Sheets, simplemente refresca el tablero en tu navegador para ver los cambios impactados.`;
 
 function ModalAyuda({ onClose }) {
     const [seccion, setSeccion] = useState("usuario");
-    return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.6)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
-        React.createElement("div", { style: { background: "#fff", borderRadius: 16, width: "100%", maxWidth: 650, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
-            React.createElement("div", { style: { padding: "18px 24px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: "#0F172A" } }, "Instrucciones de Uso"),
-                React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#94A3B8" } }, "✕")
+    return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
+        React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
+            React.createElement("div", { style: { padding: "18px 22px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 } },
+                React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: "#0F172A" } }, "❓ Soporte e Instructivos"),
+                React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#94A3B8", padding: 4 } }, "✕")
             ),
-            React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC" } },
-                [{ id: "usuario", label: "Manual de Usuario" }, { id: "admin", label: "Administración del Tablero" }].map(t => 
-                    React.createElement("button", { key: t.id, onClick: () => setSeccion(t.id), style: { flex: 1, padding: "14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: seccion === t.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${seccion === t.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, t.label)
-                )
+            React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC", flexShrink: 0 } },
+                [
+                    { id: "usuario", label: "Manual de Usuario" },
+                    { id: "admin", label: "Operación del Tablero (Admin)" }
+                ].map(t => React.createElement("button", { key: t.id, onClick: () => setSeccion(t.id), style: { flex: 1, padding: "11px 8px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: seccion === t.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${seccion === t.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, transition: "color .15s" } }, t.label))
             ),
-            React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "24px" } },
-                React.createElement("pre", { style: { fontFamily: "inherit", fontSize: 14, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 } }, seccion === "usuario" ? MANUAL_USUARIO : MANUAL_ADMIN)
+            React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 22px" } },
+                React.createElement("pre", { style: { fontFamily: "inherit", fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 } }, seccion === "usuario" ? MANUAL_USUARIO : MANUAL_ADMIN)
             ),
-            React.createElement("div", { style: { padding: "16px 24px", borderTop: "1px solid #E2E8F0", textAlign: "right", background: "#F8FAFC", borderRadius: "0 0 16px 16px" } },
-                React.createElement("button", { onClick: onClose, style: { padding: "10px 24px", borderRadius: 8, border: "none", background: CLIENTE.colorB, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" } }, "Entendido")
+            React.createElement("div", { style: { padding: "12px 22px", borderTop: "1px solid #E2E8F0", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "Tablero v1.0 · Next Siembra"),
+                React.createElement("button", { onClick: onClose, style: { padding: "8px 20px", borderRadius: 9, border: "none", background: CLIENTE.colorB, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar")
             )
         )
     );
 }
 
 // ════════════════════════════════════════════════════════════
-//  VISTAS PRINCIPALES
+//  VISTAS DE PANTALLA
 // ════════════════════════════════════════════════════════════
-
 function PanelRangoAvance({ tareas, labelRango, colorHex, onClose, onEditar }) {
     return React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 1500, display: "flex" } },
         React.createElement("div", { style: { flex: 1, background: "rgba(15,23,42,.35)", backdropFilter: "blur(2px)" }, onClick: onClose }),
@@ -249,7 +249,7 @@ function PanelRangoAvance({ tareas, labelRango, colorHex, onClose, onEditar }) {
             React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "20px" } },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
                     React.createElement("div", null,
-                        React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em" } }, "Detalle de Tareas"),
+                        React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase" } }, "Tareas en Rango"),
                         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
                             React.createElement("span", { style: { width: 12, height: 12, borderRadius: "50%", background: colorHex } }),
                             React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: colorHex } }, labelRango)
@@ -281,7 +281,6 @@ function VistaEjecutiva({ tareas, onEditar }) {
     const [panelRango, setPanelRango] = useState(null);
     const totalAv = avg(tareas.map(t => t.avance));
     
-    // Agrupar tareas por su etiqueta de avance de color
     const buckets = [
         { id: "Sin inicio", rango: "0-9%", color: "#EF4444" },
         { id: "Iniciado", rango: "10-49%", color: "#F97316" },
@@ -315,7 +314,6 @@ function VistaEjecutiva({ tareas, onEditar }) {
                 );
             })
         ),
-        
         React.createElement(LeyendaSemaforo, { totalAv: totalAv })
     );
 }
@@ -560,9 +558,6 @@ function VistaTareas({ tareas, onEditar }) {
     );
 }
 
-// ════════════════════════════════════════════════════════════
-//  VISTA REPORTE PDF (Oculta en pantalla, visible al imprimir)
-// ════════════════════════════════════════════════════════════
 function VistaReportePDF({ tareas }) {
     const totalAv = avg(tareas.map(t => t.avance));
     const tree = useMemo(() => {
@@ -601,133 +596,14 @@ function VistaReportePDF({ tareas }) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  MODAL DE EDICIÓN
-// ════════════════════════════════════════════════════════════
-function Modal({ tarea, onSave, onClose, saving, usuario }) {
-    const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || zonaDefault() });
-    const set = (k, v) => setF(p => ({ ...p, [k]: v }));
-    const avanceEfectivo = esRZNColectivo(f) ? avanceZonas(f.zonas) : f.avance;
-    const { bar, bg, text, label } = colorAvance(avanceEfectivo);
-    
-    const handleZona = (zona, campo, valor) => {
-        setF(p => {
-            const nuevasZonas = { ...p.zonas, [zona]: { ...p.zonas[zona], [campo]: valor } };
-            return { ...p, zonas: nuevasZonas, avance: avanceZonas(nuevasZonas) };
-        });
-    };
-
-    return React.createElement("div", { className: "no-print", style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
-        React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: esRZNColectivo(f) ? 600 : 500, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
-            React.createElement("div", { style: { background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", padding: "20px 24px", borderRadius: "18px 18px 0 0" } },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
-                    React.createElement("div", { style: { flex: 1, marginRight: 16 } },
-                        React.createElement(Breadcrumb, { items: [{label: f.programa}, {label: f.plan}] }),
-                        React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: "#0F172A", lineHeight: 1.3 } }, tarea.tarea || "Tarea sin nombre")
-                    ),
-                    React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#94A3B8" } }, "✕")
-                ),
-                React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap", alignItems: "center" } },
-                    React.createElement(Badge, { label: f.estado, tipo: "estado" }),
-                    tarea.responsable && React.createElement("span", { style: { fontSize: 11, color: "#0F172A", background: "#E2E8F0", borderRadius: 99, padding: "3px 10px", fontWeight: 700 } }, tarea.responsable)
-                )
-            ),
-            React.createElement("div", { style: { padding: "24px", display: "flex", flexDirection: "column", gap: 24 } },
-                esRZNColectivo(f) ? React.createElement(GrillaZonas, { zonas: f.zonas, onChange: handleZona, zonaUsuario: usuario?.rol === "vendedor" ? usuario.zona : null }) : 
-                React.createElement("div", null,
-                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 } },
-                        React.createElement("label", { style: { fontSize: 12, fontWeight: 800, color: "#475569", textTransform: "uppercase" } }, "Grado de Avance"),
-                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                            React.createElement("span", { style: { fontSize: 11, background: bg, color: text, borderRadius: 99, padding: "3px 10px", fontWeight: 800 } }, label),
-                            React.createElement("span", { style: { fontSize: 26, fontWeight: 900, color: bar } }, pct(f.avance), "%")
-                        )
-                    ),
-                    React.createElement("input", { type: "range", min: 0, max: 100, value: pct(f.avance), onChange: e => set("avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginBottom: 8 } }),
-                    React.createElement(BarraAvance, { valor: f.avance, height: 10 }),
-                    React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } }, [0, 25, 50, 75, 100].map(v => 
-                        React.createElement("button", { key: v, onClick: () => set("avance", v / 100), style: { flex: 1, padding: "6px 0", borderRadius: 8, border: `1px solid ${pct(f.avance) === v ? "#94A3B8" : "#E2E8F0"}`, background: pct(f.avance) === v ? "#F1F5F9" : "#fff", color: "#0F172A", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, v, "%")
-                    ))
-                ),
-                React.createElement("div", null,
-                    React.createElement("label", { style: { fontSize: 12, fontWeight: 800, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 10 } }, "Estado de la Tarea"),
-                    React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
-                        ["Pendiente", "En curso", "Bloqueada", "Cerrada"].map(e => {
-                            const ec = ESTADO_CFG[e];
-                            return React.createElement("button", { key: e, onClick: () => set("estado", e), style: { padding: "8px 16px", borderRadius: 99, border: `1.5px solid ${f.estado === e ? ec?.dot : "#E2E8F0"}`, background: f.estado === e ? ec?.bg : "#F8FAFC", color: f.estado === e ? ec?.text : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, e);
-                        })
-                    )
-                ),
-                React.createElement("div", null,
-                    React.createElement("label", { style: { fontSize: 12, fontWeight: 800, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 10 } }, "Notas y Comentarios"),
-                    React.createElement("textarea", { value: f.comentarios || "", onChange: e => set("comentarios", e.target.value), rows: 3, placeholder: "Aclaraciones o próximos pasos...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "12px", fontSize: 14, color: "#0F172A", resize: "vertical", background: "#F8FAFC", outline: "none" } })
-                ),
-                tarea.ultimaActualizacion && React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", textAlign: "right" } }, "Última actualización: ", new Date(tarea.ultimaActualizacion).toLocaleString("es-AR"))
-            ),
-            React.createElement("div", { style: { display: "flex", gap: 12, padding: "0 24px 24px" } },
-                React.createElement("button", { onClick: onClose, style: { flex: 1, padding: "12px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#fff", color: "#0F172A", fontSize: 15, fontWeight: 700, cursor: "pointer" } }, "Cancelar"),
-                React.createElement("button", { onClick: () => onSave({ ...f, avance: avanceEfectivo, ultimaActualizacion: new Date().toISOString() }), disabled: saving, style: { flex: 2, padding: "12px", border: "none", borderRadius: 10, background: saving ? "#94A3B8" : CLIENTE.colorA, color: "#fff", fontSize: 15, fontWeight: 800, cursor: saving ? "not-allowed" : "pointer" } }, saving ? "Guardando..." : "Guardar Cambios")
-            )
-        )
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  PANTALLA DE LOGIN
-// ════════════════════════════════════════════════════════════
-function PantallaLogin({ onLogin, usuarios }) {
-    const [pin, setPin] = useState("");
-    const [err, setErr] = useState("");
-    
-    const tryLogin = (p) => { 
-        const u = usuarios.find(usr => usr.pin === p); 
-        if (u) onLogin(u);
-        else { setErr("PIN incorrecto"); setPin(""); } 
-    };
-    
-    const handleKey = (d) => { 
-        if (pin.length >= 4) return; 
-        const n = pin + d; 
-        setPin(n); 
-        setErr(""); 
-        if (n.length === 4) setTimeout(() => tryLogin(n), 120); 
-    };
-    
-    const btnS = { padding: "16px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, color: "#0F172A", cursor: "pointer" };
-    
-    return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
-        React.createElement("div", { style: { marginBottom: 32, textAlign: "center" } },
-            React.createElement(LogoNextSiembra, { height: 50 }),
-            React.createElement("div", { style: { fontSize: 15, color: "#0F172A", fontWeight: 800, marginTop: 12, letterSpacing: "-0.01em" } }, CLIENTE.subtitulo)
-        ),
-        React.createElement("div", { style: { background: "#fff", borderRadius: 20, padding: "30px", width: "100%", maxWidth: 340, boxShadow: "0 10px 40px rgba(0,0,0,.08)", border: "1px solid #E2E8F0" } },
-            React.createElement("div", { style: { height: 5, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 24 } }),
-            React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } },
-                React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: "#0F172A" } }, "Ingresá tu PIN")
-            ),
-            React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 14, marginBottom: 20 } },
-                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 18, height: 18, borderRadius: "50%", background: i < pin.length ? CLIENTE.colorA : "#E2E8F0", border: `2px solid ${i < pin.length ? CLIENTE.colorA : "#CBD5E1"}` } }))
-            ),
-            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "10px", fontSize: 13, color: "#B91C1C", textAlign: "center", marginBottom: 16, fontWeight: 700 } }, err),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 } },
-                [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: btnS }, d)),
-                React.createElement("button", { onClick: () => setPin(""), style: { ...btnS, fontSize: 12, color: "#64748B" } }, "Borrar"),
-                React.createElement("button", { onClick: () => handleKey("0"), style: btnS }, "0"),
-                React.createElement("button", { onClick: () => { setPin(p => p.slice(0, -1)); setErr(""); }, style: { ...btnS, fontSize: 18, color: "#64748B" } }, "✕")
-            ),
-            React.createElement("div", { style: { borderTop: "1px solid #F1F5F9", marginTop: 16, paddingTop: 16, textAlign: "center" } },
-                React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "none", color: "#64748B", fontSize: 13, cursor: "pointer", fontWeight: 700, textDecoration: "underline" } }, "Ingresar como Lectura")
-            )
-        )
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  APP CONTROLLER PRINCIPAL
+//  MAIN CONTROLLER
 // ════════════════════════════════════════════════════════════
 function App() {
     const [usuario, setUsuario] = useState(undefined);
     const [tareas, setTareas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [vista, setVista] = useState("ejecutivo");
+    const [navPlanes, setNavPlanes] = useState({});
     const [modal, setModal] = useState(null);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
@@ -738,6 +614,10 @@ function App() {
     const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
     const handleLogin = (u) => setUsuario(u);
     const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); };
+    const handleNavegar = (destVista, params = {}) => {
+        if (destVista === "programas") setVista("programas");
+        else if (destVista === "planes") { setNavPlanes({ prog: params.prog, pl: params.pl }); setVista("planes"); }
+    };
 
     const handleEditar = (tarea) => {
         if (puedeEditar(usuario, tarea)) setModal(tarea);
@@ -816,6 +696,16 @@ function App() {
     const fechaFormateada = fechaHoy.charAt(0).toUpperCase() + fechaHoy.slice(1);
     const rolColor = usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
 
+    const TABS = [
+        { id: "ejecutivo", label: "Resumen" },
+        { id: "programas", label: "Programas" },
+        { id: "planes", label: "Planes" },
+        { id: "tareas", label: "Tareas" }
+    ];
+
+    const totalAv = avg(tareas.map(t => t.avance));
+    const mainBar = colorAvance(totalAv).bar;
+
     return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
         toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
         modal && React.createElement(Modal, { tarea: modal, onSave: guardar, onClose: () => setModal(null), saving: saving, usuario: usuario }),
@@ -824,48 +714,41 @@ function App() {
         imprimiendo && React.createElement(VistaReportePDF, { tareas: tareas }),
 
         React.createElement("div", { className: "no-print", style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
-            React.createElement("div", { style: { maxWidth: 1040, margin: "0 auto", padding: "0 20px" } },
-                React.createElement("div", { style: { height: 5, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -20px" } }),
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0 0", flexWrap: "wrap", gap: 14 } },
+            React.createElement("div", { style: { maxWidth: 1040, margin: "0 auto", padding: "0 16px" } },
+                React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 0", flexWrap: "wrap", gap: 10 } },
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } },
-                        React.createElement(LogoNextSiembra, { height: 46 }),
+                        React.createElement(LogoNextSiembra, { height: 42 }),
                         React.createElement("div", { style: { borderLeft: "2px solid #E2E8F0", paddingLeft: 16 } },
-                            React.createElement("div", { style: { fontSize: 18, color: "#0F172A", fontWeight: 900, letterSpacing: "-0.02em" } }, CLIENTE.subtitulo),
-                            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", marginTop: 2 } }, "Tablero de Control • " + fechaFormateada)
+                            React.createElement("div", { style: { fontSize: 16, color: "#0F172A", fontWeight: 800, letterSpacing: "-0.02em" } }, CLIENTE.subtitulo),
+                            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginTop: 2 } }, "Tablero de Control • " + fechaFormateada)
                         )
                     ),
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
                         React.createElement("button", { onClick: () => setShowAyuda(true), style: { background: "none", border: "none", fontSize: 12, fontWeight: 700, color: "#94A3B8", cursor: "pointer", textDecoration: "underline" } }, "Ayuda / Instructivo"),
                         React.createElement("div", { style: { position: "relative" } },
-                            React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 14px", cursor: "pointer" } },
-                                React.createElement("span", { style: { width: 10, height: 10, borderRadius: "50%", background: rolColor } }),
-                                React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: "#0F172A" } }, usuario?.nombre || "Solo lectura"),
+                            React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 12px", cursor: "pointer" } },
+                                React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: rolColor } }),
+                                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0F172A" } }, usuario?.nombre || "Solo lectura"),
                                 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")
                             ),
-                            showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 8px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,.15)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
-                                React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "12px 16px", border: "none", background: "none", textAlign: "left", fontSize: 14, color: "#EF4444", cursor: "pointer", fontWeight: 700 } }, "Cerrar sesión")
+                            showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
+                                React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")
                             )
                         )
                     )
                 ),
-                React.createElement("div", { style: { display: "flex", gap: 0, marginTop: 14, width: "100%", alignItems: "center" } },
-                    [
-                        { id: "ejecutivo", label: "Resumen" },
-                        { id: "programas", label: "Programas" },
-                        { id: "planes", label: "Planes" },
-                        { id: "tareas", label: "Tareas" }
-                    ].map(tab => React.createElement("button", { key: tab.id, onClick: () => setVista(tab.id), style: { padding: "12px 20px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 800, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, tab.label)),
-                    
+                React.createElement("div", { style: { display: "flex", gap: 0, marginTop: 10, width: "100%", alignItems: "center" } },
+                    TABS.map(tab => React.createElement("button", { key: tab.id, onClick: () => setVista(tab.id), style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, tab.label)),
                     React.createElement("button", { onClick: handlePrint, style: { marginLeft: 16, display: "flex", alignItems: "center", gap: 6, background: "#F1F5F9", border: "1px solid #CBD5E1", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#0F172A" } }, "📄 Reporte PDF"),
-                    
-                    React.createElement("button", { onClick: () => setVista("equipos"), style: { marginLeft: "auto", padding: "12px 20px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 900, color: vista === "equipos" ? CLIENTE.colorA : CLIENTE.colorB, borderBottom: `3px solid ${vista === "equipos" ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, "EQUIPO")
+                    React.createElement("button", { onClick: () => setVista("equipos"), style: { marginLeft: "auto", padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 900, color: vista === "equipos" ? CLIENTE.colorA : CLIENTE.colorB, borderBottom: `3px solid ${vista === "equipos" ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, "EQUIPO")
                 )
             )
         ),
-        React.createElement("div", { className: "no-print", style: { maxWidth: 1040, margin: "0 auto", padding: "24px 20px 80px" } },
-            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar }),
+        React.createElement("div", { className: "no-print", style: { maxWidth: 1040, margin: "0 auto", padding: "22px 14px 60px" } },
+            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
             vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar }),
-            vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar }),
+            vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
             vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar }),
             vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar })
         )
