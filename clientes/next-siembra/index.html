@@ -164,12 +164,12 @@
         );
     }
 
-    function Badge({ label, tipo }) {
-        const cfg = tipo === "estado" ? ESTADO_CFG[label] : PRIO_CFG[label];
+    function Badge(props) {
+        const cfg = props.tipo === "estado" ? ESTADO_CFG[props.label] : PRIO_CFG[props.label];
         if (!cfg) return null;
         return React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 4, background: cfg.bg, color: cfg.text, borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" } },
-            tipo === "estado" && React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 } }),
-            label
+            props.tipo === "estado" ? React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 } }) : null,
+            props.label
         );
     }
 
@@ -187,7 +187,7 @@
         return React.createElement("div", { style: { fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#94A3B8", marginBottom: 6, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" } },
             props.items.map((it, idx) => React.createElement("span", { key: idx, style: { display: "flex", alignItems: "center", gap: 6 } },
                 it.onClick ? React.createElement("span", { onClick: (e) => { e.stopPropagation(); it.onClick(); }, style: { color: CLIENTE.colorA, cursor: "pointer" } }, it.label) : React.createElement("span", null, it.label),
-                idx < props.items.length - 1 && React.createElement("span", { style: { color: "#CBD5E1" } }, "›")
+                idx < props.items.length - 1 ? React.createElement("span", { style: { color: "#CBD5E1" } }, "›") : null
             ))
         );
     }
@@ -195,7 +195,7 @@
     function Toast(props) {
         return React.createElement("div", { style: { position: "fixed", bottom: 24, right: 24, zIndex: 3000, background: props.ok ? "#14532D" : "#7F1D1D", color: "#fff", borderRadius: 10, padding: "12px 20px", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 8 } },
             props.ok ? "✓" : "✕", " ", props.msg);
-}
+    }
 
     // ════════════════════════════════════════════════════════════
     //  PANTALLA DE LOGIN
@@ -400,14 +400,14 @@ function VistaPlanesAll({ tareas, onEditar, initProg, initPlan }) {
                             React.createElement("div", { style: { fontWeight: 800, color: "#0F172A", fontSize: 15, marginTop: 4 } }, plan)
                         ),
                         React.createElement("span", { style: { fontWeight: 900, color: colorAvance(av).bar, fontSize: 18 } }, pct(av), "%")),
-                    abierto && React.createElement("div", { style: { background: "#F8FAFC", padding: "12px 20px", borderTop: "1px solid #E2E8F0" } }, ts.map(t => 
+                    abierto ? React.createElement("div", { style: { background: "#F8FAFC", padding: "12px 20px", borderTop: "1px solid #E2E8F0" } }, ts.map(t => 
                         React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { background: "#fff", padding: "12px 16px", borderRadius: 10, marginBottom: 6, cursor: "pointer", borderLeft: `4px solid ${colorAvance(t.avance).bar}` } },
                             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 } },
                                 React.createElement("div", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: "#1E293B" } }, t.tarea),
                                 React.createElement(PctBadge, { valor: t.avance, size: 34 })
                             )
                         )
-                    ))
+                    )) : null
                 );
             })
         ))
@@ -428,7 +428,7 @@ function VistaEquipos({ tareas, onEditar }) {
 
     return React.createElement("div", { className: "no-print" },
         React.createElement(LeyendaSemaforo, { totalAv: totalAv }),
-        !zonaActiva && React.createElement("div", null,
+        !zonaActiva ? React.createElement("div", null,
             React.createElement("div", { style: { fontSize: 12, color: "#64748B", fontWeight: 800, textTransform: "uppercase", marginBottom: 12 } }, "Total Equipo de Vendedores"),
             React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 } }, dataZonas.map(v => (
                 React.createElement(Card, { key: v.zona, onClick: () => setZonaActiva(v.zona), accent: colorAvance(v.avProm).bar },
@@ -439,24 +439,21 @@ function VistaEquipos({ tareas, onEditar }) {
                     React.createElement("div", { style: { marginTop: 12 } }, React.createElement(BarraAvance, { valor: v.avProm, height: 6 }))
                 )
             )))
-        ),
-        zonaActiva && (() => {
-            const zd = dataZonas.find(z => z.zona === zonaActiva);
-            return React.createElement("div", null,
-                React.createElement(Breadcrumb, { items: [{ label: "Equipo de Vendedores", onClick: () => setZonaActiva(null) }, { label: zonaActiva }] }),
-                React.createElement("h2", { style: { fontSize: 22, fontWeight: 900, color: "#0F172A", marginBottom: 16 } }, zonaActiva),
-                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, zd.tareas.map(t => {
-                    const avReal = t.zonas?.[zonaActiva]?.avance ?? t.avance;
-                    return React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(avReal).bar },
-                        React.createElement(Breadcrumb, { items: [{label: t.programa}, {label: t.plan}] }),
-                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 } },
-                            React.createElement("div", { style: { flex: 1, fontSize: 14, fontWeight: 700, color: "#1E293B" } }, t.tarea),
-                            React.createElement(PctBadge, { valor: avReal, size: 38 })
-                        )
-                    );
-                }))
-            );
-        })()
+        ) : null,
+        zonaActiva ? React.createElement("div", null,
+            React.createElement(Breadcrumb, { items: [{ label: "Equipo de Vendedores", onClick: () => setZonaActiva(null) }, { label: zonaActiva }] }),
+            React.createElement("h2", { style: { fontSize: 22, fontWeight: 900, color: "#0F172A", marginBottom: 16 } }, zonaActiva),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, dataZonas.find(z => z.zona === zonaActiva).tareas.map(t => {
+                const avReal = t.zonas?.[zonaActiva]?.avance ?? t.avance;
+                return React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(avReal).bar },
+                    React.createElement(Breadcrumb, { items: [{label: t.programa}, {label: t.plan}] }),
+                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 } },
+                        React.createElement("div", { style: { flex: 1, fontSize: 14, fontWeight: 700, color: "#1E293B" } }, t.tarea),
+                        React.createElement(PctBadge, { valor: avReal, size: 38 })
+                    )
+                );
+            }))
+        ) : null
     );
 }
 
@@ -537,7 +534,7 @@ function Modal({ tarea, onSave, onClose, usuario }) {
             ),
             React.createElement("div", { style: { display: "flex", justifyContent: "end", gap: 10, marginTop: 20 } },
                 React.createElement("button", { onClick: onClose, style: { padding: "8px 16px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#fff", cursor: "pointer" } }, "Cancelar"),
-                puedeEditar && React.createElement("button", { onClick: handleSave, style: { padding: "8px 16px", borderRadius: 8, background: CLIENTE.colorA, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" } }, "Guardar")
+                puedeEditar ? React.createElement("button", { onClick: handleSave, style: { padding: "8px 16px", borderRadius: 8, background: CLIENTE.colorA, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" } }, "Guardar") : null
             )
         )
     );
@@ -625,11 +622,11 @@ function App() {
                     React.createElement("button", { onClick: handlePrint, style: { marginLeft: 16, display: "flex", alignItems: "center", gap: 6, background: "#F1F5F9", border: "1px solid #CBD5E1", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 800 } }, "📄 Reporte PDF"),
                     React.createElement("button", { onClick: () => setVista("equipos"), style: { marginLeft: "auto", padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 900, color: vista === "equipos" ? CLIENTE.colorA : CLIENTE.colorB, borderBottom: `3px solid ${vista === "equipos" ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, "EQUIPO")))),
         React.createElement("div", { className: "no-print", style: { maxWidth: 1040, margin: "0 auto", padding: "22px 14px 60px" } },
-            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas, onNavegar: handleNavegar }),
-            vista === "programas" && React.createElement(VistaProgramas, { tareas, onEditar: setModal }),
-            vista === "planes" && React.createElement(VistaPlanesAll, { tareas, onEditar: setModal, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
-            vista === "equipos" && React.createElement(VistaEquipos, { tareas, onEditar: setModal }),
-            vista === "tareas" && React.createElement(VistaTareas, { tareas, onEditar: setModal }))
+            vista === "ejecutivo" ? React.createElement(VistaEjecutiva, { tareas, onNavegar: handleNavegar }) : null,
+            vista === "programas" ? React.createElement(VistaProgramas, { tareas, onEditar: setModal }) : null,
+            vista === "planes" ? React.createElement(VistaPlanesAll, { tareas, onEditar: setModal, initProg: navPlanes.prog, initPlan: navPlanes.pl }) : null,
+            vista === "equipos" ? React.createElement(VistaEquipos, { tareas, onEditar: setModal }) : null,
+            vista === "tareas" ? React.createElement(VistaTareas, { tareas, onEditar: setModal }) : null)
     );
 }
 
