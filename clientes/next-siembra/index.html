@@ -591,3 +591,113 @@ function App() {
         if (usuario === undefined) return;
         fetch(SHEET_CSV_URL)
             .then(res => res.text())
+            .then(csvText => {
+                const lineas = parseCSV(csvText);
+                if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
+                
+                const encabezados = lineas[0].map(h => h.trim().toLowerCase());
+                const rawTareas = [];
+
+                for (let i = 1; i < lineas.length; i++) {
+                    const fila = lineas[i];
+                    if (fila.length < 3 || !fila[0]) continue;
+
+                    const t = {};
+                    encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
+                    
+                    let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
+                    if (avNum > 1) avNum = avNum / 100;
+
+                    const tareaMapeada = {
+                        id: i,
+                        programa: t.programa || "Sin Programa",
+                        plan: t.plan || "Sin Plan",
+                        tarea: t.tarea || "Acción sin nombre",
+                        responsable: t.responsable || "No asignado",
+                        estado: t.estado || "Pendiente",
+                        prioridad: t.prioridad || "Media",
+                        avance: isNaN(avNum) ? 0 : avNum,
+                        comentarios: t.comentarios || t.comentario || "",
+                        ultimaActualizacion: t.ultimaactualizacion || null
+                    };
+
+                    if (esRZNColectivo(tareaMapeada)) {
+                        tareaMapeada.zonas = zonaDefault();
+                    }
+
+                    rawTareas.push(tareaMapeada);
+                }
+                setTareas(rawTareas);
+                setLoading(false);
+            })
+            .catch(err => { console.error(err); setLoading(false); });
+    }, [usuario]);
+
+    if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: handleLogin, usuarios: USUARIOS_INIT });
+    if (loading) return React.createElement("div", { id: "loading" }, React.createElement("div", { className: "spinner" }), React.createElement("span", null, "Sincronizando Matriz de Demanda..."));
+
+    const totalAv = avg(tareas.map(t => t.avance));
+    const rolColor = usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
+
+    const TABS = [
+        { id: "ejecutivo", label: "Resumen" },
+        { id: "programas", label: "Programas" },
+        { id: "planes", label: "Planes" },
+        { id: "tareas", label: "Tareas" }
+    ];
+
+    return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
+        toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
+        modal && React.createElement(Modal, { tarea: modal, onSave: guardar, onClose: () => setModal(null), saving: saving, usuario: usuario }),
+        showAyuda && React.createElement(ModalAyuda, { onClose: () => setShowAyuda(false) }),
+        
+        imprimiendo && React.createElement(VistaReportePDF, { tareas: tareas }),
+
+        React.createElement("div", { className: "no-print", style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
+            React.createElement("div", { style: { maxWidth: 1040, margin: "0 auto", padding: "0 16px" } },
+                React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 0", flexWrap: "wrap", gap: 10 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } },
+                        React.createElement(LogoNextSiembra, { height: 42 }),
+                        React.createElement("div", { style: { borderLeft: "2px solid #E2E8F0", paddingLeft: 16 } },
+                            React.createElement("div", { style: { fontSize: 16, color: "#0F172A", fontWeight: 800, letterSpacing: "-0.02em" } }, CLIENTE.subtitulo),
+                            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginTop: 2 } }, "Tablero de Control")
+                        )
+                    ),
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
+                        React.createElement("button", { onClick: () => setShowAyuda(true), style: { background: "none", border: "none", fontSize: 12, fontWeight: 700, color: "#94A3B8", cursor: "pointer", textDecoration: "underline" } }, "Ayuda / Instructivo"),
+                        React.createElement("div", { style: { position: "relative" } },
+                            React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 12px", cursor: "pointer" } },
+                                React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: rolColor } }),
+                                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0F172A" } }, usuario?.nombre || "Solo lectura"),
+                                React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")
+                            ),
+                            showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
+                                React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")
+                            )
+                        )
+                    )
+                ),
+                React.createElement("div", { style: { display: "flex", gap: 0, marginTop: 10, width: "100%", alignItems: "center" } },
+                    TABS.map(tab => React.createElement("button", { key: tab.id, onClick: () => setVista(tab.id), style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, tab.label)),
+                    React.createElement("button", { onClick: handlePrint, style: { marginLeft: 16, display: "flex", alignItems: "center", gap: 6, background: "#F1F5F9", border: "1px solid #CBD5E1", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#0F172A" } }, "📄 Reporte PDF"),
+                    React.createElement("button", { onClick: () => setVista("equipos"), style: { marginLeft: "auto", padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 900, color: vista === "equipos" ? CLIENTE.colorA : CLIENTE.colorB, borderBottom: `3px solid ${vista === "equipos" ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, "EQUIPO")
+                )
+            )
+        ),
+        React.createElement("div", { className: "no-print", style: { maxWidth: 1040, margin: "0 auto", padding: "22px 14px 60px" } },
+            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
+            vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar }),
+            vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
+            vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar }),
+            vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar })
+        )
+    );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+});
+  </script>
+</body>
+</html>
