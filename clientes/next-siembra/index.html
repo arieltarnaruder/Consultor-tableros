@@ -598,7 +598,7 @@
             toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
             modal && React.createElement(Modal, { tarea: modal, onSave: f => { setTareas(p => p.map(t => t.id === f.id ? f : t)); setModal(null); showToast("Progreso guardado"); }, onClose: () => setModal(null), usuario }),
             showAyuda && React.createElement(ModalAyuda, { onClose: () => setShowAyuda(false) }),
-            imprimiendo && React.createElement(VistaReportePDF, { tareas }),
+            imprimiendo ? React.createElement(VistaReportePDF, { tareas }) : null,
             React.createElement("div", { className: "no-print", style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
                 React.createElement("div", { style: { maxWidth: 1040, margin: "0 auto", padding: "0 16px" } },
                     React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
