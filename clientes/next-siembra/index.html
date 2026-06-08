@@ -51,7 +51,7 @@ const CLIENTE = {
 };
 
 // ════════════════════════════════════════════════════════════
-//  LOGICA BASE DE PERMISOS Y AVANCES
+//  PERMISOS Y LOGICA DE NEGOCIO
 // ════════════════════════════════════════════════════════════
 function puedeEditar(usuario, tarea) {
     if (!usuario) return false; 
@@ -107,7 +107,7 @@ function parseCSV(text) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  COMPONENTES VISUALES REUTILIZABLES
+//  COMPONENTES VISUALES COMPARTIDOS
 // ════════════════════════════════════════════════════════════
 function LeyendaSemaforo({ totalAv }) {
     const items = [
@@ -147,7 +147,7 @@ function PctBadge({ valor, size = 44 }) {
             React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: "#E2E8F0", strokeWidth: 4 }),
             React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})` })
         ),
-        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size > 35 ? 10 : 8, fontWeight: 800, color: text } }, pct(valor), "%")
+        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: text } }, pct(valor), "%")
     );
 }
 
@@ -160,9 +160,59 @@ function Badge({ label, tipo }) {
     );
 }
 
+// ════════════════════════════════════════════════════════════
+//  PANTALLA DE LOGIN (UBICADA CORRECTAMENTE)
+// ════════════════════════════════════════════════════════════
+function PantallaLogin({ onLogin, usuarios }) {
+    const [pin, setPin] = useState("");
+    const [err, setErr] = useState("");
+    
+    const tryLogin = (p) => { 
+        const u = usuarios.find(usr => usr.pin === p); 
+        if (u) onLogin(u);
+        else { setErr("PIN incorrecto"); setPin(""); } 
+    };
+    
+    const handleKey = (d) => { 
+        if (pin.length >= 4) return; 
+        const n = pin + d; 
+        setPin(n); 
+        setErr(""); 
+        if (n.length === 4) setTimeout(() => tryLogin(n), 120); 
+    };
+    
+    const btnS = { padding: "16px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, color: "#0F172A", cursor: "pointer" };
+    
+    return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
+        React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
+            React.createElement(LogoNextSiembra, { height: 44 }),
+            React.createElement("div", { style: { fontSize: 14, color: "#0F172A", fontWeight: 800, marginTop: 12, letterSpacing: "-0.01em" } }, CLIENTE.subtitulo)
+        ),
+        React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.10)", border: "1px solid #E2E8F0" } },
+            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 20 } }),
+            React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")
+            ),
+            React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 } },
+                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 16, height: 16, borderRadius: "50%", background: i < pin.length ? CLIENTE.colorA : "#E2E8F0", border: `2px solid ${i < pin.length ? CLIENTE.colorA : "#CBD5E1"}` } }))
+            ),
+            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
+                [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: btnS }, d)),
+                React.createElement("button", { onClick: () => setPin(""), style: { ...btnS, fontSize: 12, color: "#64748B" } }, "Borrar"),
+                React.createElement("button", { onClick: () => handleKey("0"), style: btnS }, "0"),
+                React.createElement("button", { onClick: () => { setPin(p => p.slice(0, -1)); setErr(""); }, style: { ...btnS, fontSize: 16, color: "#64748B" } }, "x")
+            ),
+            React.createElement("div", { style: { borderTop: "1px solid #F1F5F9", marginTop: 12, paddingTop: 12, textAlign: "center" } },
+                React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "7px 16px", color: "#64748B", fontSize: 12, cursor: "pointer", fontWeight: 600 } }, "Solo lectura")
+            )
+        )
+    );
+}
+
 function Card({ children, onClick, accent, style = {} }) {
     const [hov, setHov] = useState(false);
-    return React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", transition: "all .15s", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children);
+    return React.createElement("div", { onClick: onClick, onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false), style: { background: "#fff", border: `1px solid ${hov && onClick ? "#CBD5E1" : "#E2E8F0"}`, borderRadius: 12, padding: "15px 17px", cursor: onClick ? "pointer" : "default", transition: "all .15s", boxShadow: hov && onClick ? "0 4px 16px rgba(0,0,0,.08)" : "none", borderLeft: accent ? `4px solid ${accent}` : undefined, ...style } }, children);
 }
 
 function Breadcrumb({ items }) {
@@ -175,61 +225,59 @@ function Breadcrumb({ items }) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  MODAL DE AYUDA EXHAUSTIVO (FOR DUMMIES)
+//  MANUAL DE INSTRUCCIONES RESTAURADO (FOR DUMMIES)
 // ════════════════════════════════════════════════════════════
-const MANUAL_USUARIO = `MANUAL DE USUARIO - NEXT SIEMBRA
+const MANUAL_OPERACION = `MANUAL DE OPERACIÓN - NEXT SIEMBRA
 
-1. ¿CÓMO ME MUEVO POR EL TABLERO?
-El tablero funciona como carpetas dentro de tu computadora de forma visual. 
-Las pestañas de la barra superior te permiten ver la información desde lo más general hasta el mínimo detalle.
+1. CÓMO INGRESAR
+- Abrí el link del tablero en tu navegador.
+- Ingresá tu PIN de 4 dígitos. Si sos vendedor, usá el PIN que te asignaron.
 
-- Resumen: Un pantallazo general de cómo venimos.
-- Programas y Planes: Hacé clic en cualquier programa para ver qué planes lo componen. Arriba de todo siempre vas a tener la "ruta" escrita (Ej: Programa › Plan). Si haces clic directo en esa palabra de la ruta, volvés para atrás automáticamente sin clics extras.
-- Equipo: Podés ver cómo viene cada persona o el grupo de vendedores. Haciendo clic entrás a ver sus tareas específicas.
+2. ¿CÓMO SE LEE EL TABLERO?
+- Arriba tenés las pestañas principales para navegar de lo general a lo particular.
+- El Semáforo de Avance te marca el ritmo:
+  Rojo (0 al 9%) -> Recién arranca o está frenado.
+  Naranja (10 al 49%) -> Iniciado.
+  Amarillo (50 al 79%) -> En marcha.
+  Verde (80 al 99%) -> Muy avanzado.
+  Azul (100%) -> Tarea completa.
 
-2. EL SEMÁFORO (GRADOS DE AVANCE)
-Cada color representa un estado de avance real de las tareas del Plan Maestro:
-- Rojo (0 al 9%) -> Recién arranca o está frenado.
-- Naranja (10 al 49%) -> Iniciado.
-- Amarillo (50 al 79%) -> En marcha.
-- Verde (80 al 99%) -> Muy avanzado.
-- Azul (100%) -> Tarea completa.
+3. CÓMO CARGAR TUS AVANCES (Para responsables)
+- Andá a la pestaña "Tareas" o buscá tu nombre en "Equipo".
+- Hacé clic en la tarea que querés actualizar.
+- Mové la barrita del porcentaje hasta el avance real.
+- Cambiá el estado si hace falta (Pendiente, En curso, Bloqueada o Cerrada).
+- Escribí un comentario corto si hubo novedades.
+- ¡Importante! Hacé clic en "Guardar cambios".`;
 
-3. ¿CÓMO CARGAR TUS AVANCES?
-- Buscá la pestaña "Tareas" o navega desde tu nombre en "Equipo".
-- Hacé clic en la tarea que te toca actualizar.
-- Se va a abrir un recuadro. Mové la barrita gris para indicar qué porcentaje ya avanzaste.
-- Cambiá el estado general (Pendiente, En curso, Bloqueada o Cerrada).
-- Hacé clic en el botón naranja "Guardar cambios".`;
+const MANUAL_INSTALACION = `GESTIÓN DE DATOS - NEXT SIEMBRA
 
-const MANUAL_ADMIN = `INSTRUCTIVO DE OPERACIÓN INTERNA Y ESPECIFICACIONES TÉCNICAS
+¿DÓNDE VIVEN LOS DATOS?
+Toda la información de este tablero se lee automáticamente desde tu planilla de Google Sheets. No hace falta tocar ningún código de programación.
 
-1. ARQUITECTURA DE DATOS
-Toda la información del Plan Maestro de Generación de Demanda se sincroniza en tiempo real mediante una conexión directa a la planilla externa de Google Sheets. No requiere mantenimiento de bases de datos internas.
-
-2. ESPECIFICACIONES DE LA PLANILLA (GOOGLE SHEETS)
-- Mantenimiento: Para agregar, quitar o cambiar iniciativas, solo debes editar las filas de la planilla de Sheets conectada.
-- Cabeceras Obligatorias: La Fila 1 de la hoja debe contener estrictamente los siguientes títulos en minúsculas y sin acentos:
-  "programa", "plan", "tarea", "responsable", "estado", "prioridad", "avance", "comentarios".
-- Formato de Avance: La columna "avance" lee números enteros del 0 al 100 o con formato de porcentaje (ej: 45%).
-- Actualización: Una vez guardados los cambios en Google Sheets, simplemente refresca el tablero en tu navegador para ver los cambios impactados.`;
+¿CÓMO AGREGAR O MODIFICAR PLANES Y TAREAS?
+1. Abrí la planilla de Google Sheets original.
+2. Agregá nuevas filas o modificá las existentes.
+3. Respetá siempre los nombres de las columnas de la fila 1 (programa, plan, tarea, responsable, estado, prioridad, avance, comentarios). Deben estar en minúsculas.
+4. Los porcentajes de avance se cargan como números del 0 al 100 o con el símbolo de porcentaje (ej. 50%).
+5. Una vez que modifiques el Excel, refrescá la página web del tablero y los cambios aparecerán solos.`;
 
 function ModalAyuda({ onClose }) {
-    const [seccion, setSeccion] = useState("usuario");
+    const [seccion, setSeccion] = useState("operacion");
     return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
         React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
             React.createElement("div", { style: { padding: "18px 22px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 } },
-                React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: "#0F172A" } }, "❓ Soporte e Instructivos"),
+                React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: "#0F172A" } }, "❓ Soporte e Instructivo"),
                 React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#94A3B8", padding: 4 } }, "✕")
             ),
-            React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC", flexShrink: 0 } },
+            React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2E8F0", flexShrink: 0 } },
                 [
-                    { id: "usuario", label: "Manual de Usuario" },
-                    { id: "admin", label: "Operación del Tablero (Admin)" }
+                    { id: "operacion", label: " Manual de usuario" },
+                    { id: "instalacion", label: " Gestión de datos" }
                 ].map(t => React.createElement("button", { key: t.id, onClick: () => setSeccion(t.id), style: { flex: 1, padding: "11px 8px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: seccion === t.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${seccion === t.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, transition: "color .15s" } }, t.label))
             ),
             React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 22px" } },
-                React.createElement("pre", { style: { fontFamily: "inherit", fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 } }, seccion === "usuario" ? MANUAL_USUARIO : MANUAL_ADMIN)
+                React.createElement("pre", { style: { fontFamily: "inherit", fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 } }, seccion === "operacion" ? MANUAL_OPERACION : MANUAL_INSTALACION)
             ),
             React.createElement("div", { style: { padding: "12px 22px", borderTop: "1px solid #E2E8F0", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" } },
                 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "Tablero v1.0 · Next Siembra"),
@@ -240,7 +288,7 @@ function ModalAyuda({ onClose }) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  VISTAS DE PANTALLA
+//  VISTAS SECUNDARIAS
 // ════════════════════════════════════════════════════════════
 function PanelRangoAvance({ tareas, labelRango, colorHex, onClose, onEditar }) {
     return React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 1500, display: "flex" } },
@@ -249,7 +297,7 @@ function PanelRangoAvance({ tareas, labelRango, colorHex, onClose, onEditar }) {
             React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "20px" } },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
                     React.createElement("div", null,
-                        React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase" } }, "Tareas en Rango"),
+                        React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase" } }, "Detalle de Tareas"),
                         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
                             React.createElement("span", { style: { width: 12, height: 12, borderRadius: "50%", background: colorHex } }),
                             React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: colorHex } }, labelRango)
@@ -462,8 +510,8 @@ function VistaEquipos({ tareas, onEditar }) {
     return React.createElement("div", { className: "no-print" },
         React.createElement(LeyendaSemaforo, { totalAv: totalAv }),
         React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } },
-            React.createElement("button", { onClick: () => { setSubvista("vendedores"); setZonaActiva(null); setRolActivo(null); }, style: { padding: "8px 20px", borderRadius: 99, border: `1px solid ${subvista === "vendedores" ? CLIENTE.colorA : "#E2E8F0"}`, background: subvista === "vendedores" ? CLIENTE.colorA : "#F8FAFC", color: subvista === "vendedores" ? "#fff" : "#64748B", fontSize: 13, fontWeight: 800, cursor: "pointer" } }, "Equipo de Vendedores"),
-            React.createElement("button", { onClick: () => { setSubvista("otros"); setZonaActiva(null); setRolActivo(null); }, style: { padding: "8px 20px", borderRadius: 99, border: `1px solid ${subvista === "otros" ? CLIENTE.colorB : "#E2E8F0"}`, background: subvista === "otros" ? CLIENTE.colorB : "#F8FAFC", color: subvista === "otros" ? "#fff" : "#64748B", fontSize: 13, fontWeight: 800, cursor: "pointer" } }, "Otros Responsables")
+            React.createElement("button", { onClick: () => { setSubvista("vendedores"); setZonaActiva(null); setRolActivo(null); }, style: { padding: "8px 20px", borderRadius: 99, border: `1.5px solid ${subvista === "vendedores" ? CLIENTE.colorA : "#E2E8F0"}`, background: subvista === "vendedores" ? CLIENTE.colorA : "#F8FAFC", color: subvista === "vendedores" ? "#fff" : "#64748B", fontSize: 13, fontWeight: 800, cursor: "pointer" } }, "Equipo de Vendedores"),
+            React.createElement("button", { onClick: () => { setSubvista("otros"); setZonaActiva(null); setRolActivo(null); }, style: { padding: "8px 20px", borderRadius: 99, border: `1.5px solid ${subvista === "otros" ? CLIENTE.colorB : "#E2E8F0"}`, background: subvista === "otros" ? CLIENTE.colorB : "#F8FAFC", color: subvista === "otros" ? "#fff" : "#64748B", fontSize: 13, fontWeight: 800, cursor: "pointer" } }, "Otros Responsables")
         ),
         
         subvista === "vendedores" && !zonaActiva && React.createElement("div", null,
@@ -596,7 +644,7 @@ function VistaReportePDF({ tareas }) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  MAIN CONTROLLER
+//  APP CONTROLLER PRINCIPAL INTER CONEXIÓN AL SPREADSHEET
 // ════════════════════════════════════════════════════════════
 function App() {
     const [usuario, setUsuario] = useState(undefined);
@@ -692,8 +740,7 @@ function App() {
     if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: handleLogin, usuarios: USUARIOS_INIT });
     if (loading) return React.createElement("div", { id: "loading" }, React.createElement("div", { className: "spinner" }), React.createElement("span", null, "Sincronizando Matriz de Demanda..."));
 
-    const fechaHoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const fechaFormateada = fechaHoy.charAt(0).toUpperCase() + fechaHoy.slice(1);
+    const totalAv = avg(tareas.map(t => t.avance));
     const rolColor = usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
 
     const TABS = [
@@ -702,9 +749,6 @@ function App() {
         { id: "planes", label: "Planes" },
         { id: "tareas", label: "Tareas" }
     ];
-
-    const totalAv = avg(tareas.map(t => t.avance));
-    const mainBar = colorAvance(totalAv).bar;
 
     return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
         toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
@@ -721,7 +765,7 @@ function App() {
                         React.createElement(LogoNextSiembra, { height: 42 }),
                         React.createElement("div", { style: { borderLeft: "2px solid #E2E8F0", paddingLeft: 16 } },
                             React.createElement("div", { style: { fontSize: 16, color: "#0F172A", fontWeight: 800, letterSpacing: "-0.02em" } }, CLIENTE.subtitulo),
-                            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginTop: 2 } }, "Tablero de Control • " + fechaFormateada)
+                            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginTop: 2 } }, "Tablero de Control")
                         )
                     ),
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
@@ -755,7 +799,9 @@ function App() {
     );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+document.addEventListener("DOMContentLoaded", () => {
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+});
   </script>
 </body>
 </html>
