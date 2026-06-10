@@ -149,7 +149,8 @@ function LeyendaSemaforo() {
 
 function BarraAvance({ valor, height = 8 }) {
     const { bar } = colorAvance(valor);
-    return React.createElement("div", { style: { background: #E2E8F0, borderRadius: 99, height, overflow: "hidden", width: "100%" } },
+    // FIX línea 152: Agregadas comillas dobles correctas a "#E2E8F0"
+    return React.createElement("div", { style: { background: "#E2E8F0", borderRadius: 99, height, overflow: "hidden", width: "100%" } },
         React.createElement("div", { style: { width: `${pct(valor)}%`, background: bar, height: "100%", borderRadius: 99, transition: "width .5s cubic-bezier(.4,0,.2,1)" } })
     );
 }
@@ -303,7 +304,6 @@ function ModalEdicion({ tarea, usuario, onClose, onSave }) {
     };
 
     const execSave = () => {
-        // REQUERIMIENTO: Inyectar la estampa de tiempo toISOString() de forma consistente al guardar cambios
         const payload = { ...editado, ultimaActualizacion: new Date().toISOString() };
         onSave(payload);
     };
@@ -365,7 +365,6 @@ function App() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [toast, setToast] = useState(null);
 
-    // REQUERIMIENTO: Lógica Drill Down Real (Estados expandidos entre pestañas)
     const [progExpandido, setProgExpandido] = useState(null);
     const [planExpandido, setPlanExpandido] = useState(null);
 
@@ -418,7 +417,6 @@ function App() {
         triggerToast("Cambios inyectados localmente en memoria");
     };
 
-    // Estructuras jerárquicas agrupadas dinámicamente
     const programasData = useMemo(() => {
         const map = {};
         tareas.forEach(t => {
@@ -438,7 +436,6 @@ function App() {
         });
     }, [tareas]);
 
-    // REQUERIMIENTO: Navegación Drill Down desde el Resumen Ejecutivo
     const execDrillDown = (progNombre, planNombre = null) => {
         setProgExpandido(progNombre);
         if (planNombre) setPlanExpandido(planNombre);
@@ -448,11 +445,10 @@ function App() {
     if (loading) return React.createElement("div", { id: "loading" }, React.createElement("div", { className: "spinner" }), React.createElement("span", null, "Sincronizando Matriz de Demanda..."));
     if (error) return React.createElement("div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FEF2F2", color: "#991B1B", padding: 24, fontSize: 14, fontWeight: 700 } }, `❌ Error Crítico: ${error}`);
 
-    // VISTA LOGIN
     if (!usuario) {
         return React.createElement("div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } },
             React.createElement("div", { style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 360, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" } },
-                React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 20 } }, React.createElement(LogoNextSiembra, { height: 48 })),
+                React.createElement("div", { style: { display: "center", justifyContent: "center", marginBottom: 20 } }, React.createElement(LogoNextSiembra, { height: 48 })),
                 React.createElement("h2", { style: { fontSize: 16, fontWeight: 800, textAlign: "center", color: "#1E293B", marginBottom: 4 } }, CLIENTE.subtitulo),
                 React.createElement("p", { style: { fontSize: 12, textAlign: "center", color: "#64748B", marginBottom: 24 } }, "Ingrese su PIN de Consultor o Vendedor"),
                 React.createElement("form", { onSubmit: handleLogin, style: { display: "flex", flexDirection: "column", gap: 14 } },
@@ -461,9 +457,7 @@ function App() {
         );
     }
 
-    // INTERFAZ PRINCIPAL DEL TABLERO
     return React.createElement("div", { style: { minHeight: "100vh", display: "flex", flexDirection: "column" } },
-        // CABECERA PREMIUM
         React.createElement("header", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 1000 } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } },
                 React.createElement(LogoNextSiembra, { height: 34 }),
@@ -476,34 +470,28 @@ function App() {
                     React.createElement("p", { style: { fontSize: 10, color: "#64748B", textTransform: "uppercase", fontWeight: 700 } }, usuario.rol === "sr" ? "Consultor Sr" : usuario.rol)),
                 React.createElement("button", { onClick: handleLogout, style: { background: "none", border: "none", color: "#EF4444", fontSize: 11, fontWeight: 700, cursor: "pointer" } }, "Salir"))),
 
-        // BARRA DE NAVEGACIÓN PRINCIPAL
         React.createElement("nav", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", display: "flex", padding: "0 24px", gap: 16 } },
             React.createElement("button", { onClick: () => setTab("resumen"), style: { padding: "14px 4px", background: "none", border: "none", borderBottom: `3px solid ${tab === "resumen" ? CLIENTE.colorA : "transparent"}`, color: tab === "resumen" ? "#1E293B" : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Resumen Ejecutivo"),
             React.createElement("button", { onClick: () => setTab("programas"), style: { padding: "14px 4px", background: "none", border: "none", borderBottom: `3px solid ${tab === "programas" ? CLIENTE.colorA : "transparent"}`, color: tab === "programas" ? "#1E293B" : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Programas y Planes de Acción"),
             usuario.rol !== "vendedor" && React.createElement("button", { onClick: () => setTab("colaboradores"), style: { padding: "14px 4px", background: "none", border: "none", borderBottom: `3px solid ${tab === "colaboradores" ? CLIENTE.colorA : "transparent"}`, color: tab === "colaboradores" ? "#1E293B" : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Seguimiento de Colaboradores")),
 
-        // CUERPO CENTRAL DE LA PESTAÑA
         React.createElement("main", { style: { flex: 1, padding: "20px 24px", maxWidth: 1200, width: "100%", margin: "0 auto" } },
             
-            // PESTAÑA 1: RESUMEN EJECUTIVO
             tab === "resumen" && React.createElement("div", null,
                 React.createElement(LeyendaSemaforo),
                 React.createElement("h2", { style: { fontSize: 15, fontWeight: 800, color: "#1E293B", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".04em" } }, "Matriz Jerárquica de Control"),
                 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, programasData.map(p => 
                     React.createElement(Card, { key: p.nombre, accent: p.color, style: { padding: "18px" } },
                         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
-                            // REQUERIMIENTO: Link Drill Down en el nombre del programa
-                            React.createElement("h3", { onClick: () => execDrillDown(p.nombre), style: { fontSize: 15, fontWeight: 800, color: "#1E293B", cursor: "pointer", decoration: "underline" } }, p.nombre),
+                            React.createElement("h3", { onClick: () => execDrillDown(p.nombre), style: { fontSize: 15, fontWeight: 800, color: "#1E293B", cursor: "pointer", textDecoration: "underline" } }, p.nombre),
                             React.createElement(PctBadge, { valor: p.avance, size: 40 })),
                         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10, marginTop: 12, borderTop: "1px solid #F1F5F9", paddingTop: 12 } }, p.planes.map(pl => 
-                            React.createElement("div", { key: pl.nombre, onClick: () => execDrillDown(p.nombre, pl.nombre), style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", justifyBetween: "space-between", gap: 8 } },
+                            React.createElement("div", { key: pl.nombre, onClick: () => execDrillDown(p.nombre, pl.nombre), style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
                                 React.createElement("div", { style: { flex: 1 } },
                                     React.createElement("p", { style: { fontSize: 12, fontWeight: 700, color: "#334155" } }, pl.nombre),
                                     React.createElement("p", { style: { fontSize: 10, color: "#64748B" } }, `${pl.tareas.length} acciones`)),
-                                // REQUERIMIENTO: Inclusión de PctBadge circular en vez de textos planos
                                 React.createElement(PctBadge, { valor: pl.avance, size: 32 })))))))),
 
-            // PESTAÑA 2: PROGRAMAS Y PLANES DETALLADOS
             tab === "programas" && React.createElement("div", null,
                 programasData.map(p => {
                     const progAbierto = progExpandido === p.nombre;
@@ -520,21 +508,19 @@ function App() {
                                     React.createElement("h4", { style: { fontSize: 12, fontWeight: 700, color: "#334155" } }, pl.nombre),
                                     React.createElement(PctBadge, { valor: pl.avance, size: 28 })),
                                 planAbierto && React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, pl.tareas.map(t => 
-                                    React.createElement("div", { key: t.id, onClick: () => setEditandoTarea(t), style: { display: "flex", alignItems: "center", justifyBetween: "space-between", padding: "10px 14px", borderBottom: "1px solid #F1F5F9", cursor: "pointer", background: "#fff", transition: "background .15s" } },
+                                    React.createElement("div", { key: t.id, onClick: () => setEditandoTarea(t), style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid #F1F5F9", cursor: "pointer", background: "#fff", transition: "background .15s" } },
                                         React.createElement("div", { style: { flex: 1, paddingRight: 12 } },
                                             React.createElement("p", { style: { fontSize: 13, fontWeight: 600, color: "#1E293B" } }, t.accion),
                                             React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 4 } },
                                                 React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.responsable),
                                                 React.createElement(Badge, { label: t.estado, tipo: "estado" }),
                                                 React.createElement(Badge, { label: t.prioridad, tipo: "prio" }))),
-                                        // REQUERIMIENTO: Reemplazo por PctBadge circular premium
                                         React.createElement(PctBadge, { valor: t.avance, size: 32 }))))
                             );
                         }))
                     );
                 })),
 
-            // PESTAÑA 3: SEGUIMIENTO COMPLETO DE COLABORADORES
             tab === "colaboradores" && React.createElement("div", null,
                 React.createElement("h2", { style: { fontSize: 15, fontWeight: 800, color: "#1E293B", marginBottom: 14 } }, "Desempeño por Vendedor / Territorio"),
                 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 } }, ZONAS.map(z => {
@@ -551,13 +537,10 @@ function App() {
                                 React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: colorAvance(t.avance).bar } }, pct(t.avance), "%")))))
                 })))),
 
-        // COMPONENTE PANEL LATERAL DE FILTRADO (SIDEBAR)
         React.createElement(SidebarEstados, { open: sidebarOpen, onClose: () => setSidebarOpen(false), tareas: tareas, onEditTarea: (t) => setEditandoTarea(t) }),
 
-        // COMPONENTE MODAL DE EDICIÓN FLUIDO
         editandoTarea && React.createElement(ModalEdicion, { tarea: editandoTarea, usuario: usuario, onClose: () => setEditandoTarea(null), onSave: saveChanges }),
 
-        // TOAST NOTIFICACIONES
         toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok })
     );
 }
