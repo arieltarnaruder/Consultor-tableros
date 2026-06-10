@@ -1,26 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tablero de Generacion de Demanda - Next Siembra</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:system-ui,sans-serif;background:#F1F5F9}
-    #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
-    .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Tablero de Generacion de Demanda - Next Siembra</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:system-ui,sans-serif;background:#F1F5F9;overflow-x:hidden}
+        #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
+        .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        
+        /* Panel Lateral */
+        .sidebar-panel {
+            position: fixed; top: 0; right: -360px; width: 360px; height: 100vh;
+            background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.15); z-index: 2000;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;
+        }
+        .sidebar-panel.open { right: 0; }
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1999;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+    </style>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
-  <div id="root"><div id="loading"><div class="spinner"></div><span>Sincronizando Matriz de Demanda...</span></div></div>
-  <script>
-    const {useState,useMemo,useEffect,useCallback,useRef} = React;
+    <div id="root">
+        <div id="loading">
+            <div class="spinner"></div>
+            <span>Sincronizando Matriz de Demanda...</span>
+        </div>
+    </div>
+
+<script>
+const {useState, useMemo, useEffect, useCallback, useRef} = React;
 
 // ════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN CENTRAL NEXT SIEMBRA
+// CONFIGURACIÓN CENTRAL NEXT SIEMBRA
 // ════════════════════════════════════════════════════════════
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
 
@@ -39,20 +58,17 @@ const ZONAS = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
 const CLIENTE = {
     nombre: "Next Siembra",
     subtitulo: "Plan Maestro de Generación de Demanda",
-    colorA: "#F05A28", 
-    colorB: "#2D2D2D", 
-    colorC: "#F5A623", 
+    colorA: "#F05A28",
+    colorB: "#2D2D2D",
+    colorC: "#F5A623",
     logo: null,
 };
 
-// ════════════════════════════════════════════════════════════
-//  PERMISOS Y REGLAS DE NEGOCIO
-// ════════════════════════════════════════════════════════════
 function puedeEditar(usuario, tarea) {
-    if (!usuario) return false; 
-    if (usuario.rol === "sr" || usuario.rol === "lider") return true; 
+    if (!usuario) return false;
+    if (usuario.rol === "sr" || usuario.rol === "lider") return true;
     if (!tarea?.responsable) return false;
-    return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase()) || 
+    return tarea.responsable.toLowerCase().includes(usuario.rol.toLowerCase()) ||
            tarea.responsable.toLowerCase().includes(usuario.nombre.toLowerCase());
 }
 
@@ -62,14 +78,14 @@ function esRZNColectivo(tarea) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  PALETA SEMÁFORO UNIVERSAL
+// PALETA SEMÁFORO UNIVERSAL
 // ════════════════════════════════════════════════════════════
 function colorAvance(v) {
-    if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" }; 
-    if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" }; 
-    if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" }; 
-    if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" }; 
-    return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" }; 
+    if (v >= 1.0) return { bar: "#3B82F6", bg: "#EFF6FF", text: "#1D4ED8", label: "Completa" };
+    if (v >= 0.80) return { bar: "#22C55E", bg: "#F0FDF4", text: "#15803D", label: "Avanzado" };
+    if (v >= 0.50) return { bar: "#EAB308", bg: "#FEFCE8", text: "#854D0E", label: "En marcha" };
+    if (v >= 0.10) return { bar: "#F97316", bg: "#FFF7ED", text: "#C2410C", label: "Iniciado" };
+    return { bar: "#EF4444", bg: "#FEF2F2", text: "#B91C1C", label: "Sin inicio" };
 }
 
 const ESTADO_CFG = {
@@ -85,32 +101,22 @@ const PRIO_CFG = {
     "Baja": { bg: "#F0FDF4", text: "#166534" },
 };
 
-const PROG_COLORS = [
-    CLIENTE.colorA,
-    "#0EA5E9",
-    "#8B5CF6",
-    "#22C55E",
-    "#EC4899",
-    "#64748B",
-];
+const PROG_COLORS = [CLIENTE.colorA, "#0EA5E9", "#8B5CF6", "#22C55E", "#EC4899", "#64748B"];
 
-// ════════════════════════════════════════════════════════════
-//  UTILIDADES Y PARSEADOR
-// ════════════════════════════════════════════════════════════
 const pct = v => Math.round(v * 100);
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
 
 function parseCSV(text) {
-  const lines = []; let row = [""]; let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]; const next = text[i+1];
-    if (c === '"') { if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; } else { inQuotes = !inQuotes; } }
-    else if (c === ',' && !inQuotes) { row.push(""); }
-    else if ((c === '\r' || c === '\n') && !inQuotes) { if (c === '\r' && next === '\n') { i++; } lines.push(row); row = [""]; }
-    else { row[row.length - 1] += c; }
-  }
-  if (row.length > 1 || row[0] !== "") lines.push(row); return lines;
+    const lines = []; let row = [""]; let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i]; const next = text[i+1];
+        if (c === '"') { if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; } else { inQuotes = !inQuotes; } }
+        else if (c === ',' && !inQuotes) { row.push(""); }
+        else if ((c === '\r' || c === '\n') && !inQuotes) { if (c === '\r' && next === '\n') { i++; } lines.push(row); row = [""]; }
+        else { row[row.length - 1] += c; }
+    }
+    if (row.length > 1 || row[0] !== "") lines.push(row); return lines;
 }
 
 function zonaDefault() {
@@ -123,7 +129,7 @@ function avanceZonas(zonas) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  COMPONENTES BASE VISUALES
+// COMPONENTES BASE VISUALES PREMIUM
 // ════════════════════════════════════════════════════════════
 function LeyendaSemaforo() {
     const items = [
@@ -137,14 +143,13 @@ function LeyendaSemaforo() {
         React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: ".06em", marginRight: 4 } }, "Avance:"),
         items.map(it => React.createElement("div", { key: it.label, style: { display: "flex", alignItems: "center", gap: 5 } },
             React.createElement("span", { style: { width: 10, height: 10, borderRadius: "50%", background: it.color, flexShrink: 0 } }),
-            React.createElement("span", { style: { fontSize: 11, color: "#475569" } },
-                React.createElement("strong", null, it.label), " ", it.rango)))
+            React.createElement("span", { style: { fontSize: 11, color: "#475569" } }, React.createElement("strong", null, it.label), " ", it.rango)))
     );
 }
 
 function BarraAvance({ valor, height = 8 }) {
     const { bar } = colorAvance(valor);
-    return React.createElement("div", { style: { background: "#E2E8F0", borderRadius: 99, height, overflow: "hidden", width: "100%" } },
+    return React.createElement("div", { style: { background: #E2E8F0, borderRadius: 99, height, overflow: "hidden", width: "100%" } },
         React.createElement("div", { style: { width: `${pct(valor)}%`, background: bar, height: "100%", borderRadius: 99, transition: "width .5s cubic-bezier(.4,0,.2,1)" } })
     );
 }
@@ -156,8 +161,7 @@ function PctBadge({ valor, size = 44 }) {
         React.createElement("svg", { width: size, height: size, style: { position: "absolute", inset: 0 } },
             React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: "#E2E8F0", strokeWidth: 4 }),
             React.createElement("circle", { cx: size / 2, cy: size / 2, r: r, fill: "none", stroke: bar, strokeWidth: 4, strokeDasharray: circ, strokeDashoffset: offset, strokeLinecap: "round", transform: `rotate(-90 ${size / 2} ${size / 2})`, style: { transition: "stroke-dashoffset .5s" } })),
-        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: text } },
-            pct(valor), "%")
+        React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: text } }, pct(valor), "%")
     );
 }
 
@@ -176,24 +180,23 @@ function Card({ children, onClick, accent, style = {} }) {
 }
 
 function Toast({ msg, ok }) {
-    return React.createElement("div", { style: { position: "fixed", bottom: 24, right: 24, zIndex: 3000, background: ok ? "#14532D" : "#7F1D1D", color: "#fff", borderRadius: 10, padding: "12px 20px", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 8 } },
-        ok ? "✓" : "✕", " ", msg
-    );
+    return React.createElement("div", { style: { position: "fixed", bottom: 24, right: 24, zIndex: 3000, background: ok ? "#14532D" : "#7F1D1D", color: "#fff", borderRadius: 10, padding: "12px 20px", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 8 } }, ok ? "✓" : "✕", " ", msg);
 }
 
 function LogoNextSiembra({ height = 40 }) {
-  return React.createElement("svg", { height: height, viewBox: "0 0 200 54", fill: "none", style: { display: "block" } },
-    React.createElement("text", { x: "0", y: "38", fontFamily: "Arial Black,sans-serif", fontWeight: "900", fontSize: "34", fill: CLIENTE.colorA, letterSpacing: "-1" }, "NEXT"),
-    React.createElement("text", { x: "2", y: "51", fontFamily: "Arial,sans-serif", fontWeight: "700", fontSize: "11", fill: "#2D2D2D", letterSpacing: "4" }, "SIEMBRA"));
+    return React.createElement("svg", { height: height, viewBox: "0 0 200 54", fill: "none", style: { display: "block" } },
+        React.createElement("text", { x: "0", y: "38", fontFamily: "Arial Black,sans-serif", fontWeight: "900", fontSize: "34", fill: CLIENTE.colorA, letterSpacing: "-1" }, "NEXT"),
+        React.createElement("text", { x: "2", y: "51", fontFamily: "Arial,sans-serif", fontWeight: "700", fontSize: "11", fill: "#2D2D2D", letterSpacing: "4" }, "SIEMBRA"));
 }
 
 // ════════════════════════════════════════════════════════════
-//  GRILLA DE EDICIÓN PARA VENDEDORES
+// GRILLA DE EDICIÓN PARA VENDEDORES
 // ════════════════════════════════════════════════════════════
 function GrillaZonas({ zonas, onChange, zonaUsuario }) {
     const [expandida, setExpandida] = useState(zonaUsuario || null);
     const avProm = avanceZonas(zonas);
     const { bar: barProm } = colorAvance(avProm);
+
     return React.createElement("div", null,
         React.createElement("div", { style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "12px 14px", marginBottom: 12 } },
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } },
@@ -209,524 +212,358 @@ function GrillaZonas({ zonas, onChange, zonaUsuario }) {
             }))),
         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, ZONAS.map(zona => {
             const data = zonas[zona] || { avance: 0, estado: "Pendiente", comentario: "" };
-            const { bar, bg, text } = colorAvance(data.avance);
-            const est = ESTADO_CFG[data.estado];
             const abierta = expandida === zona;
-            return React.createElement("div", { key: zona, style: { border: `1px solid ${abierta ? bar : "#E2E8F0"}`, borderRadius: 10, overflow: "hidden", transition: "border-color .2s" } },
-                React.createElement("div", { onClick: () => (!zonaUsuario || zonaUsuario === zona) && setExpandida(abierta ? null : zona), style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", cursor: zonaUsuario && zonaUsuario !== zona ? "default" : "pointer", background: abierta ? "#F8FAFC" : "#fff", opacity: zonaUsuario && zonaUsuario !== zona ? 0.55 : 1 } },
+            return React.createElement("div", { key: zona, style: { border: `1px solid ${abierta ? colorAvance(data.avance).bar : "#E2E8F0"}`, borderRadius: 10, overflow: "hidden" } },
+                React.createElement("div", { onClick: () => (!zonaUsuario || zonaUsuario === zona) && setExpandida(abierta ? null : zona), style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 13px", cursor: zonaUsuario && zonaUsuario !== zona ? "default" : "pointer", background: abierta ? "#F8FAFC" : "#fff" } },
                     React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#475569", minWidth: 90 } }, zona),
-                    React.createElement("div", { style: { flex: 1 } }, React.createElement(BarraAvance, { valor: data.avance, height: 6 })),
-                    React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: bar, minWidth: 34, textAlign: "right" } }, pct(data.avance), "%"),
-                    React.createElement("span", { style: { fontSize: 11, background: est?.bg, color: est?.text, borderRadius: 99, padding: "1px 7px", fontWeight: 700, minWidth: 62, textAlign: "center" } }, data.estado),
-                    zonaUsuario && zonaUsuario !== zona ? React.createElement("span", { style: { fontSize: 12, color: "#CBD5E1" } }) : React.createElement("span", { style: { color: "#CBD5E1", fontSize: 14, transform: abierta ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "›")),
-                abierta && React.createElement("div", { style: { padding: "14px 13px", borderTop: "1px solid #E2E8F0", background: "#FAFBFC", display: "flex", flexDirection: "column", gap: 14 } },
+                    React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", gap: 8 } }, 
+                        React.createElement(BarraAvance, { valor: data.avance, height: 6 }),
+                        React.createElement(Badge, { label: data.estado, tipo: "estado" })),
+                    React.createElement(PctBadge, { valor: data.avance, size: 32 })),
+                abierta && React.createElement("div", { style: { padding: "12px 14px", background: "#FFF", borderTop: "1px solid #E2E8F0", display: "flex", flexDirection: "column", gap: 10 } },
+                    React.createElement("div", { style: { display: "flex", gap: 10 } },
+                        React.createElement("div", { style: { flex: 1 } },
+                            React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Avance individual"),
+                            React.createElement("input", { type: "range", min: "0", max: "1", step: "0.05", value: data.avance, disabled: zonaUsuario && zonaUsuario !== zona, onChange: e => onChange(zona, "avance", parseFloat(e.target.value)), style: { width: "100%", accentColor: CLIENTE.colorA } })),
+                        React.createElement("div", { style: { width: 130 } },
+                            React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Estado"),
+                            React.createElement("select", { value: data.estado, disabled: zonaUsuario && zonaUsuario !== zona, onChange: e => onChange(zona, "estado", e.target.value), style: { width: "100%", padding: 4, borderRadius: 6, border: "1px solid #CBD5E1", fontSize: 12 } },
+                                Object.keys(ESTADO_CFG).map(k => React.createElement("option", { key: k, value: k }, k))))),
                     React.createElement("div", null,
-                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 6 } },
-                            React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase" } }, "Avance Producido"),
-                            React.createElement("span", { style: { fontSize: 15, fontWeight: 800, color: bar } }, pct(data.avance), "%")),
-                        React.createElement("input", { type: "range", min: 0, max: 100, value: pct(data.avance), onChange: e => onChange(zona, "avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginBottom: 4 } }),
-                        React.createElement("div", { style: { display: "flex", gap: 5 } }, [0, 25, 50, 75, 100].map(v => React.createElement("button", { key: v, onClick: () => onChange(zona, "avance", v / 100), style: { flex: 1, padding: "4px 0", borderRadius: 6, border: `1px solid ${pct(data.avance) === v ? "#CBD5E1" : "#E2E8F0"}`, background: pct(data.avance) === v ? "#F1F5F9" : "#fff", color: "#64748B", fontSize: 11, fontWeight: 600, cursor: "pointer" } }, v, "%")))),
-                    React.createElement("div", null,
-                        React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 6 } }, "Estado de la Tarea"),
-                        React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } }, ["Pendiente", "En curso", "Bloqueada", "Cerrada"].map(e => {
-                            const ec = ESTADO_CFG[e];
-                            return React.createElement("button", { key: e, onClick: () => onChange(zona, "estado", e), style: { padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${data.estado === e ? ec?.dot : "#E2E8F0"}`, background: data.estado === e ? ec?.bg : "#fff", color: data.estado === e ? ec?.text : "#64748B", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, e);
-                        }))),
-                    React.createElement("div", null,
-                        React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 6 } }, "Comentario"),
-                        React.createElement("textarea", { value: data.comentario || "", onChange: e => onChange(zona, "comentario", e.target.value), rows: 2, placeholder: `Reporte de novedades para ${zona}…`, style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "8px 11px", fontSize: 12, color: "#0F172A", resize: "vertical", fontFamily: "inherit", outline: "none", background: "#fff" } }))));
-        })));
+                        React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Comentarios / Alertas de la Zona"),
+                        React.createElement("textarea", { value: data.comentario, disabled: zonaUsuario && zonaUsuario !== zona, onChange: e => onChange(zona, "comentario", e.target.value), placeholder: "Escribí novedades del territorio...", style: { width: "100%", padding: 6, borderRadius: 6, border: "1px solid #CBD5E1", fontSize: 12, minHeight: 45, resize: "vertical" } })))
+            );
+        }))
+    );
 }
 
 // ════════════════════════════════════════════════════════════
-//  MODAL GENERAL DE EDICIÓN
+// COMPONENTE PANEL LATERAL (SIDEBAR FILTRO DE ESTADOS)
 // ════════════════════════════════════════════════════════════
-const esRZN = t => { return t?.responsable?.toLowerCase().includes("vendedor"); };
+function SidebarEstados({ open, onClose, tareas, onEditTarea }) {
+    const [estadoSel, setEstadoSel] = useState("Pendiente");
+    const tareasFiltradas = useMemo(() => tareas.filter(t => t.estado === estadoSel), [tareas, estadoSel]);
 
-function Modal({ tarea, onSave, onClose, saving, usuario }) {
-    const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || zonaDefault() });
-    const set = (k, v) => setF(p => ({ ...p, [k]: v }));
-    const avanceEfectivo = esRZNColectivo(f) ? avanceZonas(f.zonas) : f.avance;
-    const { bar, bg, text, label } = colorAvance(avanceEfectivo);
+    return React.createElement(React.Fragment, null,
+        React.createElement("div", { className: `sidebar-overlay ${open ? "open" : ""}`, onClick: onClose }),
+        React.createElement("div", { className: `sidebar-panel ${open ? "open" : ""}` },
+            React.createElement("div", { style: { padding: "18px 20px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", background: CLIENTE.colorB, color: "#fff" } },
+                React.createElement("div", null,
+                    React.createElement("h3", { style: { fontSize: 15, fontWeight: 800 } }, "Tareas por Estado"),
+                    React.createElement("p", { style: { fontSize: 11, opacity: 0.8 } }, "Filtro rápido global")),
+                React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer" } }, "✕")),
+            React.createElement("div", { style: { display: "flex", background: "#F1F5F9", padding: "4px 8px", gap: 4 } },
+                Object.keys(ESTADO_CFG).map(est => React.createElement("button", { key: est, onClick: () => setEstadoSel(est), style: { flex: 1, padding: "6px 2px", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: estadoSel === est ? "#fff" : "transparent", color: estadoSel === est ? ESTADO_CFG[est].dot : "#64748B", boxShadow: estadoSel === est ? "0 2px 4px rgba(0,0,0,0.05)" : "none", transition: "all .15s" } }, est))),
+            React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 } },
+                tareasFiltradas.length === 0 ? React.createElement("div", { style: { textAlign: "center", color: "#94A3B8", fontSize: 13, marginTop: 40 } }, "No hay tareas en este estado.") :
+                tareasFiltradas.map(t => React.createElement(Card, { key: t.id, onClick: () => { onClose(); onEditTarea(t); }, accent: ESTADO_CFG[t.estado]?.dot },
+                    React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", marginBottom: 4 } }, t.programa, " / ", t.plan),
+                    React.createElement("h4", { style: { fontSize: 13, fontWeight: 700, color: "#1E293B", marginBottom: 6 } }, t.accion),
+                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                        React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, "Resp: ", t.responsable),
+                        React.createElement(PctBadge, { valor: t.avance, size: 28 })))))
+        )
+    );
+}
 
-    const handleZona = (zona, campo, valor) => {
-        setF(p => {
-            const nuevasZonas = { ...p.zonas, [zona]: { ...p.zonas[zona], [campo]: valor } };
-            return { ...p, zonas: nuevasZonas, avance: avanceZonas(nuevasZonas) };
+// ════════════════════════════════════════════════════════════
+// MODAL DE EDICIÓN CON TIME STAMP CORRECTO
+// ════════════════════════════════════════════════════════════
+function ModalEdicion({ tarea, usuario, onClose, onSave }) {
+    const [editado, setEditado] = useState(() => JSON.parse(JSON.stringify(tarea)));
+    const permitida = puedeEditar(usuario, tarea);
+
+    const handleZonaChange = (zona, campo, value) => {
+        setEditado(prev => {
+            const next = { ...prev };
+            if (!next.zonas) next.zonas = zonaDefault();
+            next.zonas[zona] = { ...next.zonas[zona], [campo]: value };
+            if (campo === "avance" || campo === "estado") {
+                next.avance = avanceZonas(next.zonas);
+                next.estado = next.avance >= 1.0 ? "Cerrada" : next.avance > 0 ? "En curso" : "Pendiente";
+            }
+            return next;
         });
     };
 
-    const handleGuardar = () => {
-        const payload = { ...f, avance: avanceEfectivo, ultimaActualizacion: new Date().toISOString() };
+    const handleBaseChange = (campo, value) => {
+        setEditado(prev => {
+            const next = { ...prev, [campo]: value };
+            if (campo === "avance") {
+                next.estado = parseFloat(value) >= 1.0 ? "Cerrada" : parseFloat(value) > 0 ? "En curso" : "Pendiente";
+                if (esRZNColectivo(next) && next.zonas) {
+                    ZONAS.forEach(z => {
+                        next.zonas[z].avance = parseFloat(value);
+                        next.zonas[z].estado = next.estado;
+                    });
+                }
+            }
+            return next;
+        });
+    };
+
+    const execSave = () => {
+        // REQUERIMIENTO: Inyectar la estampa de tiempo toISOString() de forma consistente al guardar cambios
+        const payload = { ...editado, ultimaActualizacion: new Date().toISOString() };
         onSave(payload);
     };
 
-    return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
-        React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: esRZNColectivo(f) ? 560 : 500, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
-            React.createElement("div", { style: { background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", padding: "18px 22px", borderRadius: "18px 18px 0 0" } },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
-                    React.createElement("div", { style: { flex: 1, marginRight: 12 } },
-                        React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, marginBottom: 3 } }, f.plan),
-                        React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#0F172A", lineHeight: 1.35 } }, f.tarea || "Acción sin nombre")),
-                    React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#94A3B8", padding: 4 } }, "✕")),
-                React.createElement("div", { style: { display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap", alignItems: "center" } },
-                    React.createElement(Badge, { label: f.estado, tipo: "estado" }),
-                    React.createElement(Badge, { label: f.prioridad, tipo: "prioridad" }),
-                    f.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: esRZN(f) ? "#FEF9C3" : "#EEF2FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, f.responsable),
-                    esRZNColectivo(f) && React.createElement("span", { style: { fontSize: 11, background: "#EFF6FF", color: "#1D4ED8", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, "Progreso Promedio: ", pct(avanceEfectivo), "%"))),
-            React.createElement("div", { style: { padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 } },
-                esRZNColectivo(f) ? React.createElement("div", null,
-                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 } },
-                        React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: ".05em" } }, "Reporte por Colaborador")),
-                    React.createElement(GrillaZonas, { zonas: f.zonas, onChange: handleZona, zonaUsuario: usuario?.rol === "vendedor" ? usuario.zona : null })) : React.createElement("div", null,
-                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
-                        React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase" } }, "Avance General"),
-                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-                            React.createElement("span", { style: { fontSize: 11, background: bg, color: text, borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, label),
-                            React.createElement("span", { style: { fontSize: 22, fontWeight: 800, color: bar } }, pct(f.avance), "%"))),
-                    React.createElement("input", { type: "range", min: 0, max: 100, value: pct(f.avance), onChange: e => set("avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginBottom: 6 } }),
-                    React.createElement(BarraAvance, { valor: f.avance, height: 10 }),
-                    React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } }, [0, 25, 50, 75, 100].map(v => React.createElement("button", { key: v, onClick: () => set("avance", v / 100), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${pct(f.avance) === v ? "#CBD5E1" : "#E2E8F0"}`, background: pct(f.avance) === v ? "#F1F5F9" : "#fff", color: "#475569", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, v, "%")))),
+    return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2500, padding: 16 } },
+        React.createElement("div", { style: { background: "#fff", borderRadius: 16, width: "100%", maxWidth: 600, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.15)" } },
+            React.createElement("div", { style: { padding: "16px 20px", background: CLIENTE.colorB, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" } },
                 React.createElement("div", null,
-                    React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 8 } }, "Estado General de la Tarea"),
-                    React.createElement("div", { style: { display: "flex", gap: 7, flexWrap: "wrap" } }, ["Pendiente", "En curso", "Bloqueada", "Cerrada"].map(e => {
-                        return React.createElement("button", { key: e, onClick: () => set("estado", e), style: { padding: "7px 14px", borderRadius: 99, border: `1.5px solid ${f.estado === e ? ESTADO_CFG[e]?.dot : "#E2E8F0"}`, background: f.estado === e ? ESTADO_CFG[e]?.bg : "#F8FAFC", color: f.estado === e ? ESTADO_CFG[e]?.text : "#64748B", fontSize: 13, fontWeight: 600, cursor: "pointer" } }, e);
-                    }))),
+                    React.createElement("span", { style: { fontSize: 10, textTransform: "uppercase", opacity: 0.8, fontWeight: 700 } }, editado.programa, " — ", editado.plan),
+                    React.createElement("h3", { style: { fontSize: 15, fontWeight: 800 } }, "Ficha de Acción")),
+                React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer" } }, "✕")),
+            React.createElement("div", { style: { padding: "20px", display: "flex", flexDirection: "column", gap: 14 } },
                 React.createElement("div", null,
-                    React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 8 } }, "Observaciones y Comentarios"),
-                    React.createElement("textarea", { value: f.comentarios || "", onChange: e => set("comentarios", e.target.value), rows: 3, placeholder: "Próximos pasos o detalles del status actual...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#0F172A", resize: "vertical", background: "#F8FAFC", outline: "none" } })),
-                tarea.ultimaActualizacion && React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", textAlign: "right" } }, "Modificado: ", new Date(tarea.ultimaActualizacion).toLocaleString("es-AR"))),
-            React.createElement("div", { style: { display: "flex", gap: 10, padding: "0 22px 22px" } },
-                React.createElement("button", { onClick: onClose, style: { flex: 1, padding: "11px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", fontSize: 14, fontWeight: 600, cursor: "pointer" } }, "Cancelar"),
-                React.createElement("button", { onClick: handleGuardar, disabled: saving, style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: saving ? "#94A3B8" : CLIENTE.colorA, color: "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" } }, saving ? "Procesando…" : "Guardar cambios")))
+                    React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Nombre de la Acción / Hito"),
+                    React.createElement("p", { style: { fontSize: 14, fontWeight: 700, color: "#1E293B" } }, editado.accion)),
+                React.createElement("div", { style: { display: "flex", gap: 12 } },
+                    React.createElement("div", { style: { flex: 1 } }, React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Responsable"), React.createElement("p", { style: { fontSize: 13, color: "#334155" } }, editado.responsable)),
+                    React.createElement("div", { style: { width: 100 } }, React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Prioridad"), React.createElement("div", { style: { marginTop: 2 } }, React.createElement(Badge, { label: editado.prioridad, tipo: "prio" })))),
+                !permitida && React.createElement("div", { style: { background: "#FEF2F2", color: "#991B1B", padding: "10px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600 } }, "⚠️ Modo Lectura: No tenés permisos asignados para modificar esta acción."),
+                esRZNColectivo(editado) ? 
+                React.createElement(GrillaZonas, { zonas: editado.zonas || zonaDefault(), zonaUsuario: usuario.rol === "vendedor" ? usuario.zona : null, onChange: handleZonaChange }) :
+                React.createElement("div", { style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "14px", display: "flex", flexDirection: "column", gap: 12 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+                        React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#334155" } }, "Métricas de Control Individual"),
+                        React.createElement(PctBadge, { valor: editado.avance, size: 36 })),
+                    React.createElement("div", { style: { display: "flex", gap: 12 } },
+                        React.createElement("div", { style: { flex: 1 } },
+                            React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Progreso de la Tarea"),
+                            React.createElement("input", { type: "range", min: "0", max: "1", step: "0.05", value: editado.avance, disabled: !permitida, onChange: e => handleBaseChange("avance", e.target.value), style: { width: "100%", accentColor: CLIENTE.colorA, marginTop: 4 } })),
+                        React.createElement("div", { style: { width: 140 } },
+                            React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Estado"),
+                            React.createElement("select", { value: editado.estado, disabled: !permitida, onChange: e => handleBaseChange("estado", e.target.value), style: { width: "100%", padding: "5px", borderRadius: 6, border: "1px solid #CBD5E1", fontSize: 12, marginTop: 4 } },
+                                Object.keys(ESTADO_CFG).map(k => React.createElement("option", { key: k, value: k }, k)))))),
+                React.createElement("div", null,
+                    React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#64748B" } }, "Comentarios de Ejecución / Minuta"),
+                    React.createElement("textarea", { value: editado.comentario || "", disabled: !permitida, onChange: e => handleBaseChange("comentario", e.target.value), placeholder: "Dejá sentado el estatus o los próximos pasos...", style: { width: "100%", padding: 8, borderRadius: 6, border: "1px solid #CBD5E1", fontSize: 13, minHeight: 60 } })),
+                editado.ultimaActualizacion && React.createElement("span", { style: { fontSize: 10, color: "#94A3B8", textAlign: "right" } }, "Último cambio: ", fmtD(editado.ultimaActualizacion)),
+                React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6, borderTop: "1px solid #E2E8F0", paddingTop: 12 } },
+                    React.createElement("button", { onClick: onClose, style: { padding: "7px 14px", border: "1px solid #CBD5E1", background: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" } }, "Cancelar"),
+                    permitida && React.createElement("button", { onClick: execSave, style: { padding: "7px 18px", border: "none", background: CLIENTE.colorA, color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Guardar Matriz"))))
     );
 }
 
 // ════════════════════════════════════════════════════════════
-//  PANEL LATERAL (PREMIUM DROPDOWN)
-// ════════════════════════════════════════════════════════════
-function PanelEstado({ tareas, estado, progNombre, onEditar, onClose }) {
-    const cfg = ESTADO_CFG[estado];
-    const filtradas = tareas.filter(t => t.estado === estado);
-    return React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 1500, display: "flex" } },
-        React.createElement("div", { style: { flex: 1, background: "rgba(15,23,42,.35)", backdropFilter: "blur(2px)" }, onClick: onClose }),
-        React.createElement("div", { style: { width: "min(420px, 100vw)", background: "#F8FAFC", borderLeft: "1px solid #E2E8F0", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,.12)" } },
-            React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "16px 18px" } },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
-                    React.createElement("div", null,
-                        React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600 } }, progNombre),
-                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
-                            React.createElement("span", { style: { width: 10, height: 10, borderRadius: "50%", background: cfg?.dot } }),
-                            React.createElement("span", { style: { fontSize: 16, fontWeight: 800, color: cfg?.text } }, estado),
-                            React.createElement("span", { style: { fontSize: 13, color: "#94A3B8", fontWeight: 600 } }, `· ${filtradas.length} acciones`))),
-                    React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#94A3B8" } }, "✕"))),
-            React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 } },
-                filtradas.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 40, color: "#94A3B8" } }, "No hay acciones registradas en este bloque."),
-                filtradas.map(t => React.createElement(Card, { key: t.id, onClick: () => { onClose(); onEditar(t); } },
-                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 } },
-                        React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#0F172A", lineHeight: 1.3 } }, t.tarea),
-                        React.createElement(PctBadge, { valor: t.avance, size: 36 })),
-                    React.createElement(BarraAvance, { valor: t.avance, height: 5 }),
-                    React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, alignItems: "center", fontSize: 11, color: "#64748B" } },
-                        React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }),
-                        React.createElement("span", null, t.responsable),
-                        React.createElement("span", { style: { marginLeft: "auto", fontSize: 10, color: "#94A3B8" } }, t.plan))
-                ))
-            ),
-            React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "12px 16px", background: "#fff" } },
-                React.createElement("button", { onClick: onClose, style: { width: "100%", padding: "10px", border: "1px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", cursor: "pointer", fontWeight: 600 } }, "Cerrar")))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  VISTA RESUMEN / EJECUTIVA
-// ════════════════════════════════════════════════════════════
-function VistaEjecutiva({ tareas, onEditar, onNavegar }) {
-    const porPrograma = useMemo(() => {
-        const m = {};
-        tareas.forEach(t => { if (!m[t.programa]) m[t.programa] = []; m[t.programa].push(t); });
-        return m;
-    }, [tareas]);
-    const totalAv = avg(tareas.map(t => t.avance));
-    const { bar, bg, text, label } = colorAvance(totalAv);
-    const est = { Pendiente: 0, "En curso": 0, Bloqueada: 0, Cerrada: 0 };
-    tareas.forEach(t => { est[t.estado] = (est[t.estado] || 0) + 1; });
-
-    return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 18 } },
-        React.createElement(LeyendaSemaforo),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10 } }, [
-            { label: "Avance Total", valor: `${pct(totalAv)}%`, color: bar, sub: label },
-            { label: "En curso", valor: est["En curso"], color: "#3B82F6", sub: "acciones activas" },
-            { label: "Bloqueadas", valor: est["Bloqueada"], color: "#EF4444", sub: "con impedimentos" },
-            { label: "Cerradas", valor: est["Cerrada"], color: "#22C55E", sub: "completadas" },
-            { label: "Programas", valor: Object.keys(porPrograma).length, color: CLIENTE.colorA, sub: "en matriz" },
-        ].map(k => React.createElement("div", { key: k.label, style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "14px 16px", borderTop: `3px solid ${k.color}` } },
-            React.createElement("div", { style: { fontSize: 11, color: "#64748B", marginBottom: 5, fontWeight: 600, textTransform: "uppercase" } }, k.label),
-            React.createElement("div", { style: { fontSize: 28, fontWeight: 800, color: k.color, lineHeight: 1 } }, k.valor),
-            React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 4 } }, k.sub)))),
-        React.createElement("div", { style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "18px 20px" } },
-            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 } },
-                React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 15 } }, "Consolidado Estratégico"),
-                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                    React.createElement("span", { style: { fontSize: 11, background: bg, color: text, borderRadius: 99, padding: "2px 10px", fontWeight: 700 } }, label),
-                    React.createElement("span", { style: { fontWeight: 800, color: bar, fontSize: 24 } }, pct(totalAv), "%"))),
-            React.createElement(BarraAvance, { valor: totalAv, height: 12 })),
-        React.createElement("div", null,
-            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 } }, "Avance Operativo por Programa"),
-            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, Object.entries(porPrograma).map(([prog, ts], i) => {
-                const av = avg(ts.map(t => t.avance));
-                const planes = [...new Set(ts.map(t => t.plan))];
-                const { bar: b } = colorAvance(av);
-                return React.createElement(Card, { key: prog, onClick: () => onNavegar("programas", { prog }), accent: b },
-                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10, flexWrap: "wrap" } },
-                        React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14 } },
-                            React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "#94A3B8", display: "block", marginBottom: 2 } }, "PROGRAMA"), prog),
-                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                            React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, `${planes.length} planes · ${ts.length} acciones`),
-                            React.createElement("span", { style: { fontWeight: 800, color: b, fontSize: 18 } }, pct(av), "%"))),
-                    React.createElement(BarraAvance, { valor: av, height: 7 }),
-                    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 } }, planes.map(pl => {
-                        const pav = avg(ts.filter(t => t.plan === pl).map(t => t.avance));
-                        return React.createElement("span", { key: pl, onClick: e => { e.stopPropagation(); onNavegar("planes", { prog, pl }); }, style: { fontSize: 11, background: "#F8FAFC", border: `1px solid ${colorAvance(pav).bar}`, borderRadius: 7, padding: "3px 9px", color: "#475569", cursor: "pointer" } },
-                            React.createElement("span", { style: { fontSize: 9, color: "#94A3B8", textTransform: "uppercase", marginRight: 3 } }, "PLAN"), pl, " ", React.createElement("strong", { style: { color: colorAvance(pav).bar } }, pct(pav), "%"));
-                    })));
-            })))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  VISTA DRILL DOWN - PROGRAMAS Y PLANES
-// ════════════════════════════════════════════════════════════
-function VistaProgramas({ tareas, onEditar, initProg, initPlan, forceView }) {
-    const [prog, setProg] = useState(initProg || null);
-    const [plan, setPlan] = useState(initPlan || null);
-    const [panelEstado, setPanelEstado] = useState(null);
-
-    useEffect(() => { if (forceView) { setProg(initProg); setPlan(initPlan); } }, [forceView, initProg, initPlan]);
-
-    const tree = useMemo(() => {
-        const m = {};
-        tareas.forEach(t => {
-            if (!m[t.programa]) m[t.programa] = {};
-            if (!m[t.programa][t.plan]) m[t.programa][t.plan] = [];
-            m[t.programa][t.plan].push(t);
-        });
-        return m;
-    }, [tareas]);
-
-    const progNames = Object.keys(tree);
-
-    if (!prog) return React.createElement("div", null,
-        panelEstado && React.createElement(PanelEstado, { tareas: panelEstado.tareas, estado: panelEstado.estado, progNombre: panelEstado.progNombre, onEditar: onEditar, onClose: () => setPanelEstado(null) }),
-        React.createElement(LeyendaSemaforo),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 } }, progNames.map((p, i) => {
-            const allT = Object.values(tree[p]).flat();
-            const av = avg(allT.map(t => t.avance));
-            const col = PROG_COLORS[i % PROG_COLORS.length];
-            const { bar: b, bg: bg2, text: tx, label: lb } = colorAvance(av);
-            const byEst = {}; allT.forEach(t => { byEst[t.estado] = (byEst[t.estado] || 0) + 1; });
-            return React.createElement(Card, { key: p, onClick: () => { setProg(p); setPlan(null); }, accent: b },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 } },
-                    React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: col, textTransform: "uppercase" } }, `P${i + 1}`),
-                    React.createElement("div", { style: { textAlign: "right" } },
-                        React.createElement("div", { style: { fontSize: 26, fontWeight: 800, color: b, lineHeight: 1 } }, pct(av), "%"),
-                        React.createElement("span", { style: { fontSize: 10, background: bg2, color: tx, borderRadius: 99, padding: "1px 7px", fontWeight: 700 } }, lb))),
-                React.createElement("div", { style: { fontValue: 700, fontWeight: 700, color: "#0F172A", fontSize: 14, lineHeight: 1.35, marginBottom: 6 } }, p),
-                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginBottom: 12 } }, `${Object.keys(tree[p]).length} planes · ${allT.length} acciones`),
-                React.createElement(BarraAvance, { valor: av, height: 6 }),
-                React.createElement("div", { style: { display: "flex", gap: 4, marginTop: 10, flexWrap: "wrap" }, onClick: e => e.stopPropagation() }, Object.entries(byEst).map(([e, n]) => 
-                    React.createElement("span", { key: e, onClick: () => setPanelEstado({ estado: e, tareas: allT, progNombre: p }), style: { fontSize: 10, background: ESTADO_CFG[e]?.bg, color: ESTADO_CFG[e]?.text, padding: "2px 7px", borderRadius: 99, fontWeight: 700, cursor: "pointer" } }, e, " ", n)
-                ))
-            );
-        }))
-    );
-
-    const col = PROG_COLORS[progNames.indexOf(prog) % PROG_COLORS.length];
-
-    if (!plan) return React.createElement("div", null,
-        React.createElement("button", { onClick: () => setProg(null), style: { background: "none", border: "none", color: CLIENTE.colorA, cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 18, padding: 0 } }, "← Volver a Programas"),
-        React.createElement("div", { style: { borderLeft: `4px solid ${col}`, paddingLeft: 14, marginBottom: 18 } },
-            React.createElement("h2", { style: { margin: 0, fontSize: 18, fontWeight: 800, color: "#0F172A" } }, prog)),
-        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, Object.keys(tree[prog]).map(pl => {
-            const ts = tree[prog][pl]; const av = avg(ts.map(t => t.avance));
-            return React.createElement(Card, { key: pl, onClick: () => setPlan(pl), accent: colorAvance(av).bar },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                    React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14 } }, pl),
-                    React.createElement("span", { style: { fontWeight: 800, color: colorAvance(av).bar, fontSize: 16 } }, pct(av), "%"))
-            );
-        }))
-    );
-
-    return React.createElement("div", null,
-        React.createElement("button", { onClick: () => setPlan(null), style: { background: "none", border: "none", color: CLIENTE.colorA, cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 18, padding: 0 } }, `← Volver a ${prog}`),
-        React.createElement("div", { style: { borderLeft: `4px solid ${col}`, paddingLeft: 14, marginBottom: 18 } },
-            React.createElement("h2", { style: { margin: 0, fontSize: 18, fontWeight: 800, color: "#0F172A" } }, plan)),
-        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, tree[prog][plan].map(t => 
-            React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(t.avance).bar },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 } },
-                    React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 13, flex: 1 } }, t.tarea),
-                    React.createElement(PctBadge, { valor: t.avance, size: 40 })),
-                React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
-                React.createElement("div", { style: { display: "flex", gap: 12, marginTop: 6, fontSize: 11, color: "#64748B" } },
-                    React.createElement(Badge, { label: t.estado, tipo: "estado" }),
-                    React.createElement("span", null, t.responsable)))
-        ))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  VISTA PLANES COMPLETA
-// ════════════════════════════════════════════════════════════
-function VistaPlanesAll({ tareas, onEditar, initProg, initPlan }) {
-    const [planAbierto, setPlanAbierto] = useState(initPlan ? `${initProg}||${initPlan}` : null);
-    const tree = useMemo(() => {
-        const m = {};
-        tareas.forEach(t => {
-            if (!m[t.programa]) m[t.programa] = {};
-            if (!m[t.programa][t.plan]) m[t.programa][t.plan] = [];
-            m[t.programa][t.plan].push(t);
-        });
-        return m;
-    }, [tareas]);
-
-    return React.createElement("div", null,
-        React.createElement(LeyendaSemaforo),
-        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, Object.keys(tree).map(prog => 
-            Object.keys(tree[prog]).map(plan => {
-                const ts = tree[prog][plan]; const av = avg(ts.map(t => t.avance));
-                const abierto = planAbierto === `${prog}||${plan}`;
-                return React.createElement("div", { key: `${prog}||${plan}`, style: { background: "#fff", border: `1px solid ${abierto ? CLIENTE.colorA : "#E2E8F0"}`, borderLeft: `4px solid ${colorAvance(av).bar}`, borderRadius: 12, overflow: "hidden", marginBottom: 4 } },
-                    React.createElement("div", { onClick: () => setPlanAbierto(abierto ? null : `${prog}||${plan}`), style: { padding: "13px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                        React.createElement("div", null,
-                            React.createElement("div", { style: { fontSize: 10, color: CLIENTE.colorA, fontWeight: 700 } }, prog),
-                            React.createElement("div", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14, marginTop: 2 } }, plan)),
-                        React.createElement("span", { style: { fontWeight: 800, color: colorAvance(av).bar, fontSize: 18 } }, pct(av), "%")),
-                    abierto && React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6, background: "#F8FAFC" } }, ts.map(t => 
-                        React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { background: "#fff", padding: "10px 13px", borderRadius: 9, cursor: "pointer", borderLeft: `3px solid ${colorAvance(t.avance).bar}` } },
-                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                                React.createElement("span", { style: { fontSize: 13, fontWeight: 700 } }, t.tarea),
-                                React.createElement(PctBadge, { valor: t.avance, size: 34 })))
-                    ))
-                );
-            })
-        ))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  VISTA COLABORADORES / EQUIPOS
-// ════════════════════════════════════════════════════════════
-function VistaEquipos({ tareas, onEditar }) {
-    const dataVendedores = useMemo(() => {
-        return ZONAS.map(zona => {
-            const ts = tareas.filter(t => esRZNColectivo(t));
-            const avances = ts.map(t => t.zonas?.[zona]?.avance ?? t.avance);
-            return { nombre: zona, avProm: avances.length ? avg(avances) : 0, total: avances.length };
-        });
-    }, [tareas]);
-
-    return React.createElement("div", null,
-        React.createElement(LeyendaSemaforo),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 } }, dataVendedores.map(v => 
-            React.createElement(Card, { key: v.nombre, accent: colorAvance(v.avProm).bar },
-                React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700 } }, "COLABORADOR NEXT"),
-                React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginTop: 4 } }, v.nombre),
-                React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: colorAvance(v.avProm).bar, margin: "10px 0 4px" } }, pct(v.avProm), "%"),
-                React.createElement(BarraAvance, { valor: v.avProm, height: 6 }),
-                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 6 } }, `${v.total} acciones asignadas`))
-        ))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  VISTA TAREAS / BUSCADOR GENERAL
-// ════════════════════════════════════════════════════════════
-function VistaTareas({ tareas, onEditar }) {
-    const [q, setQ] = useState("");
-    const filtradas = tareas.filter(t => t.tarea.toLowerCase().includes(q.toLowerCase()) || t.plan.toLowerCase().includes(q.toLowerCase()));
-    return React.createElement("div", null,
-        React.createElement("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "🔍 Buscar acción o plan maestro…", style: { width: "100%", padding: 12, border: "1.5px solid #E2E8F0", borderRadius: 10, marginBottom: 12, outline: "none" } }),
-        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, filtradas.map(t => 
-            React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(t.avance).bar },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                    React.createElement("div", null,
-                        React.createElement("div", { style: { fontSize: 11, color: "#64748B" } }, `${t.programa} › ${t.plan}`),
-                        React.createElement("div", { style: { fontWeight: 700, fontSize: 14, marginTop: 2 } }, t.tarea)),
-                    React.createElement(PctBadge, { valor: t.avance, size: 38 })))
-        ))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  PANTALLA DE ACCESO (LOGIN)
-// ════════════════════════════════════════════════════════════
-function PantallaLogin({ onLogin, usuarios }) {
-    const [pin, setPin] = useState("");
-    const [err, setErr] = useState("");
-    const tryLogin = (p) => { 
-        const u = usuarios.find(usr => usr.pin === p); 
-        if (u) onLogin(u);
-        else { setErr("PIN incorrecto"); setPin(""); } 
-    };
-    const handleKey = (d) => { 
-        if (pin.length >= 4) return; 
-        const n = pin + d; setPin(n); setErr(""); 
-        if (n.length === 4) setTimeout(() => tryLogin(n), 120); 
-    };
-    const btnS = { padding: "16px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, color: "#0F172A", cursor: "pointer" };
-    return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
-        React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
-            React.createElement(LogoNextSiembra, { height: 44 }),
-            React.createElement("div", { style: { fontSize: 12, color: "#64748B", fontWeight: 600, marginTop: 8 } }, CLIENTE.subtitulo)),
-        React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.10)", border: "1px solid #E2E8F0" } },
-            React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 20 } }),
-            React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
-            React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 } }, 
-                [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 16, height: 16, borderRadius: "50%", background: i < pin.length ? CLIENTE.colorA : "#E2E8F0", border: `2px solid ${i < pin.length ? CLIENTE.colorA : "#CBD5E1"}` } }))),
-            err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
-                [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: btnS }, d)),
-                React.createElement("button", { onClick: () => setPin(""), style: { ...btnS, fontSize: 12, color: "#64748B" } }, "Borrar"),
-                React.createElement("button", { onClick: () => handleKey("0"), style: btnS }, "0"),
-                React.createElement("button", { onClick: () => { setPin(p => p.slice(0, -1)); setErr(""); }, style: { ...btnS, fontSize: 16, color: "#64748B" } }, "x")),
-            React.createElement("div", { style: { borderTop: "1px solid #F1F5F9", marginTop: 12, paddingTop: 12, textAlign: "center" } },
-                React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "7px 16px", color: "#64748B", fontSize: 12, cursor: "pointer", fontWeight: 600 } }, "Solo lectura")))
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-//  CONTROLADOR DE FLUJO CENTRAL
+// APLICACIÓN CENTRAL (CORE)
 // ════════════════════════════════════════════════════════════
 function App() {
-    const [usuario, setUsuario] = useState(undefined);
-    const [tareas, setTareas] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [vista, setVista] = useState("ejecutivo");
-    const [navPlanes, setNavPlanes] = useState({ prog: null, pl: null, force: false });
-    const [modal, setModal] = useState(null);
-    const [saving, setSaving] = useState(false);
-    const [toast, setToast] = useState(null);
-    const [showUserMenu, setShowUserMenu] = useState(false);
-
-    const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
-    const handleLogin = (u) => setUsuario(u);
-    const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); };
+    const [error, setError] = useState(null);
+    const [usuario, setUsuario] = useState(() => {
+        const cached = localStorage.getItem("next_user");
+        return cached ? JSON.parse(cached) : null;
+    });
+    const [pinInput, setPinInput] = useState("");
+    const [tab, setTab] = useState("resumen");
     
-    const handleNavegar = (destVista, params = {}) => {
-        if (destVista === "programas") {
-            setNavPlanes({ prog: params.prog, pl: null, force: true });
-            setVista("programas");
-        } else if (destVista === "planes") {
-            setNavPlanes({ prog: params.prog, pl: params.pl, force: true });
-            setVista("programas");
-        }
-    };
+    const [tareas, setTareas] = useState([]);
+    const [editandoTarea, setEditandoTarea] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [toast, setToast] = useState(null);
 
-    const handleEditar = (tarea) => {
-        if (puedeEditar(usuario, tarea)) setModal(tarea);
-        else showToast("Modo Lectura: No posees permisos para modificar este registro.", false);
-    };
+    // REQUERIMIENTO: Lógica Drill Down Real (Estados expandidos entre pestañas)
+    const [progExpandido, setProgExpandido] = useState(null);
+    const [planExpandido, setPlanExpandido] = useState(null);
 
-    const guardar = useCallback(async (form) => {
-        setSaving(true);
-        try {
-            setTareas(prev => prev.map(t => t.id === form.id ? form : t));
-            setModal(null);
-            showToast("Cambio registrado localmente");
-        } finally {
-            setSaving(false);
-        }
-    }, []);
+    const triggerToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
     useEffect(() => {
-        if (usuario === undefined) return;
         fetch(SHEET_CSV_URL)
-            .then(res => res.text())
+            .then(r => { if(!r.ok) throw new Error("Fallo de red al conectar la matriz"); return r.text(); })
             .then(csvText => {
-                const lineas = parseCSV(csvText);
-                if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
-                const encabezados = lineas[0].map(h => h.trim().toLowerCase());
-                const rawTareas = [];
+                const rows = parseCSV(csvText);
+                if (rows.length < 2) throw new Error("La hoja de cálculo está vacía o corrupta");
+                const headers = rows[0].map(h => h.trim());
+                
+                const mapped = rows.slice(1).map((r, idx) => {
+                    const t = {}; headers.forEach((h, i) => { t[h] = r[i] ? r[i].trim() : ""; });
+                    if (!t.id) t.id = `t-${idx}`;
+                    t.avance = t.avance ? parseFloat(t.avance) : 0;
+                    if(t.avance > 1) t.avance = t.avance / 100;
+                    if (!t.estado) t.estado = "Pendiente";
+                    if (!t.prioridad) t.prioridad = "Media";
+                    
+                    if (t.responsable && (t.responsable.toLowerCase().includes("vendedor") || t.responsable.toLowerCase().includes("colaboradores"))) {
+                        t.zonas = zonaDefault();
+                        ZONAS.forEach(z => {
+                            t.zonas[z].avance = t.avance;
+                            t.zonas[z].estado = t.estado;
+                        });
+                    }
+                    return t;
+                }).filter(t => t.programa && t.plan && t.accion);
 
-                for (let i = 1; i < lineas.length; i++) {
-                    const fila = lineas[i];
-                    if (fila.length < 3 || !fila[0]) continue;
-                    const t = {};
-                    encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
-                    let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
-                    if (avNum > 1) avNum = avNum / 100;
-
-                    const tareaMapeada = {
-                        id: i,
-                        programa: t.programa || "Sin Programa",
-                        plan: t.plan || "Sin Plan",
-                        tarea: t.tarea || "Acción sin nombre",
-                        responsable: t.responsable || "No asignado",
-                        estado: t.estado || "Pendiente",
-                        prioridad: t.prioridad || "Media",
-                        avance: isNaN(avNum) ? 0 : avNum,
-                        comentarios: t.comentarios || t.comentario || "",
-                        ultimaActualizacion: t.ultimaactualizacion || null
-                    };
-                    if (esRZNColectivo(tareaMapeada)) tareaMapeada.zonas = zonaDefault();
-                    rawTareas.push(tareaMapeada);
-                }
-                setTareas(rawTareas);
+                setTareas(mapped);
                 setLoading(false);
             })
-            .catch(err => { console.error(err); setLoading(false); });
-    }, [usuario]);
+            .catch(err => { setError(err.message); setLoading(false); });
+    }, []);
 
-    if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: handleLogin, usuarios: USUARIOS_INIT });
+    const handleLogin = (e) => {
+        e.preventDefault();
+        const found = USUARIOS_INIT.find(u => u.pin === pinInput.trim());
+        if (found) { setUsuario(found); localStorage.setItem("next_user", JSON.stringify(found)); triggerToast(`Bienvenido, ${found.nombre}`); }
+        else { triggerToast("PIN Incorrecto", false); }
+    };
+
+    const handleLogout = () => { setUsuario(null); localStorage.removeItem("next_user"); };
+
+    const saveChanges = (updatedTarea) => {
+        setTareas(prev => prev.map(t => t.id === updatedTarea.id ? updatedTarea : t));
+        setEditandoTarea(null);
+        triggerToast("Cambios inyectados localmente en memoria");
+    };
+
+    // Estructuras jerárquicas agrupadas dinámicamente
+    const programasData = useMemo(() => {
+        const map = {};
+        tareas.forEach(t => {
+            if (!map[t.programa]) map[t.programa] = { nombre: t.programa, tareas: [] };
+            map[t.programa].tareas.push(t);
+        });
+        return Object.values(map).map((p, i) => {
+            const planesMap = {};
+            p.tareas.forEach(t => {
+                if (!planesMap[t.plan]) planesMap[t.plan] = { nombre: t.plan, tareas: [] };
+                planesMap[t.plan].tareas.push(t);
+            });
+            p.planes = Object.values(planesMap).map(pl => ({ ...pl, avance: avg(pl.tareas.map(t => t.avance)) }));
+            p.avance = avg(p.tareas.map(t => t.avance));
+            p.color = PROG_COLORS[i % PROG_COLORS.length];
+            return p;
+        });
+    }, [tareas]);
+
+    // REQUERIMIENTO: Navegación Drill Down desde el Resumen Ejecutivo
+    const execDrillDown = (progNombre, planNombre = null) => {
+        setProgExpandido(progNombre);
+        if (planNombre) setPlanExpandido(planNombre);
+        setTab("programas");
+    };
+
     if (loading) return React.createElement("div", { id: "loading" }, React.createElement("div", { className: "spinner" }), React.createElement("span", null, "Sincronizando Matriz de Demanda..."));
+    if (error) return React.createElement("div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FEF2F2", color: "#991B1B", padding: 24, fontSize: 14, fontWeight: 700 } }, `❌ Error Crítico: ${error}`);
 
-    const TABS = [
-        { id: "ejecutivo", label: "Resumen" },
-        { id: "programas", label: "Programas" },
-        { id: "planes", label: "Planes" },
-        { id: "equipos", label: "Equipos" },
-        { id: "tareas", label: "Tareas" },
-    ];
+    // VISTA LOGIN
+    if (!usuario) {
+        return React.createElement("div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } },
+            React.createElement("div", { style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 360, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 20 } }, React.createElement(LogoNextSiembra, { height: 48 })),
+                React.createElement("h2", { style: { fontSize: 16, fontWeight: 800, textAlign: "center", color: "#1E293B", marginBottom: 4 } }, CLIENTE.subtitulo),
+                React.createElement("p", { style: { fontSize: 12, textAlign: "center", color: "#64748B", marginBottom: 24 } }, "Ingrese su PIN de Consultor o Vendedor"),
+                React.createElement("form", { onSubmit: handleLogin, style: { display: "flex", flexDirection: "column", gap: 14 } },
+                    React.createElement("input", { type: "password", maxLength: 4, placeholder: "• • • •", value: pinInput, onChange: e => setPinInput(e.target.value), style: { width: "100%", textAlign: "center", padding: 12, fontSize: 22, letterSpacing: 6, borderRadius: 10, border: "1px solid #CBD5E1", outline: "none" } }),
+                    React.createElement("button", { type: "submit", style: { background: CLIENTE.colorA, color: "#fff", padding: 11, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" } }, "Acceder al Tablero")))
+        );
+    }
 
-    const totalAv = avg(tareas.map(t => t.avance));
-    const { bar } = colorAvance(totalAv);
-    const rolColor = usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
+    // INTERFAZ PRINCIPAL DEL TABLERO
+    return React.createElement("div", { style: { minHeight: "100vh", display: "flex", flexDirection: "column" } },
+        // CABECERA PREMIUM
+        React.createElement("header", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 1000 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16 } },
+                React.createElement(LogoNextSiembra, { height: 34 }),
+                React.createElement("div", { style: { width: 1, height: 24, background: "#E2E8F0" } }),
+                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#475569" } }, CLIENTE.subtitulo)),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
+                React.createElement("button", { onClick: () => setSidebarOpen(true), style: { background: "#F1F5F9", border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 } }, "🔍 Ver Estados"),
+                React.createElement("div", { style: { textAlign: "right" } },
+                    React.createElement("p", { style: { fontSize: 12, fontWeight: 800, color: "#1E293B" } }, usuario.nombre),
+                    React.createElement("p", { style: { fontSize: 10, color: "#64748B", textTransform: "uppercase", fontWeight: 700 } }, usuario.rol === "sr" ? "Consultor Sr" : usuario.rol)),
+                React.createElement("button", { onClick: handleLogout, style: { background: "none", border: "none", color: "#EF4444", fontSize: 11, fontWeight: 700, cursor: "pointer" } }, "Salir"))),
 
-    return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
-        toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
-        modal && React.createElement(Modal, { tarea: modal, onSave: guardar, onClose: () => setModal(null), saving: saving, usuario: usuario }),
-        React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
-            React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "0 16px" } },
-                React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 0", flexWrap: "wrap", gap: 10 } },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
-                        React.createElement(LogoNextSiembra, { height: 40 }),
-                        React.createElement("div", { style: { borderLeft: "1px solid #E2E8F0", paddingLeft: 14 } },
-                            React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase" } }, CLIENTE.subtitulo))),
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" } },
-                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "7px 14px" } },
-                            React.createElement("span", { style: { fontSize: 12, color: "#64748B", fontWeight: 600 } }, "Avance General"),
-                            React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: bar } }, pct(totalAv), "%"),
-                            React.createElement("div", { style: { width: 60 } }, React.createElement(BarraAvance, { valor: totalAv, height: 6 }))),
-                        React.createElement("div", { style: { position: "relative" } },
-                            React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 12px", cursor: "pointer" } },
-                                React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: rolColor } }),
-                                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0F172A" } }, usuario?.nombre || "Solo lectura"),
-                                React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")),
-                            showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
-                                React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión"))))),
-                React.createElement("div", { style: { display: "flex", gap: 0, marginTop: 10 } }, TABS.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas') setNavPlanes({ prog: null, pl: null, force: false }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, tab.label))))),
-        React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "22px 14px 60px" } },
-            vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
-            vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
-            vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
-            vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar }),
-            vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar }))
+        // BARRA DE NAVEGACIÓN PRINCIPAL
+        React.createElement("nav", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", display: "flex", padding: "0 24px", gap: 16 } },
+            React.createElement("button", { onClick: () => setTab("resumen"), style: { padding: "14px 4px", background: "none", border: "none", borderBottom: `3px solid ${tab === "resumen" ? CLIENTE.colorA : "transparent"}`, color: tab === "resumen" ? "#1E293B" : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Resumen Ejecutivo"),
+            React.createElement("button", { onClick: () => setTab("programas"), style: { padding: "14px 4px", background: "none", border: "none", borderBottom: `3px solid ${tab === "programas" ? CLIENTE.colorA : "transparent"}`, color: tab === "programas" ? "#1E293B" : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Programas y Planes de Acción"),
+            usuario.rol !== "vendedor" && React.createElement("button", { onClick: () => setTab("colaboradores"), style: { padding: "14px 4px", background: "none", border: "none", borderBottom: `3px solid ${tab === "colaboradores" ? CLIENTE.colorA : "transparent"}`, color: tab === "colaboradores" ? "#1E293B" : "#64748B", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Seguimiento de Colaboradores")),
+
+        // CUERPO CENTRAL DE LA PESTAÑA
+        React.createElement("main", { style: { flex: 1, padding: "20px 24px", maxWidth: 1200, width: "100%", margin: "0 auto" } },
+            
+            // PESTAÑA 1: RESUMEN EJECUTIVO
+            tab === "resumen" && React.createElement("div", null,
+                React.createElement(LeyendaSemaforo),
+                React.createElement("h2", { style: { fontSize: 15, fontWeight: 800, color: "#1E293B", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".04em" } }, "Matriz Jerárquica de Control"),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, programasData.map(p => 
+                    React.createElement(Card, { key: p.nombre, accent: p.color, style: { padding: "18px" } },
+                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+                            // REQUERIMIENTO: Link Drill Down en el nombre del programa
+                            React.createElement("h3", { onClick: () => execDrillDown(p.nombre), style: { fontSize: 15, fontWeight: 800, color: "#1E293B", cursor: "pointer", decoration: "underline" } }, p.nombre),
+                            React.createElement(PctBadge, { valor: p.avance, size: 40 })),
+                        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10, marginTop: 12, borderTop: "1px solid #F1F5F9", paddingTop: 12 } }, p.planes.map(pl => 
+                            React.createElement("div", { key: pl.nombre, onClick: () => execDrillDown(p.nombre, pl.nombre), style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", justifyBetween: "space-between", gap: 8 } },
+                                React.createElement("div", { style: { flex: 1 } },
+                                    React.createElement("p", { style: { fontSize: 12, fontWeight: 700, color: "#334155" } }, pl.nombre),
+                                    React.createElement("p", { style: { fontSize: 10, color: "#64748B" } }, `${pl.tareas.length} acciones`)),
+                                // REQUERIMIENTO: Inclusión de PctBadge circular en vez de textos planos
+                                React.createElement(PctBadge, { valor: pl.avance, size: 32 })))))))),
+
+            // PESTAÑA 2: PROGRAMAS Y PLANES DETALLADOS
+            tab === "programas" && React.createElement("div", null,
+                programasData.map(p => {
+                    const progAbierto = progExpandido === p.nombre;
+                    return React.createElement("div", { key: p.nombre, style: { background: "#fff", borderRadius: 12, border: `1px solid ${progAbierto ? p.color : "#E2E8F0"}`, marginBottom: 14, overflow: "hidden" } },
+                        React.createElement("div", { onClick: () => setProgExpandido(progAbierto ? null : p.nombre), style: { padding: "14px 18px", background: "#F8FAFC", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `4px solid ${p.color}` } },
+                            React.createElement("h3", { style: { fontSize: 14, fontWeight: 800, color: "#1E293B" } }, p.nombre),
+                            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
+                                React.createElement(BarraAvance, { valor: p.avance, height: 6 }),
+                                React.createElement(PctBadge, { valor: p.avance, size: 32 }))),
+                        progAbierto && React.createElement("div", { style: { padding: "14px 18px", borderTop: "1px solid #E2E8F0", display: "flex", flexDirection: "column", gap: 12 } }, p.planes.map(pl => {
+                            const planAbierto = planExpandido === pl.nombre;
+                            return React.createElement("div", { key: pl.nombre, style: { border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden" } },
+                                React.createElement("div", { onClick: () => setPlanExpandido(planAbierto ? null : pl.nombre), style: { padding: "10px 14px", background: "#F1F5F9", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                                    React.createElement("h4", { style: { fontSize: 12, fontWeight: 700, color: "#334155" } }, pl.nombre),
+                                    React.createElement(PctBadge, { valor: pl.avance, size: 28 })),
+                                planAbierto && React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, pl.tareas.map(t => 
+                                    React.createElement("div", { key: t.id, onClick: () => setEditandoTarea(t), style: { display: "flex", alignItems: "center", justifyBetween: "space-between", padding: "10px 14px", borderBottom: "1px solid #F1F5F9", cursor: "pointer", background: "#fff", transition: "background .15s" } },
+                                        React.createElement("div", { style: { flex: 1, paddingRight: 12 } },
+                                            React.createElement("p", { style: { fontSize: 13, fontWeight: 600, color: "#1E293B" } }, t.accion),
+                                            React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 4 } },
+                                                React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.responsable),
+                                                React.createElement(Badge, { label: t.estado, tipo: "estado" }),
+                                                React.createElement(Badge, { label: t.prioridad, tipo: "prio" }))),
+                                        // REQUERIMIENTO: Reemplazo por PctBadge circular premium
+                                        React.createElement(PctBadge, { valor: t.avance, size: 32 }))))
+                            );
+                        }))
+                    );
+                })),
+
+            // PESTAÑA 3: SEGUIMIENTO COMPLETO DE COLABORADORES
+            tab === "colaboradores" && React.createElement("div", null,
+                React.createElement("h2", { style: { fontSize: 15, fontWeight: 800, color: "#1E293B", marginBottom: 14 } }, "Desempeño por Vendedor / Territorio"),
+                React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 } }, ZONAS.map(z => {
+                    const tareasZona = tareas.filter(t => t.responsable && t.responsable.includes(z));
+                    const promAv = tareasZona.length ? avg(tareasZona.map(t => t.avance)) : 0;
+                    return React.createElement(Card, { key: z, accent: colorAvance(promAv).bar },
+                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+                            React.createElement("h3", { style: { fontSize: 14, fontWeight: 800, color: "#1E293B" } }, z),
+                            React.createElement(PctBadge, { valor: promAv, size: 36 })),
+                        React.createElement("p", { style: { fontSize: 12, color: "#64748B", marginBottom: 8 } }, `${tareasZona.length} acciones asignadas territoriales`),
+                        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 180, overflowY: "auto", marginTop: 10, borderTop: "1px solid #F1F5F9", paddingTop: 8 } }, tareasZona.map(t => 
+                            React.createElement("div", { key: t.id, onClick: () => setEditandoTarea(t), style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", cursor: "pointer" } },
+                                React.createElement("span", { style: { fontSize: 11, color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "80%" } }, t.accion),
+                                React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: colorAvance(t.avance).bar } }, pct(t.avance), "%")))))
+                })))),
+
+        // COMPONENTE PANEL LATERAL DE FILTRADO (SIDEBAR)
+        React.createElement(SidebarEstados, { open: sidebarOpen, onClose: () => setSidebarOpen(false), tareas: tareas, onEditTarea: (t) => setEditandoTarea(t) }),
+
+        // COMPONENTE MODAL DE EDICIÓN FLUIDO
+        editandoTarea && React.createElement(ModalEdicion, { tarea: editandoTarea, usuario: usuario, onClose: () => setEditandoTarea(null), onSave: saveChanges }),
+
+        // TOAST NOTIFICACIONES
+        toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok })
     );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-  </script>
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+</script>
 </body>
 </html>
