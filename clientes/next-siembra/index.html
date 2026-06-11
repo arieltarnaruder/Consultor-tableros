@@ -512,38 +512,93 @@ function VistaProgramas({ tareas, onEditar, initProg, initPlan, forceView }) {
 }
 
 function VistaPlanesAll({ tareas, onEditar, initProg, initPlan }) {
-const [planAbierto, setPlanAbierto] = useState(initPlan ? `${initProg}||${initPlan}` : null);
-const tree = useMemo(() => {
-const m = {};
-tareas.forEach(t => {
-if (!m[t.programa]) m[t.programa] = {};
-if (!m[t.programa][t.plan]) m[t.programa][t.plan] = [];
-m[t.programa][t.plan].push(t);
-});
-return m;
-}, [tareas]);
-
-return React.createElement("div", null,
-React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, Object.keys(tree).map(prog =>
-Object.keys(tree[prog]).map(plan => {
-const ts = tree[prog][plan]; const av = avg(ts.map(t => t.avance));
-const abierto = planAbierto === `${prog}||${plan}`;
-return React.createElement("div", { key: `${prog}||${plan}`, style: { background: "#fff", border: `1px solid ${abierto ? CLIENTE.colorA : "#E2E8F0"}`, borderLeft: `4px solid ${colorAvance(av).bar}`, borderRadius: 12, overflow: "hidden", marginBottom: 4 } },
-React.createElement("div", { onClick: () => setPlanAbierto(abierto ? null : `${prog}||${plan}`), style: { padding: "13px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-React.createElement("div", null,
-React.createElement("div", { style: { fontSize: 10, color: CLIENTE.colorA, fontWeight: 700 } }, prog),
-React.createElement("div", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14, marginTop: 2 } }, plan)),
-React.createElement("span", { style: { fontWeight: 800, color: colorAvance(av).bar, fontSize: 18 } }, pct(av), "%")),
-abierto && React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6, background: "#F8FAFC" } }, ts.map(t =>
-React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { background: "#fff", padding: "10px 13px", borderRadius: 9, cursor: "pointer", borderLeft: `3px solid ${colorAvance(t.avance).bar}` } },
-React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-React.createElement("span", { style: { fontSize: 13, fontWeight: 700 } }, t.tarea),
-React.createElement(PctBadge, { valor: t.avance, size: 34 })))
-))
-);
-})
-))
-);
+    const [filtroProg, setFiltroProg] = useState(initProg || "");
+    const [planAbierto, setPlanAbierto] = useState(initPlan || null);
+    const tree = useMemo(() => {
+        const m = {};
+        tareas.forEach(t => {
+            if (!m[t.programa])
+                m[t.programa] = {};
+            if (!m[t.programa][t.plan])
+                m[t.programa][t.plan] = [];
+            m[t.programa][t.plan].push(t);
+        });
+        return m;
+    }, [tareas]);
+    const programas = Object.keys(tree);
+    const planesFlat = useMemo(() => {
+        const list = [];
+        programas.forEach((prog, pi) => {
+            Object.keys(tree[prog]).forEach(plan => {
+                const ts = tree[prog][plan];
+                list.push({ prog, plan, ts, color: PROG_COLORS[pi % PROG_COLORS.length] });
+            });
+        });
+        return list;
+    }, [tree]);
+    const planesFiltrados = filtroProg ? planesFlat.filter(p => p.prog === filtroProg) : planesFlat;
+    return (React.createElement("div", null,
+        React.createElement(LeyendaSemaforo, null),
+        React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
+            React.createElement("button", { onClick: () => { setFiltroProg(""); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${!filtroProg ? CLIENTE.colorA : "#E2E8F0"}`, background: !filtroProg ? CLIENTE.colorA : "#F8FAFC", color: !filtroProg ? "#fff" : "#64748B", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "Todos"),
+            programas.map((prog, i) => (React.createElement("button", { key: prog, onClick: () => { setFiltroProg(prog === filtroProg ? "" : prog); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#E2E8F0"}`, background: filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#F8FAFC", color: filtroProg === prog ? "#fff" : "#64748B", fontSize: 11, fontWeight: 700, cursor: "pointer", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } },
+                prog.split(" ").slice(0, 3).join(" "),
+                "\u2026")))),
+        React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginBottom: 10 } },
+            planesFiltrados.length,
+            " planes"),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, planesFiltrados.map(({ prog, plan, ts, color }) => {
+            const av = avg(ts.map(t => t.avance));
+            const { bar: b } = colorAvance(av);
+            const abierto = planAbierto === `${prog}||${plan}`;
+            const byEst = {};
+            ts.forEach(t => { byEst[t.estado] = (byEst[t.estado] || 0) + 1; });
+            return (React.createElement("div", { key: `${prog}||${plan}`, style: { background: "#fff", border: `1px solid ${abierto ? color : "#E2E8F0"}`, borderLeft: `4px solid ${b}`, borderRadius: 12, overflow: "hidden", transition: "border-color .15s" } },
+                React.createElement("div", { onClick: () => setPlanAbierto(abierto ? null : `${prog}||${plan}`), style: { padding: "13px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" } },
+                    React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: color, marginBottom: 2 } },
+                            "PLAN \u00B7 ",
+                            prog),
+                        React.createElement("div", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14, lineHeight: 1.3 } }, plan),
+                        React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 3 } },
+                            ts.length,
+                            " tareas")),
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexShrink: 0 } },
+                        React.createElement("div", { style: { width: 80 } },
+                            React.createElement(BarraAvance, { valor: av, height: 6 })),
+                        React.createElement("span", { style: { fontWeight: 800, color: b, fontSize: 18, minWidth: 38, textAlign: "right" } },
+                            pct(av),
+                            "%"),
+                        React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, Object.entries(byEst).map(([e, n]) => {
+                            var _a, _b;
+                            return (React.createElement("span", { key: e, style: { fontSize: 10, background: (_a = ESTADO_CFG[e]) === null || _a === void 0 ? void 0 : _a.bg, color: (_b = ESTADO_CFG[e]) === null || _b === void 0 ? void 0 : _b.text, borderRadius: 99, padding: "1px 7px", fontWeight: 700 } },
+                                e,
+                                " ",
+                                n));
+                        })),
+                        React.createElement("span", { style: { color: "#CBD5E1", fontSize: 16, transform: abierto ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "\u203A"))),
+                abierto && (React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6, background: "#F8FAFC" } }, ts.map(t => {
+                    const { bar: tb } = colorAvance(t.avance);
+                    return (React.createElement("div", { key: t.id, onClick: () => onEditar(t), style: { background: "#fff", border: "1px solid #E2E8F0", borderLeft: `3px solid ${tb}`, borderRadius: 9, padding: "10px 13px", cursor: "pointer", transition: "box-shadow .15s" }, onMouseEnter: e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,.08)", onMouseLeave: e => e.currentTarget.style.boxShadow = "none" },
+                        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" } },
+                            React.createElement("div", { style: { flex: 1 } },
+                                React.createElement("div", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#94A3B8", marginBottom: 2 } }, "TAREA"),
+                                React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#0F172A", lineHeight: 1.3 } }, t.tarea || "(Sin nombre)")),
+                            React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } },
+                                React.createElement(Badge, { label: t.estado, tipo: "estado" }),
+                                React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }),
+                                React.createElement("span", { style: { fontWeight: 800, color: tb, fontSize: 14 } },
+                                    pct(t.avance),
+                                    "%"))),
+                        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" } },
+                            t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } },
+                                " ",
+                                t.responsable),
+                            t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } },
+                                " ",
+                                fmtD(t.fechaVencimiento)))));
+                })))));
+        }))));
 }
 
 function VistaEquipos({ tareas, onEditar }) {
