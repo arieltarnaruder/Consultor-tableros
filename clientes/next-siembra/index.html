@@ -298,7 +298,6 @@ React.createElement("div", { style: { display: "flex", alignItems: "center", gap
 React.createElement("span", { style: { fontSize: 11, background: bg, color: text, borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, label),
 React.createElement("span", { style: { fontSize: 22, fontWeight: 800, color: bar } }, pct(f.avance), "%"))),
 React.createElement("input", { type: "range", min: 0, max: 100, value: pct(f.avance), onChange: e => set("avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginBottom: 6 } }),
-React.createElement(BarraAvance, { valor: f.avance, height: 10 }),
 React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } }, [0, 25, 50, 75, 100].map(v => React.createElement("button", { key: v, onClick: () => set("avance", v / 100), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${pct(f.avance) === v ? "#CBD5E1" : "#E2E8F0"}`, background: pct(f.avance) === v ? "#F1F5F9" : "#fff", color: "#475569", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, v, "%")))),
 React.createElement("div", null,
 React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 8 } }, "Estado General de la Tarea"),
@@ -592,27 +591,6 @@ function VistaPlanesAll({ tareas, onEditar, initProg, initPlan }) {
         })));
 }
 
-function VistaEquipos({ tareas, onEditar }) {
-const dataVendedores = useMemo(() => {
-return ZONAS.map(zona => {
-const ts = tareas.filter(t => esRZNColectivo(t));
-const avances = ts.map(t => t.zonas?.[zona]?.avance ?? t.avance);
-return { nombre: zona, avProm: avances.length ? avg(avances) : 0, total: avances.length };
-});
-}, [tareas]);
-
-return React.createElement("div", null,
-React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 } }, dataVendedores.map(v =>
-React.createElement(Card, { key: v.nombre, accent: colorAvance(v.avProm).bar },
-React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700 } }, "COLABORADOR NEXT"),
-React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginTop: 4 } }, v.nombre),
-React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: colorAvance(v.avProm).bar, margin: "10px 0 4px" } }, pct(v.avProm), "%"),
-React.createElement(BarraAvance, { valor: v.avProm, height: 6 }),
-React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 6 } }, `${v.total} acciones asignadas`))
-))
-);
-}
-
 function VistaTareas({ tareas, onEditar, initAvance }) {
 const [filtros, setFiltros] = useState({ q: "", programa: "", responsable: "", estado: "", prioridad: "", avance: initAvance || "" });
 
@@ -655,13 +633,42 @@ React.createElement("span", { style: { fontSize: 12, color: "#94A3B8", marginLef
 ),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
 filtradas.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 48, color: "#94A3B8", fontSize: 14 } }, "Sin resultados."),
-filtradas.map(t =>
-React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: colorAvance(t.avance).bar },
-React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-React.createElement("div", null,
-React.createElement("div", { style: { fontSize: 11, color: "#64748B" } }, `${t.programa} › ${t.plan}`),
-React.createElement("div", { style: { fontWeight: 700, fontSize: 14, marginTop: 2 } }, t.tarea)),
-React.createElement(PctBadge, { valor: t.avance, size: 38 })))
+filtradas.map(t => {
+const { bar: b } = colorAvance(t.avance);
+return React.createElement(Card, { key: t.id, onClick: () => onEditar(t), style: { padding: "11px 14px" } },
+React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } },
+React.createElement(PctBadge, { valor: t.avance, size: 44 }),
+React.createElement("div", { style: { flex: 1, minWidth: 130 } },
+React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 2, lineHeight: 1.3 } }, t.tarea || "(Sin nombre)"),
+React.createElement("div", { style: { fontSize: 11, color: "#94A3B8" } }, t.programa, " › ", t.plan)),
+React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } },
+React.createElement(Badge, { label: t.estado, tipo: "estado" }),
+React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }),
+t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, " ", t.responsable),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, " ", fmtD(t.fechaVencimiento))),
+React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›")));
+})
+)
+);
+}
+
+function VistaEquipos({ tareas, onEditar }) {
+const dataVendedores = useMemo(() => {
+return ZONAS.map(zona => {
+const ts = tareas.filter(t => esRZNColectivo(t));
+const avances = ts.map(t => t.zonas?.[zona]?.avance ?? t.avance);
+return { nombre: zona, avProm: avances.length ? avg(avances) : 0, total: avances.length };
+});
+}, [tareas]);
+
+return React.createElement("div", null,
+React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 } }, dataVendedores.map(v =>
+React.createElement(Card, { key: v.nombre, accent: colorAvance(v.avProm).bar },
+React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 700 } }, "COLABORADOR NEXT"),
+React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginTop: 4 } }, v.nombre),
+React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: colorAvance(v.avProm).bar, margin: "10px 0 4px" } }, pct(v.avProm), "%"),
+React.createElement(BarraAvance, { valor: v.avProm, height: 6 }),
+React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 6 } }, `${v.total} acciones asignadas`))
 ))
 );
 }
