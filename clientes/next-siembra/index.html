@@ -10,6 +10,22 @@ body{font-family:system-ui,sans-serif;background:#F1F5F9}
 #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
 .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ESTILOS ESPECIFICOS PARA IMPRESION PDF */
+@media screen {
+    .print-only { display: none !important; }
+}
+@media print {
+    .no-print { display: none !important; }
+    .print-only { display: block !important; width: 100%; color: #0F172A; }
+    body { background: #fff; font-size: 10pt; margin: 0; padding: 0; }
+    @page { margin: 15mm; size: A4; }
+    .print-break-avoid { page-break-inside: avoid; }
+    .print-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 9pt; }
+    .print-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #CBD5E1; color: #475569; }
+    .print-table td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+    .print-badge { padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: 700; }
+}
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -146,24 +162,6 @@ function Toast({ msg, ok }) {
 return React.createElement("div", { style: { position: "fixed", bottom: 24, right: 24, zIndex: 3000, background: ok ? "#14532D" : "#7F1D1D", color: "#fff", borderRadius: 10, padding: "12px 20px", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 8 } },
 ok ? "✓" : "✕", " ", msg
 );
-}
-
-function LeyendaSemaforo() {
-    const items = [
-        { color: "#EF4444", label: "Sin inicio", rango: "0–9%" },
-        { color: "#F97316", label: "Iniciado", rango: "10–49%" },
-        { color: "#EAB308", label: "En marcha", rango: "50–79%" },
-        { color: "#22C55E", label: "Avanzado", rango: "80–99%" },
-        { color: "#3B82F6", label: "Completa", rango: "100%" },
-    ];
-    return (React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", padding: "10px 16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, marginBottom: 20 } },
-        React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: ".06em", marginRight: 4 } }, "Avance:"),
-        items.map(it => (React.createElement("div", { key: it.label, style: { display: "flex", alignItems: "center", gap: 5 } },
-            React.createElement("span", { style: { width: 10, height: 10, borderRadius: "50%", background: it.color, flexShrink: 0 } }),
-            React.createElement("span", { style: { fontSize: 11, color: "#475569" } },
-                React.createElement("strong", null, it.label),
-                " ",
-                it.rango))))));
 }
 
 function MiniTarea({ t, onEditar }) {
@@ -682,295 +680,4 @@ function VistaEquipos({ tareas, onEditar }) {
             ),
             React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, respData.tareas.map(t => {
                 const { bar: b } = colorAvance(t.avance);
-                return React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: b },
-                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, flexWrap: "wrap" } },
-                        React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 13, flex: 1, lineHeight: 1.35 } },
-                            React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 1 } }, "TAREA"), t.tarea || "(Sin nombre)"),
-                        React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
-                            React.createElement(Badge, { label: t.estado, tipo: "estado" }),
-                            React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }))),
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 6 } },
-                        React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
-                        React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: b, minWidth: 34, textAlign: "right" } }, pct(t.avance), "%")),
-                    React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
-                        React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.programa, " › ", t.plan),
-                        t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento)),
-                        t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))
-                );
-            }))
-        );
-    }
-
-    return React.createElement("div", null,
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 } }, dataResponsables.map(v =>
-            React.createElement(Card, { key: v.nombre, onClick: () => setRespActivo(v.nombre), accent: colorAvance(v.avProm).bar, style: { cursor: "pointer" } },
-                React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginTop: 4 } }, v.nombre),
-                React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: colorAvance(v.avProm).bar, margin: "10px 0 4px" } }, pct(v.avProm), "%"),
-                React.createElement(BarraAvance, { valor: v.avProm, height: 6 }),
-                React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 6 } }, `Responsable de ${v.total} Tareas`))
-        ))
-    );
-}
-
-function PantallaLogin({ onLogin, usuarios }) {
-const [pin, setPin] = useState("");
-const [err, setErr] = useState("");
-const tryLogin = (p) => {
-const u = usuarios.find(usr => usr.pin === p);
-if (u) onLogin(u);
-else { setErr("PIN incorrecto"); setPin(""); }
-};
-const handleKey = (d) => {
-if (pin.length >= 4) return;
-const n = pin + d; setPin(n); setErr("");
-if (n.length === 4) setTimeout(() => tryLogin(n), 120);
-};
-const btnS = { padding: "16px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#F8FAFC", fontSize: 18, fontWeight: 700, color: "#0F172A", cursor: "pointer" };
-return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 } },
-React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
-React.createElement(LogoNextSiembra, { height: 44 }),
-React.createElement("div", { style: { fontSize: 12, color: "#64748B", fontWeight: 600, marginTop: 8 } }, CLIENTE.subtitulo)),
-React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.10)", border: "1px solid #E2E8F0" } },
-React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 20 } }),
-React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
-React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
-React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 } },
-[0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 16, height: 16, borderRadius: "50%", background: i < pin.length ? CLIENTE.colorA : "#E2E8F0", border: `2px solid ${i < pin.length ? CLIENTE.colorA : "#CBD5E1"}` } }))),
-err && React.createElement("div", { style: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#B91C1C", textAlign: "center", marginBottom: 12, fontWeight: 600 } }, err),
-React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 } },
-[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => React.createElement("button", { key: d, onClick: () => handleKey(String(d)), style: btnS }, d)),
-React.createElement("button", { onClick: () => setPin(""), style: { ...btnS, fontSize: 12, color: "#64748B" } }, "Borrar"),
-React.createElement("button", { onClick: () => handleKey("0"), style: btnS }, "0"),
-React.createElement("button", { onClick: () => { setPin(p => p.slice(0, -1)); setErr(""); }, style: { ...btnS, fontSize: 16, color: "#64748B" } }, "x")),
-React.createElement("div", { style: { borderTop: "1px solid #F1F5F9", marginTop: 12, paddingTop: 12, textAlign: "center" } },
-React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "7px 16px", color: "#64748B", fontSize: 12, cursor: "pointer", fontWeight: 600 } }, "Solo lectura")))
-);
-}
-
-function ModalAyuda({ onClose }) {
-const [tab, setTab] = useState("usuario");
-
-const Seccion = ({ titulo, children }) => React.createElement("div", { style: { marginBottom: 20 } },
-React.createElement("h4", { style: { fontSize: 14, color: "#0F172A", marginBottom: 10, fontWeight: 700, borderBottom: "1px solid #E2E8F0", paddingBottom: 6 } }, titulo),
-React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, children)
-);
-
-const ItemLista = ({ negrita, texto }) => React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "baseline" } },
-React.createElement("span", { style: { color: CLIENTE.colorA, fontSize: 14, fontWeight: 800 } }, "•"),
-React.createElement("span", null, React.createElement("strong", { style: { color: "#334155" } }, negrita), texto)
-);
-
-const manualUsuario = React.createElement(React.Fragment, null,
-React.createElement(Seccion, { titulo: "Navegación del Tablero" },
-  React.createElement(ItemLista, { negrita: "Resumen:", texto: " Vista ejecutiva global de tareas agrupadas por su grado de avance (Completas, Avanzadas, etc.) y progreso consolidado por Programa." }),
-  React.createElement(ItemLista, { negrita: "Programas y Planes:", texto: " Permite hacer exploración profunda desde el nivel macro (Programa) hasta el nivel micro (Tarea individual)." }),
-  React.createElement(ItemLista, { negrita: "Equipo:", texto: " Vista de desempeño transversal segmentada por colaborador responsable." }),
-  React.createElement(ItemLista, { negrita: "Tareas:", texto: " Buscador con filtros múltiples para encontrar acciones específicas." })
-),
-React.createElement(Seccion, { titulo: "Semáforo de Avances" },
-  React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 } },
-    React.createElement("span", { style: { background: "#FEF2F2", color: "#B91C1C", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "0-9% Rojo"),
-    React.createElement("span", { style: { background: "#FFF7ED", color: "#C2410C", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "10-49% Naranja"),
-    React.createElement("span", { style: { background: "#FEFCE8", color: "#854D0E", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "50-79% Amarillo"),
-    React.createElement("span", { style: { background: "#F0FDF4", color: "#15803D", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "80-99% Verde"),
-    React.createElement("span", { style: { background: "#EFF6FF", color: "#1D4ED8", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "100% Azul")
-  )
-),
-React.createElement(Seccion, { titulo: "Cómo Cargar el Avance" },
-  React.createElement("ol", { style: { paddingLeft: 20, margin: 0, color: "#475569" } },
-    React.createElement("li", { style: { marginBottom: 6 } }, "Ir a la pestaña ", React.createElement("strong", null, "Tareas"), " y filtrar por tu nombre en 'Responsable'."),
-    React.createElement("li", { style: { marginBottom: 6 } }, "Hacer clic sobre la tarjeta de la tarea que deseás actualizar."),
-    React.createElement("li", { style: { marginBottom: 6 } }, "Mover el deslizador hasta el porcentaje de avance real logrado."),
-    React.createElement("li", { style: { marginBottom: 6 } }, "Ajustar el 'Estado de la Tarea' (Pendiente, En curso, Bloqueada, Cerrada)."),
-    React.createElement("li", { style: { marginBottom: 6 } }, "Dejar un comentario breve informando novedades y presionar ", React.createElement("strong", null, "Guardar cambios"), ".")
-  )
-)
-);
-
-const manualMantenimiento = React.createElement(React.Fragment, null,
-React.createElement(Seccion, { titulo: "Arquitectura y Fuente de Datos" },
-  React.createElement("p", { style: { marginBottom: 10 } }, "El tablero funciona como una interfaz de lectura rápida (Frontend). Su única fuente de verdad es un archivo ", React.createElement("strong", null, "CSV en vivo"), " exportado desde Google Sheets."),
-  React.createElement(ItemLista, { negrita: "Actualización Masiva:", texto: " Las modificaciones estructurales, creación de nuevos Programas o asignación masiva de tareas deben realizarse directamente en la Planilla Matriz." }),
-  React.createElement(ItemLista, { negrita: "Sincronización:", texto: " Automática. Cada vez que recargás la página, el tablero descarga y proyecta la última versión publicada de la matriz." })
-),
-React.createElement(Seccion, { titulo: "Gestión de Accesos (Roles)" },
-  React.createElement("p", { style: { marginBottom: 10 } }, "El sistema de PINs restringe permisos según tu rol en el equipo:"),
-  React.createElement("ul", { style: { paddingLeft: 20, margin: 0, color: "#475569" } },
-    React.createElement("li", { style: { marginBottom: 6 } }, React.createElement("strong", null, "Rol Líder / SR:"), " Visibilidad total. Pueden editar el avance y estado de cualquier tarea sin importar quién sea el responsable asignado."),
-    React.createElement("li", { style: { marginBottom: 6 } }, React.createElement("strong", null, "Rol Colaborador:"), " Visibilidad total, pero edición restringida. Solo pueden guardar cambios en aquellas tareas donde figuren explícitamente como responsables."),
-    React.createElement("li", { style: { marginBottom: 6 } }, React.createElement("strong", null, "Solo Lectura:"), " Ingreso libre sin PIN. Permite navegar el tablero y monitorear el progreso pero anula por completo la capacidad de edición.")
-  )
-)
-);
-
-return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
-React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: 650, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
-  React.createElement("div", { style: { padding: "20px 24px 0", borderBottom: "1px solid #E2E8F0", flexShrink: 0 } },
-    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 } },
-      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-        React.createElement("span", { style: { fontSize: 20 } }, "❓"),
-        React.createElement("span", { style: { fontSize: 18, fontWeight: 800, color: "#0F172A" } }, "Ayuda y Documentación")
-      ),
-      React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8" } }, "✕")
-    ),
-    React.createElement("div", { style: { display: "flex", gap: 24 } },
-      React.createElement("button", { onClick: () => setTab("usuario"), style: { padding: "10px 4px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === "usuario" ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${tab === "usuario" ? CLIENTE.colorA : "transparent"}`, transition: "all .2s" } }, "Manual de usuario"),
-      React.createElement("button", { onClick: () => setTab("mantenimiento"), style: { padding: "10px 4px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === "mantenimiento" ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${tab === "mantenimiento" ? CLIENTE.colorA : "transparent"}`, transition: "all .2s" } }, "Instalación y mantenimiento")
-    )
-  ),
-  React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "24px", fontSize: 13, color: "#334155", lineHeight: 1.6 } },
-    tab === "usuario" ? manualUsuario : manualMantenimiento
-  ),
-  React.createElement("div", { style: { padding: "14px 24px", borderTop: "1px solid #E2E8F0", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", borderRadius: "0 0 18px 18px" } },
-    React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontWeight: 600 } }, "Tablero de Generación de Demanda · Next Siembra"),
-    React.createElement("button", { onClick: onClose, style: { padding: "9px 24px", borderRadius: 10, border: "none", background: CLIENTE.colorA, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar")
-  )
-)
-);
-}
-
-function App() {
-const [usuario, setUsuario] = useState(undefined);
-const [tareas, setTareas] = useState([]);
-const [loading, setLoading] = useState(true);
-const [vista, setVista] = useState("ejecutivo");
-const [navPlanes, setNavPlanes] = useState({ prog: null, pl: null, force: false });
-const [navTareas, setNavTareas] = useState({ filtroAvance: "" });
-const [modal, setModal] = useState(null);
-const [saving, setSaving] = useState(false);
-const [toast, setToast] = useState(null);
-const [showUserMenu, setShowUserMenu] = useState(false);
-const [showAyuda, setShowAyuda] = useState(false);
-
-const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
-const handleLogin = (u) => setUsuario(u);
-const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); };
-
-const handleNavegar = (destVista, params = {}) => {
-if (destVista === "programas") {
-setNavPlanes({ prog: params.prog, pl: null, force: true });
-setVista("programas");
-} else if (destVista === "planes") {
-setNavPlanes({ prog: params.prog, pl: params.pl, force: true });
-setVista("planes");
-} else if (destVista === "tareas") {
-setNavTareas({ filtroAvance: params.filtroAvance });
-setVista("tareas");
-}
-};
-
-const handleEditar = (tarea) => {
-if (puedeEditar(usuario, tarea)) setModal(tarea);
-else showToast("Modo Lectura: No posees permisos para modificar este registro.", false);
-};
-
-const guardar = useCallback(async (form) => {
-setSaving(true);
-try {
-setTareas(prev => prev.map(t => t.id === form.id ? form : t));
-setModal(null);
-showToast("Cambio registrado localmente");
-} finally {
-setSaving(false);
-}
-}, []);
-
-useEffect(() => {
-if (usuario === undefined) return;
-fetch(SHEET_CSV_URL)
-.then(res => res.text())
-.then(csvText => {
-const lineas = parseCSV(csvText);
-if (lineas.length <= 1) { setTareas([]); setLoading(false); return; }
-const encabezados = lineas[0].map(h => h.trim().toLowerCase());
-const rawTareas = [];
-for (let i = 1; i < lineas.length; i++) {
-const fila = lineas[i];
-if (fila.length < 3 || !fila[0]) continue;
-const t = {};
-encabezados.forEach((h, idx) => { let key = h === "accion" ? "tarea" : h; t[key] = fila[idx] ? fila[idx].trim() : ""; });
-let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
-if (avNum > 1) avNum = avNum / 100;
-const tareaMapeada = {
-id: i,
-programa: t.programa || "Sin Programa",
-plan: t.plan || "Sin Plan",
-tarea: t.tarea || "Acción sin nombre",
-responsable: t.responsable || "No asignado",
-estado: t.estado || "Pendiente",
-prioridad: t.prioridad || "Media",
-avance: isNaN(avNum) ? 0 : avNum,
-comentarios: t.comentarios || t.comentario || "",
-ultimaActualizacion: t.ultimaactualizacion || null
-};
-if (esRZNColectivo(tareaMapeada)) tareaMapeada.zonas = zonaDefault();
-rawTareas.push(tareaMapeada);
-}
-setTareas(rawTareas);
-setLoading(false);
-})
-.catch(err => { console.error(err); setLoading(false); });
-}, [usuario]);
-
-if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: handleLogin, usuarios: USUARIOS_INIT });
-if (loading) return React.createElement("div", { id: "loading" }, React.createElement("div", { className: "spinner" }), React.createElement("span", null, "Sincronizando Matriz de Demanda..."));
-
-const TABS_JERARQUIA = [
-{ id: "ejecutivo", label: "Resumen" },
-{ id: "programas", label: "Programas" },
-{ id: "planes", label: "Planes" },
-{ id: "tareas", label: "Tareas" },
-];
-
-const totalAv = avg(tareas.map(t => t.avance));
-const { bar } = colorAvance(totalAv);
-const rolColor = usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
-
-return React.createElement("div", { style: { minHeight: "100vh", background: "#F1F5F9" } },
-toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
-modal && React.createElement(Modal, { tarea: modal, onSave: guardar, onClose: () => setModal(null), saving: saving, usuario: usuario }),
-showAyuda && React.createElement(ModalAyuda, { onClose: () => setShowAyuda(false) }),
-React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
-React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "0 16px" } },
-React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
-React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0 12px", width: "100%" } },
-React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flex: 1, justifyContent: "flex-start" } },
-React.createElement(LogoNextSiembra, { height: 40 }),
-React.createElement("div", { style: { borderLeft: "1px solid #E2E8F0", paddingLeft: 8 } },
-React.createElement("div", { style: { fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" } }, CLIENTE.subtitulo))),
-React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", flex: 1 } },
-React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, background: "#fff", border: "2px solid #E2E8F0", borderRadius: 12, padding: "10px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" } },
-React.createElement("span", { style: { fontSize: 13, color: "#475569", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" } }, "Avance General"),
-React.createElement("span", { style: { fontSize: 24, fontWeight: 800, color: bar } }, pct(totalAv), "%"),
-React.createElement("div", { style: { width: 120 } }, React.createElement(BarraAvance, { valor: totalAv, height: 8 })))),
-React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", flex: 1, position: "relative" } },
-React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 14px", cursor: "pointer" } },
-React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: rolColor } }),
-React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0F172A" } }, usuario?.nombre || "Solo lectura"),
-React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")),
-showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
-React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
-React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, justifyContent: "space-between", width: "100%" } }, 
-React.createElement("div", { style: { display: "flex", gap: 0, flex: 1, justifyContent: "flex-start" } },
-TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1 } }, tab.label))
-),
-React.createElement("div", { style: { display: "flex", flex: 1, justifyContent: "center", paddingBottom: 8 } },
-React.createElement("button", { onClick: () => { setVista('equipos'); setNavPlanes({ prog: null, pl: null, force: false }); setNavTareas({ filtroAvance: "" }); }, style: { padding: "7px 22px", borderRadius: 99, border: `2px solid ${vista === 'equipos' ? CLIENTE.colorA : '#E2E8F0'}`, background: vista === 'equipos' ? '#FFF7ED' : '#F8FAFC', color: vista === 'equipos' ? CLIENTE.colorA : '#475569', fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer', transition: 'all .2s' } }, "Equipo")
-),
-React.createElement("div", { style: { display: "flex", flex: 1, justifyContent: "flex-end", paddingBottom: 8 } },
-React.createElement("button", { onClick: () => setShowAyuda(true), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#475569" } }, "? Ayuda")
-)
-))),
-React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "22px 14px 60px" } },
-vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
-vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
-vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
-vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar }),
-vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtroAvance }))
-);
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-</script>
-</body>
-</html>
+                return React.createElement(Card, { key
