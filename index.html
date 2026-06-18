@@ -172,7 +172,6 @@ ok ? "✓" : "✕", " ", msg
 
 function MiniTarea({ t, onEditar }) {
 const { bar, bg, text } = colorAvance(t.avance);
-const cfg = ESTADO_CFG[t.estado];
 const pcfg = PRIO_CFG[t.prioridad];
 const urgColor = t.prioridad === "Alta" ? "#EF4444" : t.prioridad === "Media" ? "#F97316" : "#22C55E";
 return (React.createElement("div", { onClick: () => onEditar(t), style: { background: "#fff", border: "1px solid #E2E8F0", borderLeft: `4px solid ${urgColor}`, borderRadius: 10, padding: "12px 14px", cursor: "pointer", transition: "box-shadow .15s" }, onMouseEnter: e => e.currentTarget.style.boxShadow = "0 3px 12px rgba(0,0,0,.1)", onMouseLeave: e => e.currentTarget.style.boxShadow = "none" },
@@ -346,10 +345,11 @@ React.createElement("strong", { style: { color: colorAvance(avg(filtradas.map(t 
 pct(avg(filtradas.map(t => t.avance))), "%"))))),
 React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 } },
 filtradas.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: 40, color: "#94A3B8", fontSize: 14 } }, "No hay tareas en este estado.")),
-filtradas.map(t => (React.createElement(MiniTarea, { key: t.id, t: t, onEditar: (tarea) => { onClose(); onEditar(tarea); } })))),
+filtradas.map(t => (React.createElement(MiniTarea, { key: t.id, t: t, onEditar: (tarea) => { onEditar(tarea); } })))),
 React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "12px 16px", background: "#fff", flexShrink: 0 } },
-React.createElement("button", { onClick: onClose, style: { width: "100%", padding: "11px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", fontSize: 14, fontWeight: 600, cursor: "pointer" } }, "Cerrar")))
-));
+React.createElement("button", { onClick: onClose, style: { width: "100%", padding: "11px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", fontSize: 14, fontWeight: 600, cursor: "pointer" } }, "Cerrar Panel")))
+)
+);
 }
 
 function VistaEjecutiva({ tareas, onEditar, onNavegar }) {
@@ -613,7 +613,6 @@ React.createElement("span", { style: { fontSize: 12, color: "#94A3B8", marginLef
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
 filtradas.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 48, color: "#94A3B8", fontSize: 14 } }, "Sin resultados."),
 filtradas.map(t => {
-const { bar: b } = colorAvance(t.avance);
 return React.createElement(Card, { key: t.id, onClick: () => onEditar(t), style: { padding: "11px 14px" } },
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } },
 React.createElement(PctBadge, { valor: t.avance, size: 44 }),
@@ -855,7 +854,7 @@ const manualMantenimiento = React.createElement(React.Fragment, null,
 React.createElement(Seccion, { titulo: "Arquitectura y Fuente de Datos" },
 React.createElement("p", { style: { marginBottom: 10 } }, "El tablero funciona como una interfaz de lectura rápida (Frontend). Su única fuente de verdad es un archivo CSV en vivo exportado desde Google Sheets."),
 React.createElement(ItemLista, { negrita: "Actualización Masiva:", texto: " Las modificaciones estructurales o creación de nuevos Programas deben realizarse directamente en la Planilla Matriz." }),
-React.createElement(ItemLista, { negrita: "Sincronización:", texto: " Automática. Cada vez que recargás la página, el tablero descarga y proyecta la última version publicada de la matriz." })
+React.createElement(ItemLista, { negrita: "Sincronización:", texto: " Automática. Cada vez que recargás la página, el tablero descarga y proyecta la última versión publicada de la matriz." })
 ),
 React.createElement(Seccion, { titulo: "Gestión de Accesos (Roles)" },
 React.createElement("p", { style: { marginBottom: 10 } }, "El sistema de PINs restringe permisos según tu rol en el equipo:"),
