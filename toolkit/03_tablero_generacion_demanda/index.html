@@ -346,12 +346,10 @@ React.createElement("strong", { style: { color: colorAvance(avg(filtradas.map(t 
 pct(avg(filtradas.map(t => t.avance))), "%"))))),
 React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 } },
 filtradas.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: 40, color: "#94A3B8", fontSize: 14 } }, "No hay tareas en este estado.")),
-filtradas.map(t => (React.createElement(MiniTarea, { key: t.id, t: t, onEditar: (tarea) => { onEditar(tarea); } })))),
+filtradas.map(t => (React.createElement(MiniTarea, { key: t.id, t: t, onEditar: (tarea) => { onClose(); onEditar(tarea); } })))),
 React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "12px 16px", background: "#fff", flexShrink: 0 } },
-React.createElement("div", { style: { display: "flex", gap: 10, padding: "0 22px 22px" } },
-React.createElement("button", { onClick: onClose, style: { flex: 1, padding: "11px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", fontSize: 14, fontWeight: 600, cursor: "pointer" } }, "Cancelar"),
-React.createElement("button", { onClick: handleGuardar, disabled: saving, style: { flex: 2, padding: "11px", border: "none", borderRadius: 10, background: saving ? "#94A3B8" : CLIENTE.colorA, color: "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" } }, saving ? "Procesando…" : "Guardar cambios")))
-);
+React.createElement("button", { onClick: onClose, style: { width: "100%", padding: "11px", border: "1.5px solid #E2E8F0", borderRadius: 10, background: "#F8FAFC", color: "#64748B", fontSize: 14, fontWeight: 600, cursor: "pointer" } }, "Cerrar")))
+));
 }
 
 function VistaEjecutiva({ tareas, onEditar, onNavegar }) {
@@ -469,7 +467,7 @@ React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransfo
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
 React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, ts.length, " tareas"),
 React.createElement("span", { style: { fontWeight: 800, color: b, fontSize: 16 } }, pct(av), "%"),
-React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›"))),
+React.createElement("span", { color: "#CBD5E1", fontSize: 18 } }, "›"))),
 React.createElement(BarraAvance, { valor: av, height: 6 }),
 React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 10, flexWrap: "wrap" }, onClick: e => e.stopPropagation() }, Object.entries(byEst).map(([e, n]) => (React.createElement(BadgeEstado, { key: e, estado: e, count: n, tareasDelProg: ts, progNombre: `${prog} › ${pl}`, progColor: col }))))));
 }))));
@@ -528,7 +526,7 @@ return list;
 const planesFiltrados = filtroProg ? planesFlat.filter(p => p.prog === filtroProg) : planesFlat;
 return React.createElement("div", null,
 React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
-React.createElement("button", { onClick: () => { setFiltroProg(""); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${!filtroProg ? CLIENTE.colorA : "#E2E8F0"}`, background: !filtroProg ? CLIENTE.colorA : "#F8FAFC", color: !filtroProg ? "#fff" : "#64748B", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "Todos"),
+React.createElement("button", { onClick: () => { setFiltroProg(""); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${not filtroProg ? CLIENTE.colorA : "#E2E8F0"}`, background: not filtroProg ? CLIENTE.colorA : "#F8FAFC", color: not filtroProg ? "#fff" : "#64748B", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "Todos"),
 programas.map((prog, i) => React.createElement("button", { key: prog, onClick: () => { setFiltroProg(prog === filtroProg ? "" : prog); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#E2E8F0"}`, background: filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#F8FAFC", color: filtroProg === prog ? "#fff" : "#64748B", fontSize: 11, fontWeight: 700, cursor: "pointer", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } },
 prog.split(" ").slice(0, 3).join(" "), "…"))),
 React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginBottom: 10 } },
