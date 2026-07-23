@@ -11,7 +11,6 @@ body{font-family:system-ui,sans-serif;background:#F1F5F9}
 .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ESTILOS ESPECIFICOS PARA IMPRESION PDF */
 @media screen {
 .print-only { display: none !important; }
 }
@@ -182,6 +181,7 @@ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, fle
 React.createElement("span", { style: { fontSize: 11, fontWeight: 700, background: pcfg === null || pcfg === void 0 ? void 0 : pcfg.bg, color: pcfg === null || pcfg === void 0 ? void 0 : pcfg.text, borderRadius: 99, padding: "2px 8px" } },
 t.prioridad),
 t.responsable && (React.createElement("span", { style: { fontSize: 11, color: "#475569", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, t.responsable)),
+t.colaboradores && (React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: " + t.colaboradores)),
 t.fechaVencimiento && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 8px" } }, fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8", marginLeft: "auto" } }, t.plan)),
 esRZNColectivo(t) && t.zonas && (React.createElement("div", { style: { marginTop: 8, borderTop: "1px solid #F1F5F9", paddingTop: 8 } },
@@ -286,6 +286,7 @@ React.createElement("div", { style: { display: "flex", gap: 7, marginTop: 10, fl
 React.createElement(Badge, { label: f.estado, tipo: "estado" }),
 React.createElement(Badge, { label: f.prioridad, tipo: "prioridad" }),
 f.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: esRZN(f) ? "#FEF9C3" : "#EEF2FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, f.responsable),
+f.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Colab: " + f.colaboradores),
 esRZNColectivo(f) && React.createElement("span", { style: { fontSize: 11, background: "#EFF6FF", color: "#1D4ED8", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, "Progreso Promedio: ", pct(avanceEfectivo), "%"))),
 React.createElement("div", { style: { padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 } },
 esRZNColectivo(f) ? React.createElement("div", null,
@@ -508,6 +509,7 @@ React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
 React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: b, minWidth: 34, textAlign: "right" } }, pct(t.avance), "%")),
 React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
 t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", t.responsable),
+t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento)),
 t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))));
 }))));
@@ -588,6 +590,7 @@ React.createElement("span", { style: { fontWeight: 800, color: tb, fontSize: 14 
 pct(t.avance), "%"))),
 React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" } },
 t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", t.responsable),
+t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, " ", fmtD(t.fechaVencimiento))));
 })));
 })));
@@ -647,7 +650,8 @@ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap",
 React.createElement(Badge, { label: t.estado, tipo: "estado" }),
 React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }),
 t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, " ", t.responsable),
-t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, " ", fmtD(t.fechaVencimiento))),
+t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: ", t.colaboradores),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›")));
 })
 )
@@ -699,6 +703,7 @@ React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
 React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: b, minWidth: 34, textAlign: "right" } }, pct(t.avance), "%")),
 React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
 React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.programa, " › ", t.plan),
+t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento)),
 t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))
 );
@@ -782,11 +787,12 @@ React.createElement("h4", { style: { fontSize: "10pt", fontWeight: 700, color: "
 ),
 React.createElement("table", { className: "print-table" },
 React.createElement("thead", null, React.createElement("tr", null,
-React.createElement("th", { style: { width: "45%" } }, "Acción / Tarea"),
+React.createElement("th", { style: { width: "40%" } }, "Acción / Tarea"),
 React.createElement("th", { style: { width: "20%" } }, "Responsable"),
-React.createElement("th", { style: { width: "12%" } }, "Prioridad"),
-React.createElement("th", { style: { width: "13%" } }, "Estado"),
-React.createElement("th", { style: { width: "10%", textAlign: "right" } }, "Avance")
+React.createElement("th", { style: { width: "15%" } }, "Colaboradores"),
+React.createElement("th", { style: { width: "10%" } }, "Prioridad"),
+React.createElement("th", { style: { width: "10%" } }, "Estado"),
+React.createElement("th", { style: { width: "5%", textAlign: "right" } }, "Avance")
 )),
 React.createElement("tbody", null, ts.map(t => {
 const eCfg = ESTADO_CFG[t.estado];
@@ -794,6 +800,7 @@ const pCfg = PRIO_CFG[t.prioridad];
 return React.createElement("tr", { key: t.id },
 React.createElement("td", null, t.tarea || "(Sin nombre)"),
 React.createElement("td", null, t.responsable || "-"),
+React.createElement("td", null, t.colaboradores || "-"),
 React.createElement("td", null, React.createElement("span", { className: "print-badge", style: { background: pCfg?.bg, color: pCfg?.text } }, t.prioridad)),
 React.createElement("td", null,
 React.createElement("span", { style: { display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: eCfg?.dot, marginRight: "4px" } }),
@@ -995,6 +1002,7 @@ programa: t.programa || "Sin Programa",
 plan: t.plan || "Sin Plan",
 tarea: t.tarea || "Acción sin nombre",
 responsable: t.responsable || "No asignado",
+colaboradores: t.colaboradores || "",
 estado: t.estado || "Pendiente",
 prioridad: t.prioridad || "Media",
 avance: isNaN(avNum) ? 0 : avNum,
