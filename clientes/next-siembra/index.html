@@ -179,7 +179,7 @@ pct(t.avance),
 "%")),
 React.createElement(BarraAvance, { valor: t.avance, height: 5 }),
 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" } },
-React.createElement("span", { style: { fontSize: 11, fontWeight: 700, background: pcfg === null || pcfg === void 0 ? void 0 : pcfg.bg, color: pcfg === null || pcfg === void 0 ? void 0 : pcfg.text, borderRadius: 99, padding: "2px 8px" } },
+React.createElement("span", { style: { fontSize: 11, fontWeight: 700, background: pcfg && pcfg.bg ? pcfg.bg : "#FFFBEB", color: pcfg && pcfg.text ? pcfg.text : "#854D0E", borderRadius: 99, padding: "2px 8px" } },
 t.prioridad),
 t.responsable && (React.createElement("span", { style: { fontSize: 11, color: "#475569", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, t.responsable)),
 t.colaboradores && (React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: " + t.colaboradores)),
@@ -247,6 +247,8 @@ React.createElement("textarea", { value: data.comentario || "", onChange: e => o
 })));
 }
 
+const esRZN = t => { return t?.responsable?.toLowerCase().includes("vendedor"); };
+
 function Modal({ tarea, onSave, onClose, saving, usuario }) {
 const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || zonaDefault() });
 const set = (k, v) => setF(p => ({ ...p, [k]: v }));
@@ -295,7 +297,7 @@ React.createElement("div", { style: { display: "flex", alignItems: "center", gap
 React.createElement("span", { style: { fontSize: 11, background: bg, color: text, borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, label),
 React.createElement("span", { style: { fontSize: 22, fontWeight: 800, color: bar } }, pct(f.avance), "%"))),
 React.createElement("input", { type: "range", min: 0, max: 100, value: pct(f.avance), disabled: modoSoloLecturaColab, onChange: e => set("avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginBottom: 6, opacity: modoSoloLecturaColab ? 0.6 : 1, cursor: modoSoloLecturaColab ? "not-allowed" : "pointer" } }),
-!modoSoloLecturaColab && React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } }, [0, 25, 50, 75, 100].map(v => React.createElement("button", { key: v, onClick: () => set("avance", v / 100), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${pct(f.avance) === v ? "#CBD5E1" : "#E2E8F0"}`, background: pct(f.avance) === v ? "#F1F5F9" : "#fff", color: "#475569", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, v, "%"))),
+!modoSoloLecturaColab && React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } }, [0, 25, 50, 75, 100].map(v => React.createElement("button", { key: v, onClick: () => set("avance", v / 100), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${pct(f.avance) === v ? "#CBD5E1" : "#E2E8F0"}`, background: pct(f.avance) === v ? "#F1F5F9" : "#fff", color: "#475569", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, v, "%")))),
 React.createElement("div", null,
 React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 8 } }, "Observaciones y Comentarios"),
 React.createElement("textarea", { value: f.comentarios || "", onChange: e => set("comentarios", e.target.value), rows: 3, placeholder: "Próximos pasos o detalles del status actual...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#0F172A", resize: "vertical", background: "#F8FAFC", outline: "none" } })),
@@ -328,7 +330,7 @@ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" 
 const cnt = filtradas.filter(t => t.prioridad === p).length;
 if (!cnt) return null;
 const pc = PRIO_CFG[p];
-return (React.createElement("span", { key: p, style: { fontSize: 11, background: pc === null || pc === void 0 ? void 0 : pc.bg, color: pc === null || pc === void 0 ? void 0 : pc.text, borderRadius: 99, padding: "2px 9px", fontWeight: 700 } },
+return (React.createElement("span", { key: p, style: { fontSize: 11, background: pc && pc.bg ? pc.bg : "#FFFBEB", color: pc && pc.text ? pc.text : "#854D0E", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } },
 p, ": ", cnt));
 }),
 filtradas.length > 0 && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", marginLeft: "auto" } },
@@ -490,7 +492,7 @@ React.createElement("h2", { style: { margin: 0, fontSize: 18, fontWeight: 800, c
 React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 3 } }, tareasDelPlan.length, " tareas · ", pct(avg(tareasDelPlan.map(t => t.avance))), "% avance promedio")),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, tareasDelPlan.map(t => {
 const { bar: b, label: lb } = colorAvance(t.avance);
-return (React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: b },
+return (React.createElement(Card, { key: t.id, onClick: () => setPanelEstado ? onEditar(t) : null, accent: b },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, flexWrap: "wrap" } },
 React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 13, flex: 1, lineHeight: 1.35 } },
 React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 1 } }, "TAREA"), t.tarea ||
@@ -837,13 +839,13 @@ React.createElement("th", { style: { width: "13%" } }, "Estado (Avance)"),
 React.createElement("th", { style: { width: "5%", textAlign: "right" } }, "%")
 )),
 React.createElement("tbody", null, ts.map(t => {
-const pCfg = PRIO_CFG[t.prioridad];
+const pcfg = PRIO_CFG[t.prioridad] || { bg: "#FFFBEB", text: "#854D0E" };
 const { label: tlb } = colorAvance(t.avance);
 return React.createElement("tr", { key: t.id },
 React.createElement("td", null, t.tarea || "(Sin nombre)"),
 React.createElement("td", null, t.responsable || "-"),
 React.createElement("td", null, t.colaboradores || "-"),
-React.createElement("td", null, React.createElement("span", { className: "print-badge", style: { background: pCfg?.bg, color: pCfg?.text } }, t.prioridad)),
+React.createElement("td", null, React.createElement("span", { className: "print-badge", style: { background: pcfg.bg, color: pcfg.text } }, t.prioridad)),
 React.createElement("td", null, tlb),
 React.createElement("td", { style: { textAlign: "right", fontWeight: 700 } }, `${pct(t.avance)}%`)
 );
@@ -921,8 +923,7 @@ React.createElement("span", { style: { background: "#EFF6FF", color: "#1D4ED8", 
 )
 ),
 React.createElement(Seccion, { titulo: "Permisos y Roles" },
-React.createElement("p", { style: { marginBottom: 6 } }, "Cada integrante puede ver su participación global en 'Equipo'. Recordá que los colaboradores pueden consultar el estatus y participar en las tareas, pero solo el responsable directo de cada acción está autorizado a modificar su porcentaje de avance.")
-)
+React.createElement("p", { style: { marginBottom: 6 } }, "Cada integrante puede ver su participación global en 'Equipo'. Recordá que los colaboradores pueden consultar el estatus y participar en las tareas, pero solo el responsable directo de cada acción está autorizado a modificar su porcentaje de avance."))
 );
 
 const manualMantenimiento = React.createElement(React.Fragment, null,
@@ -1098,7 +1099,7 @@ vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, o
 vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
 vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
 vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar, usuario: usuario }),
-vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtroAvance }))
+vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtorAvance }))
 )
 );
 }
