@@ -35,8 +35,9 @@ body { background: #fff; font-size: 10pt; margin: 0; padding: 0; }
 const {useState,useMemo,useEffect,useCallback,useRef} = React;
 
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
-const USUARIOS_INIT = [
-{ id: "ariel", nombre: "Ariel Tarnaruder", rol: "sr", zona: null, pin: "2502", email: "ariel@consultor.com" },
+
+const USUARIOS_DEFAULT = [
+{ id: "ariel", nombre: "Ariel Tarnaruder", rol: "administrador", zona: null, pin: "2502", email: "ariel@consultor.com" },
 { id: "maxi", nombre: "Maxi Donolo", rol: "sr", zona: null, pin: "1111", email: "maxi@nextsiembra.com" },
 { id: "adrian", nombre: "Adrián Bonfiglio", rol: "lider", zona: null, pin: "2222", email: "adrian@nextsiembra.com" },
 { id: "v1", nombre: "Vendedor 1", rol: "vendedor", zona: "Vendedor 1", pin: "1001", email: "v1@nextsiembra.com" },
@@ -46,6 +47,7 @@ const USUARIOS_INIT = [
 ];
 
 const ZONAS = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
+const ROLES_POSIBLES = ["administrador", "sr", "lider", "vendedor", "tecnico", "externo"];
 
 const CLIENTE = {
 nombre: "Next Siembra",
@@ -56,9 +58,23 @@ colorC: "#F5A623",
 logo: null,
 };
 
+function obtenerUsuariosGuardados() {
+try {
+const guardados = localStorage.getItem("nextsiembra_usuarios");
+if (guardados) return JSON.parse(guardados);
+} catch (e) {}
+return USUARIOS_DEFAULT;
+}
+
+function guardarUsuariosStorage(usuarios) {
+try {
+localStorage.setItem("nextsiembra_usuarios", JSON.stringify(usuarios));
+} catch (e) {}
+}
+
 function puedeEditar(usuario, tarea) {
 if (!usuario) return false;
-if (usuario.rol === "sr" || usuario.rol === "lider") return true;
+if (usuario.rol === "administrador" || usuario.rol === "sr" || usuario.rol === "lider") return true;
 if (!tarea) return false;
 const resp = (tarea.responsable || "").toLowerCase();
 const nombreUsr = (usuario.nombre || "").toLowerCase();
@@ -247,8 +263,6 @@ React.createElement("textarea", { value: data.comentario || "", onChange: e => o
 })));
 }
 
-const esRZN = t => { return t?.responsable?.toLowerCase().includes("vendedor"); };
-
 function Modal({ tarea, onSave, onClose, saving, usuario }) {
 const [f, setF] = useState({ ...tarea, zonas: tarea.zonas || zonaDefault() });
 const set = (k, v) => setF(p => ({ ...p, [k]: v }));
@@ -257,7 +271,8 @@ const { bar, bg, text, label } = colorAvance(avanceEfectivo);
 
 const esResponsableReal = puedeEditar(usuario, f);
 const esColaboradorReal = esColaboradorDeTarea(usuario, f);
-const modoSoloLecturaColab = esColaboradorReal && !esResponsableReal && usuario?.rol !== "sr" && usuario?.rol !== "lider";
+const isAdminOrSrOrLider = usuario?.rol === "administrador" || usuario?.rol === "sr" || usuario?.rol === "lider";
+const modoSoloLecturaColab = esColaboradorReal && !esResponsableReal && !isAdminOrSrOrLider;
 
 const handleZona = (zona, campo, valor) => {
 setF(p => {
@@ -492,7 +507,7 @@ React.createElement("h2", { style: { margin: 0, fontSize: 18, fontWeight: 800, c
 React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 3 } }, tareasDelPlan.length, " tareas · ", pct(avg(tareasDelPlan.map(t => t.avance))), "% avance promedio")),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, tareasDelPlan.map(t => {
 const { bar: b, label: lb } = colorAvance(t.avance);
-return (React.createElement(Card, { key: t.id, onClick: () => setPanelEstado ? onEditar(t) : null, accent: b },
+return (React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: b },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, flexWrap: "wrap" } },
 React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 13, flex: 1, lineHeight: 1.35 } },
 React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 1 } }, "TAREA"), t.tarea ||
@@ -655,6 +670,94 @@ React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›"
 );
 }
 
+function ModalAdmin({ usuarios, onGuardarUsuario, onEliminarUsuario, onClose }) {
+const [editando, setEditando] = useState(null);
+const [form, setForm] = useState({ nombre: "", rol: "vendedor", zona: "", pin: "", email: "" });
+const [err, setErr] = useState("");
+
+const abrirNuevo = () => {
+setEditando("nuevo");
+setForm({ nombre: "", rol: "vendedor", zona: "", pin: "", email: "" });
+setErr("");
+};
+
+const abrirEditar = (u) => {
+setEditando(u.id);
+setForm({ ...u, zona: u.zona || "" });
+setErr("");
+};
+
+const guardar = () => {
+if (!form.nombre.trim() || !form.pin.trim()) {
+setErr("Nombre y PIN son obligatorios.");
+return;
+}
+if (editando === "nuevo") {
+const nuevoUsr = { ...form, id: "usr_" + Date.now() };
+onGuardarUsuario([...usuarios, nuevoUsr]);
+} else {
+onGuardarUsuario(usuarios.map(u => u.id === editando ? { ...form } : u));
+}
+setEditando(null);
+};
+
+const eliminar = (id) => {
+if (usuarios.length <= 1) {
+alert("No podés eliminar al último usuario del sistema.");
+return;
+}
+if (confirm("¿Estás seguro de eliminar este usuario?")) {
+onGuardarUsuario(usuarios.filter(u => u.id !== id));
+}
+};
+
+return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
+React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: 700, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
+React.createElement("div", { style: { padding: "18px 24px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+React.createElement("span", { style: { fontSize: 20 } }, "⚙️"),
+React.createElement("span", { style: { fontSize: 18, fontWeight: 800, color: "#0F172A" } }, "Administración de Usuarios y Roles")),
+React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8" } }, "✕")),
+React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px" } },
+editando ? React.createElement("div", { style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 12 } },
+React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#0F172A", marginBottom: 4 } }, editando === "nuevo" ? "Crear Nuevo Usuario" : "Editar Usuario"),
+err && React.createElement("div", { style: { background: "#FEF2F2", color: "#B91C1C", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600 } }, err),
+React.createElement("div", null,
+React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Nombre Completo"),
+React.createElement("input", { value: form.nombre, onChange: e => setForm({ ...form, nombre: e.target.value }), placeholder: "Ej: Juan Pérez", style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff" } })),
+React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+React.createElement("div", null,
+React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Rol"),
+React.createElement("select", { value: form.rol, onChange: e => setForm({ ...form, rol: e.target.value }), style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff", cursor: "pointer" } },
+ROLES_POSIBLES.map(r => React.createElement("option", { key: r, value: r }, r.toUpperCase())))),
+React.createElement("div", null,
+React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "PIN (4 dígitos)"),
+React.createElement("input", { value: form.pin, maxLength: 4, onChange: e => setForm({ ...form, pin: e.target.value }), placeholder: "Ej: 1234", style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff" } }))),
+React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+React.createElement("div", null,
+React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Email"),
+React.createElement("input", { value: form.email, onChange: e => setForm({ ...form, email: e.target.value }), placeholder: "correo@empresa.com", style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff" } })),
+React.createElement("div", null,
+React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Zona (opcional)"),
+React.createElement("input", { value: form.zona, onChange: e => setForm({ ...form, zona: e.target.value }), placeholder: "Ej: Vendedor 1", style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff" } }))),
+React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
+React.createElement("button", { onClick: () => setEditando(null), style: { flex: 1, padding: "9px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#fff", color: "#64748B", fontWeight: 600, cursor: "pointer" } }, "Cancelar"),
+React.createElement("button", { onClick: guardar, style: { flex: 1, padding: "9px", borderRadius: 8, border: "none", background: CLIENTE.colorA, color: "#fff", fontWeight: 700, cursor: "pointer" } }, "Guardar"))) : React.createElement("div", null,
+React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } },
+React.createElement("span", { style: { fontSize: 13, color: "#64748B", fontWeight: 600 } }, "Listado de usuarios registrados en el sistema:"),
+React.createElement("button", { onClick: abrirNuevo, style: { background: CLIENTE.colorA, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "+ Nuevo Usuario")),
+React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, usuarios.map(u => React.createElement("div", { key: u.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "10px 14px" } },
+React.createElement("div", null,
+React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#0F172A" } }, u.nombre),
+React.createElement("div", { style: { fontSize: 11, color: "#64748B", marginTop: 2 } }, `Rol: `, React.createElement("strong", { style: { color: CLIENTE.colorA } }, u.rol.toUpperCase()), ` · PIN: ${u.pin} ${u.email ? '· ' + u.email : ''}`)),
+React.createElement("div", { style: { display: "flex", gap: 6 } },
+React.createElement("button", { onClick: () => abrirEditar(u), style: { padding: "5px 10px", borderRadius: 6, border: "1px solid #CBD5E1", background: "#fff", color: "#475569", fontSize: 11, fontWeight: 600, cursor: "pointer" } }, "Editar"),
+React.createElement("button", { onClick: () => eliminar(u.id), style: { padding: "5px 10px", borderRadius: 6, border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C", fontSize: 11, fontWeight: 600, cursor: "pointer" } }, "Eliminar"))
+))))),
+React.createElement("div", { style: { padding: "14px 24px", borderTop: "1px solid #E2E8F0", display: "flex", justifyContent: "flex-end", background: "#F8FAFC", borderRadius: "0 0 18px 18px" } },
+React.createElement("button", { onClick: onClose, style: { padding: "8px 20px", borderRadius: 8, border: "none", background: "#475569", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar"))));
+}
+
 function VistaEquipos({ tareas, onEditar }) {
 const [personaActiva, setPersonaActiva] = useState(null);
 
@@ -778,7 +881,6 @@ return m;
 }, [tareas]);
 
 const totalAv = avg(tareas.map(t => t.avance));
-
 const avanceCounts = { "Completa": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0 };
 tareas.forEach(t => { const lbl = colorAvance(t.avance).label; if(avanceCounts[lbl] !== undefined) avanceCounts[lbl]++; });
 
@@ -913,25 +1015,13 @@ React.createElement(ItemLista, { negrita: "Programas y Planes:", texto: " Permit
 React.createElement(ItemLista, { negrita: "Equipo:", texto: " Vista integral donde se detalla el estatus de las tareas de cada integrante, diferenciando claramente su rol como Responsable o Colaborador." }),
 React.createElement(ItemLista, { negrita: "Tareas:", texto: " Buscador con filtros múltiples para encontrar acciones específicas." })
 ),
-React.createElement(Seccion, { titulo: "Semáforo de Avances" },
-React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 } },
-React.createElement("span", { style: { background: "#FEF2F2", color: "#B91C1C", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "0-9% Sin inicio"),
-React.createElement("span", { style: { background: "#FFF7ED", color: "#C2410C", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "10-49% Iniciado"),
-React.createElement("span", { style: { background: "#FEFCE8", color: "#854D0E", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "50-79% En marcha"),
-React.createElement("span", { style: { background: "#F0FDF4", color: "#15803D", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "80-99% Avanzado"),
-React.createElement("span", { style: { background: "#EFF6FF", color: "#1D4ED8", padding: "4px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 } }, "100% Completa")
-)
-),
-React.createElement(Seccion, { titulo: "Permisos y Roles" },
-React.createElement("p", { style: { marginBottom: 6 } }, "Cada integrante puede ver su participación global en 'Equipo'. Recordá que los colaboradores pueden consultar el estatus y participar en las tareas, pero solo el responsable directo de cada acción está autorizado a modificar su porcentaje de avance."))
+React.createElement(Seccion, { titulo: "Módulo de Administración" },
+React.createElement("p", { style: { marginBottom: 6 } }, "Los usuarios con rol 'administrador' pueden gestionar altas, bajas, modificaciones de PIN y roles directamente desde el botón '⚙️ Admin' sin tocar código."))
 );
 
 const manualMantenimiento = React.createElement(React.Fragment, null,
 React.createElement(Seccion, { titulo: "Arquitectura y Fuente de Datos" },
-React.createElement("p", { style: { marginBottom: 10 } }, "El tablero funciona como una interfaz de lectura rápida (Frontend). Su única fuente de verdad es un archivo ", React.createElement("strong", null, "CSV en vivo"), " exportado desde Google Sheets."),
-React.createElement(ItemLista, { negrita: "Actualización Masiva:", texto: " Las modificaciones estructurales, creación de nuevos Programas o asignación masiva de tareas deben realizarse directamente en la Planilla Matriz." }),
-React.createElement(ItemLista, { negrita: "Sincronización:", texto: " Automática. Cada vez que recargás la página, el tablero descarga y proyecta la última versión publicada de la matriz." })
-)
+React.createElement("p", { style: { marginBottom: 10 } }, "El tablero funciona como una interfaz de lectura rápida (Frontend). Su única fuente de verdad es un archivo ", React.createElement("strong", null, "CSV en vivo"), " exportado desde Google Sheets."))
 );
 
 return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
@@ -961,6 +1051,7 @@ React.createElement("button", { onClick: onClose, style: { padding: "9px 24px", 
 }
 
 function App() {
+const [usuarios, setUsuarios] = useState(obtenerUsuariosGuardados());
 const [usuario, setUsuario] = useState(undefined);
 const [tareas, setTareas] = useState([]);
 const [loading, setLoading] = useState(true);
@@ -972,10 +1063,17 @@ const [saving, setSaving] = useState(false);
 const [toast, setToast] = useState(null);
 const [showUserMenu, setShowUserMenu] = useState(false);
 const [showAyuda, setShowAyuda] = useState(false);
+const [showAdmin, setShowAdmin] = useState(false);
 
 const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 const handleLogin = (u) => setUsuario(u);
-const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); };
+const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); setShowAdmin(false); };
+
+const handleGuardarUsuarios = (nuevosUsrs) => {
+setUsuarios(nuevosUsrs);
+guardarUsuariosStorage(nuevosUsrs);
+showToast("Lista de usuarios actualizada con éxito");
+};
 
 const handleNavegar = (destVista, params = {}) => {
 if (destVista === "programas") {
@@ -1042,7 +1140,7 @@ setLoading(false);
 .catch(err => { console.error(err); setLoading(false); });
 }, [usuario]);
 
-if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: handleLogin, usuarios: USUARIOS_INIT });
+if (usuario === undefined) return React.createElement(PantallaLogin, { onLogin: handleLogin, usuarios: usuarios });
 if (loading) return React.createElement("div", { id: "loading" }, React.createElement("div", { className: "spinner" }), React.createElement("span", null, "Sincronizando Matriz de Demanda..."));
 
 const TABS_JERARQUIA = [
@@ -1054,7 +1152,7 @@ const TABS_JERARQUIA = [
 
 const totalAv = avg(tareas.map(t => t.avance));
 const { bar } = colorAvance(totalAv);
-const rolColor = usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
+const rolColor = usuario?.rol === "administrador" || usuario?.rol === "sr" ? CLIENTE.colorA : "#475569";
 
 return React.createElement(React.Fragment, null,
 React.createElement(ReporteImprimible, { tareas: tareas, usuario: usuario }),
@@ -1062,6 +1160,7 @@ React.createElement("div", { className: "no-print", style: { minHeight: "100vh",
 toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
 modal && React.createElement(Modal, { tarea: modal, onSave: guardar, onClose: () => setModal(null), saving: saving, usuario: usuario }),
 showAyuda && React.createElement(ModalAyuda, { onClose: () => setShowAyuda(false) }),
+showAdmin && React.createElement(ModalAdmin, { usuarios: usuarios, onGuardarUsuario: handleGuardarUsuarios, onClose: () => setShowAdmin(false) }),
 React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
 React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "0 16px" } },
 React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
@@ -1075,9 +1174,10 @@ React.createElement("div", { style: { display: "flex", alignItems: "center", gap
 React.createElement("span", { style: { fontSize: 13, color: "#475569", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" } }, "Avance General"),
 React.createElement("span", { style: { fontSize: 24, fontWeight: 800, color: bar } }, pct(totalAv), "%"),
 React.createElement("div", { style: { width: 120 } }, React.createElement(BarraAvance, { valor: totalAv, height: 8 })))),
-React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", flex: "1 1 240px", position: "relative", gap: 10 } },
-React.createElement("button", { onClick: () => window.print(), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#475569" } }, "🖨️ PDF / Imprimir"),
-React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 14px", cursor: "pointer" } },
+React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", flex: "1 1 240px", position: "relative", gap: 8, alignItems: "center" } },
+usuario?.rol === "administrador" && React.createElement("button", { onClick: () => setShowAdmin(true), style: { display: "flex", alignItems: "center", gap: 4, background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 99, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#92400E" } }, "⚙️ Admin"),
+React.createElement("button", { onClick: () => window.print(), style: { display: "flex", alignItems: "center", gap: 4, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#475569" } }, "🖨️ PDF"),
+React.createElement("button", { onClick: () => setShowUserMenu(v => !v), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: `1.5px solid ${rolColor}`, borderRadius: 99, padding: "6px 12px", cursor: "pointer" } },
 React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: rolColor } }),
 React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0F172A" } }, usuario?.nombre || "Solo lectura"),
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")),
@@ -1099,7 +1199,7 @@ vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, o
 vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
 vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
 vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar, usuario: usuario }),
-vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtorAvance }))
+vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtroAvance }))
 )
 );
 }
