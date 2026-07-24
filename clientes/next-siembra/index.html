@@ -670,7 +670,7 @@ React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›"
 );
 }
 
-function ModalAdmin({ usuarios, onGuardarUsuario, onEliminarUsuario, onClose }) {
+function ModalAdmin({ usuarios, onGuardarUsuario, onClose }) {
 const [editando, setEditando] = useState(null);
 const [form, setForm] = useState({ nombre: "", rol: "vendedor", zona: "", pin: "", email: "" });
 const [err, setErr] = useState("");
@@ -723,8 +723,8 @@ editando ? React.createElement("div", { style: { background: "#F8FAFC", border: 
 React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#0F172A", marginBottom: 4 } }, editando === "nuevo" ? "Crear Nuevo Usuario" : "Editar Usuario"),
 err && React.createElement("div", { style: { background: "#FEF2F2", color: "#B91C1C", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600 } }, err),
 React.createElement("div", null,
-React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Nombre Completo"),
-React.createElement("input", { value: form.nombre, onChange: e => setForm({ ...form, nombre: e.target.value }), placeholder: "Ej: Juan Pérez", style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff" } })),
+React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Nombre Oficial (Debe coincidir con Sheets)"),
+React.createElement("input", { value: form.nombre, onChange: e => setForm({ ...form, nombre: e.target.value }), placeholder: "Ej: Ariel Tarnaruder", style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#fff" } })),
 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
 React.createElement("div", null,
 React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Rol"),
@@ -744,7 +744,7 @@ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } }
 React.createElement("button", { onClick: () => setEditando(null), style: { flex: 1, padding: "9px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#fff", color: "#64748B", fontWeight: 600, cursor: "pointer" } }, "Cancelar"),
 React.createElement("button", { onClick: guardar, style: { flex: 1, padding: "9px", borderRadius: 8, border: "none", background: CLIENTE.colorA, color: "#fff", fontWeight: 700, cursor: "pointer" } }, "Guardar"))) : React.createElement("div", null,
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } },
-React.createElement("span", { style: { fontSize: 13, color: "#64748B", fontWeight: 600 } }, "Listado de usuarios registrados en el sistema:"),
+React.createElement("span", { style: { fontSize: 13, color: "#64748B", fontWeight: 600 } }, "Listado de usuarios oficiales (usar estos mismos nombres en Sheets):"),
 React.createElement("button", { onClick: abrirNuevo, style: { background: CLIENTE.colorA, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "+ Nuevo Usuario")),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, usuarios.map(u => React.createElement("div", { key: u.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "10px 14px" } },
 React.createElement("div", null,
@@ -758,20 +758,26 @@ React.createElement("div", { style: { padding: "14px 24px", borderTop: "1px soli
 React.createElement("button", { onClick: onClose, style: { padding: "8px 20px", borderRadius: 8, border: "none", background: "#475569", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar"))));
 }
 
-function VistaEquipos({ tareas, onEditar }) {
+function VistaEquipos({ tareas, onEditar, usuarios }) {
 const [personaActiva, setPersonaActiva] = useState(null);
+
+const nombresOficiales = useMemo(() => usuarios.map(u => u.nombre), [usuarios]);
 
 const personasData = useMemo(() => {
 const map = {};
+usuarios.forEach(u => {
+map[u.nombre] = { resp: [], colab: [], esOficial: true };
+});
+
 tareas.forEach(t => {
 const r = (t.responsable || "Sin asignar").trim();
-if (!map[r]) map[r] = { resp: [], colab: [] };
+if (!map[r]) map[r] = { resp: [], colab: [], esOficial: false };
 map[r].resp.push(t);
 
 if (t.colaboradores) {
 const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
 colabs.forEach(c => {
-if (!map[c]) map[c] = { resp: [], colab: [] };
+if (!map[c]) map[c] = { resp: [], colab: [], esOficial: false };
 if (!map[c].colab.some(item => item.id === t.id)) {
 map[c].colab.push(t);
 }
@@ -788,10 +794,15 @@ resp: data.resp,
 colab: data.colab,
 todas,
 avProm,
-total: todas.length
+total: todas.length,
+esOficial: data.esOficial
 };
 }).sort((a, b) => b.avProm - a.avProm);
-}, [tareas]);
+}, [tareas, usuarios]);
+
+const nombresNoOficialesEncontrados = useMemo(() => {
+return personasData.filter(p => !p.esOficial && p.total > 0);
+}, [personasData]);
 
 if (personaActiva) {
 const pData = personasData.find(p => p.nombre === personaActiva);
@@ -855,9 +866,18 @@ t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#9
 }
 
 return React.createElement("div", null,
+nombresNoOficialesEncontrados.length > 0 && React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#92400E" } },
+React.createElement("strong", null, "⚠️ Alerta de nombres en Sheets sin usuario oficial: "),
+"Se detectaron nombres en la planilla que no están dados de alta en el Administrador: ",
+React.createElement("strong", null, nombresNoOficialesEncontrados.map(p => p.nombre).join(", ")),
+". Asegurate de unificarlos."
+),
 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 } }, personasData.map(p =>
 React.createElement(Card, { key: p.nombre, onClick: () => setPersonaActiva(p.nombre), accent: colorAvance(p.avProm).bar, style: { cursor: "pointer" } },
+React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
 React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginTop: 4 } }, p.nombre),
+!p.esOficial && React.createElement("span", { style: { fontSize: 10, background: "#FEF2F2", color: "#B91C1C", padding: "2px 6px", borderRadius: 4, fontWeight: 700 } }, "Sin rol")
+),
 React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: colorAvance(p.avProm).bar, margin: "10px 0 4px" } }, pct(p.avProm), "%"),
 React.createElement(BarraAvance, { valor: p.avProm, height: 6 }),
 React.createElement("div", { style: { fontSize: 11, color: "#64748B", marginTop: 8, display: "flex", justifyContent: "space-between" } },
@@ -1016,12 +1036,13 @@ React.createElement(ItemLista, { negrita: "Equipo:", texto: " Vista integral don
 React.createElement(ItemLista, { negrita: "Tareas:", texto: " Buscador con filtros múltiples para encontrar acciones específicas." })
 ),
 React.createElement(Seccion, { titulo: "Módulo de Administración" },
-React.createElement("p", { style: { marginBottom: 6 } }, "Los usuarios con rol 'administrador' pueden gestionar altas, bajas, modificaciones de PIN y roles directamente desde el botón '⚙️ Admin' sin tocar código."))
+React.createElement("p", { style: { marginBottom: 6 } }, "Los usuarios con rol 'administrador' pueden gestionar altas, bajas, modificaciones de PIN y roles directamente desde el botón '⚙️ Admin' en la barra superior."))
 );
 
 const manualMantenimiento = React.createElement(React.Fragment, null,
-React.createElement(Seccion, { titulo: "Arquitectura y Fuente de Datos" },
-React.createElement("p", { style: { marginBottom: 10 } }, "El tablero funciona como una interfaz de lectura rápida (Frontend). Su única fuente de verdad es un archivo ", React.createElement("strong", null, "CSV en vivo"), " exportado desde Google Sheets."))
+React.createElement(Seccion, { titulo: "Validación y Buenas Prácticas en Sheets" },
+React.createElement("p", { style: { marginBottom: 10 } }, "Para evitar desajustes en el cruce de datos de responsables y colaboradores, asegurate de utilizar los nombres oficiales dados de alta en el Administrador o aplicar validación por lista desplegable en tu Google Sheets.")
+)
 );
 
 return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
@@ -1148,6 +1169,7 @@ const TABS_JERARQUIA = [
 { id: "programas", label: "Programas" },
 { id: "planes", label: "Planes" },
 { id: "tareas", label: "Tareas" },
+{ id: "equipos", label: "Equipo" }
 ];
 
 const totalAv = avg(tareas.map(t => t.avance));
@@ -1183,14 +1205,11 @@ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")),
 showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
-React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: "10px" } },
-React.createElement("div", { style: { display: "flex", gap: 0, flex: "1 1 100%", justifyContent: "flex-start", overflowX: "auto", paddingBottom: "4px" } },
+React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, justifyContent: "space-between", width: "100%" } },
+React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: "4px" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
-React.createElement("div", { style: { display: "flex", flex: "1 1 auto", justifyContent: "center", paddingBottom: 8 } },
-React.createElement("button", { onClick: () => { setVista('equipos'); setNavPlanes({ prog: null, pl: null, force: false }); setNavTareas({ filtroAvance: "" }); }, style: { padding: "7px 22px", borderRadius: 99, border: `2px solid ${vista === 'equipos' ? CLIENTE.colorA : '#E2E8F0'}`, background: vista === 'equipos' ? '#FFF7ED' : '#F8FAFC', color: vista === 'equipos' ? CLIENTE.colorA : '#475569', fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer', transition: 'all .2s' } }, "Equipo")
-),
-React.createElement("div", { style: { display: "flex", flex: "1 1 auto", justifyContent: "flex-end", paddingBottom: 8 } },
+React.createElement("div", { style: { paddingBottom: 8 } },
 React.createElement("button", { onClick: () => setShowAyuda(true), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#475569", whiteSpace: "nowrap" } }, "? Ayuda")
 )
 ))),
@@ -1198,7 +1217,7 @@ React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: 
 vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
 vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
 vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
-vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar, usuario: usuario }),
+vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar, usuarios: usuarios }),
 vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtroAvance }))
 )
 );
