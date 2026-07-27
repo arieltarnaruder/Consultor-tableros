@@ -106,8 +106,7 @@ CLIENTE.colorA,
 
 const pct = v => Math.round(v * 100);
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
-} catch { return iso; } };
+const fmtD = iso => { try { return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }); } catch { return iso; } };
 
 function parseCSV(text) {
 const lines = []; let row = [""]; let inQuotes = false;
@@ -115,8 +114,7 @@ for (let i = 0; i < text.length; i++) {
 const c = text[i]; const next = text[i+1];
 if (c === '"') { if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; } else { inQuotes = !inQuotes; } }
 else if (c === ',' && !inQuotes) { row.push(""); }
-else if ((c === '\r' || c === '\n') && !inQuotes) { if (c === '\r' && next === '\n') { i++;
-} lines.push(row); row = [""]; }
+else if ((c === '\r' || c === '\n') && !inQuotes) { if (c === '\r' && next === '\n') { i++; } lines.push(row); row = [""]; }
 else { row[row.length - 1] += c; }
 }
 if (row.length > 1 || row[0] !== "") lines.push(row); return lines;
@@ -177,16 +175,14 @@ const urgColor = t.prioridad === "Alta" ? "#EF4444" : t.prioridad === "Media" ? 
 return (React.createElement("div", { onClick: () => onEditar(t), style: { background: "#fff", border: "1px solid #E2E8F0", borderLeft: `4px solid ${urgColor}`, borderRadius: 10, padding: "12px 14px", cursor: "pointer", transition: "box-shadow .15s" }, onMouseEnter: e => e.currentTarget.style.boxShadow = "0 3px 12px rgba(0,0,0,.1)", onMouseLeave: e => e.currentTarget.style.boxShadow = "none" },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 } },
 React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#0F172A", lineHeight: 1.3, flex: 1 } }, t.tarea || "(Sin nombre)"),
-React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: bar, flexShrink: 0 } },
-pct(t.avance),
-"%")),
+React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: bar, flexShrink: 0 } }, pct(t.avance), "%")),
 React.createElement(BarraAvance, { valor: t.avance, height: 5 }),
 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" } },
-React.createElement("span", { style: { fontSize: 11, fontWeight: 700, background: pcfg && pcfg.bg ? pcfg.bg : "#FFFBEB", color: pcfg && pcfg.text ? pcfg.text : "#854D0E", borderRadius: 99, padding: "2px 8px" } },
-t.prioridad),
+React.createElement("span", { style: { fontSize: 11, fontWeight: 700, background: pcfg && pcfg.bg ? pcfg.bg : "#FFFBEB", color: pcfg && pcfg.text ? pcfg.text : "#854D0E", borderRadius: 99, padding: "2px 8px" } }, t.prioridad),
 t.responsable && (React.createElement("span", { style: { fontSize: 11, color: "#475569", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, t.responsable)),
 t.colaboradores && (React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: " + t.colaboradores)),
-t.fechaVencimiento && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 8px" } }, fmtD(t.fechaVencimiento))),
+t.fechaInicio && (React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 8px" } }, "Inicio: " + fmtD(t.fechaInicio))),
+t.fechaVencimiento && (React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 8px" } }, "Vence: " + fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8", marginLeft: "auto" } }, t.plan)),
 esRZNColectivo(t) && t.zonas && (React.createElement("div", { style: { marginTop: 8, borderTop: "1px solid #F1F5F9", paddingTop: 8 } },
 React.createElement("div", { style: { fontSize: 10, color: "#94A3B8", fontWeight: 600, marginBottom: 5, textTransform: "uppercase", letterSpacing: ".04em" } }, "Por colaborador"),
@@ -199,9 +195,7 @@ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%",
 React.createElement("span", { style: { fontSize: 10, color: "#475569", fontWeight: 600 } }, zona),
 React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: bar } }, pct(data.avance), "%")));
 })))),
-t.comentarios && (React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: "#94A3B8", fontStyle: "italic", borderTop: "1px solid #F1F5F9", paddingTop: 6 } },
-t.comentarios.slice(0, 90),
-t.comentarios.length > 90 ? "…" : ""))));
+t.comentarios && (React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: "#94A3B8", fontStyle: "italic", borderTop: "1px solid #F1F5F9", paddingTop: 6 } }, t.comentarios.slice(0, 90), t.comentarios.length > 90 ? "…" : ""))));
 }
 
 function LogoNextSiembra({ height = 40 }) {
@@ -286,6 +280,8 @@ React.createElement(Badge, { label: label, tipo: "estado" }),
 React.createElement(Badge, { label: f.prioridad, tipo: "prioridad" }),
 f.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#EEF2FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Resp: " + f.responsable),
 f.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Colab: " + f.colaboradores),
+f.fechaInicio && React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Inicio: " + fmtD(f.fechaInicio)),
+f.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Vence: " + fmtD(f.fechaVencimiento)),
 esRZNColectivo(f) && React.createElement("span", { style: { fontSize: 11, background: "#EFF6FF", color: "#1D4ED8", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, "Progreso Promedio: ", pct(avanceEfectivo), "%"))),
 React.createElement("div", { style: { padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 } },
 modoSoloLecturaColab && React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400E", fontWeight: 600 } }, "ℹ️ Estás visualizando esta tarea como colaborador. Solo el responsable puede modificar el avance."),
@@ -324,21 +320,16 @@ React.createElement("div", { style: { fontSize: 11, color: "#64748B", marginBott
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
 React.createElement("span", { style: { width: 10, height: 10, borderRadius: "50%", background: cfg.bar, flexShrink: 0 } }),
 React.createElement("span", { style: { fontSize: 16, fontWeight: 800, color: cfg.text } }, avanceLabel),
-React.createElement("span", { style: { fontSize: 13, color: "#94A3B8", fontWeight: 600 } },
-"· ", filtradas.length, " ", filtradas.length === 1 ? "tarea" : "tareas"))),
+React.createElement("span", { style: { fontSize: 13, color: "#94A3B8", fontWeight: 600 } }, "· ", filtradas.length, " ", filtradas.length === 1 ? "tarea" : "tareas"))),
 React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#94A3B8", padding: 4, lineHeight: 1 } }, "✕")),
 React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
 ["Alta", "Media", "Baja"].map(p => {
 const cnt = filtradas.filter(t => t.prioridad === p).length;
 if (!cnt) return null;
 const pc = PRIO_CFG[p];
-return (React.createElement("span", { key: p, style: { fontSize: 11, background: pc && pc.bg ? pc.bg : "#FFFBEB", color: pc && pc.text ? pc.text : "#854D0E", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } },
-p, ": ", cnt));
+return (React.createElement("span", { key: p, style: { fontSize: 11, background: pc && pc.bg ? pc.bg : "#FFFBEB", color: pc && pc.text ? pc.text : "#854D0E", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, p, ": ", cnt));
 }),
-filtradas.length > 0 && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", marginLeft: "auto" } },
-"Avance prom.: ",
-React.createElement("strong", { style: { color: colorAvance(avg(filtradas.map(t => t.avance))).bar } },
-pct(avg(filtradas.map(t => t.avance))), "%"))))),
+filtradas.length > 0 && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", marginLeft: "auto" } }, "Avance prom.: ", React.createElement("strong", { style: { color: colorAvance(avg(filtradas.map(t => t.avance))).bar } }, pct(avg(filtradas.map(t => t.avance))), "%"))))),
 React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 } },
 filtradas.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: 40, color: "#94A3B8", fontSize: 14 } }, "No hay tareas con este grado de avance.")),
 filtradas.map(t => (React.createElement(MiniTarea, { key: t.id, t: t, onEditar: (tarea) => { onEditar(tarea); } })))),
@@ -353,13 +344,7 @@ tareas.forEach(t => { if (!m[t.programa]) m[t.programa] = []; m[t.programa].push
 return m;
 }, [tareas]);
 
-const avanceCounts = {
-"Completa": 0,
-"Avanzado": 0,
-"En marcha": 0,
-"Iniciado": 0,
-"Sin inicio": 0
-};
+const avanceCounts = { "Completa": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0 };
 tareas.forEach(t => {
 const lbl = colorAvance(t.avance).label;
 if(avanceCounts[lbl] !== undefined) avanceCounts[lbl]++;
@@ -447,8 +432,7 @@ React.createElement("div", { style: { textAlign: "right" } },
 React.createElement("div", { style: { fontSize: 26, fontWeight: 800, color: b, lineHeight: 1 } }, pct(av), "%"),
 React.createElement("span", { style: { fontSize: 10, background: bg2, color: tx, borderRadius: 99, padding: "1px 7px", fontWeight: 700 } }, lb))),
 React.createElement("div", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14, lineHeight: 1.35, marginBottom: 6 } },
-React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 2 } }, "PROGRAMA"),
-p),
+React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 2 } }, "PROGRAMA"), p),
 React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginBottom: 12 } }, Object.keys(tree[p]).length, " planes · ", allT.length, " tareas"),
 React.createElement(BarraAvance, { valor: av, height: 6 }),
 React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 10, flexWrap: "wrap" }, onClick: e => e.stopPropagation() }, Object.entries(byAv).map(([e, n]) => (React.createElement(BadgeAvanceLabel, { key: e, avanceLabel: e, count: n, tareasDelProg: allT, progNombre: p, progColor: col }))))
@@ -497,19 +481,19 @@ const { bar: b, label: lb } = colorAvance(t.avance);
 return (React.createElement(Card, { key: t.id, onClick: () => onEditar(t), accent: b },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, flexWrap: "wrap" } },
 React.createElement("span", { style: { fontWeight: 700, color: "#0F172A", fontSize: 13, flex: 1, lineHeight: 1.35 } },
-React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 1 } }, "TAREA"), t.tarea ||
-"(Sin nombre)"),
+React.createElement("span", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#94A3B8", display: "block", marginBottom: 1 } }, "TAREA"), t.tarea || "(Sin nombre)"),
 React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
 React.createElement(Badge, { label: lb, tipo: "estado" }),
 React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 6 } },
 React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
 React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: b, minWidth: 34, textAlign: "right" } }, pct(t.avance), "%")),
-React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
-t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", t.responsable),
+React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" } },
+t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.responsable),
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
-t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento)),
-t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))));
+t.fechaInicio && React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 8px" } }, "Inicio: ", fmtD(t.fechaInicio)),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 8px" } }, "Vence: ", fmtD(t.fechaVencimiento)),
+t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, t.comentarios.slice(0, 50), t.comentarios.length > 50 ? "…" : ""))));
 }))));
 }
 
@@ -545,10 +529,8 @@ const planesFiltrados = filtroProg ? planesFlat.filter(p => p.prog === filtroPro
 return React.createElement("div", null,
 React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 } },
 React.createElement("button", { onClick: () => { setFiltroProg(""); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${!filtroProg ? CLIENTE.colorA : "#E2E8F0"}`, background: !filtroProg ? CLIENTE.colorA : "#F8FAFC", color: !filtroProg ? "#fff" : "#64748B", fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "Todos"),
-programas.map((prog, i) => React.createElement("button", { key: prog, onClick: () => { setFiltroProg(prog === filtroProg ? "" : prog); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#E2E8F0"}`, background: filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#F8FAFC", color: filtroProg === prog ? "#fff" : "#64748B", fontSize: 11, fontWeight: 700, cursor: "pointer", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } },
-prog.split(" ").slice(0, 3).join(" "), "…"))),
-React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginBottom: 10 } },
-planesFiltrados.length, " planes"),
+programas.map((prog, i) => React.createElement("button", { key: prog, onClick: () => { setFiltroProg(prog === filtroProg ? "" : prog); setPlanAbierto(null); }, style: { padding: "6px 14px", borderRadius: 99, border: `1.5px solid ${filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#E2E8F0"}`, background: filtroProg === prog ? PROG_COLORS[i % PROG_COLORS.length] : "#F8FAFC", color: filtroProg === prog ? "#fff" : "#64748B", fontSize: 11, fontWeight: 700, cursor: "pointer", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, prog.split(" ").slice(0, 3).join(" "), "…"))),
+React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginBottom: 10 } }, planesFiltrados.length, " planes"),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, planesFiltrados.map(({ prog, plan, ts, color }) => {
 const av = avg(ts.map(t => t.avance));
 const { bar: b } = colorAvance(av);
@@ -561,20 +543,15 @@ byAv[l] = (byAv[l] || 0) + 1;
 return React.createElement("div", { key: `${prog}||${plan}`, style: { background: "#fff", border: `1px solid ${abierto ? color : "#E2E8F0"}`, borderLeft: `4px solid ${b}`, borderRadius: 12, overflow: "hidden", transition: "border-color .15s" } },
 React.createElement("div", { onClick: () => setPlanAbierto(abierto ? null : `${prog}||${plan}`), style: { padding: "13px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" } },
 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-React.createElement("div", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: color, marginBottom: 2 } },
-"PLAN · ", prog),
+React.createElement("div", { style: { fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: color, marginBottom: 2 } }, "PLAN · ", prog),
 React.createElement("div", { style: { fontWeight: 700, color: "#0F172A", fontSize: 14, lineHeight: 1.3 } }, plan),
-React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 3 } },
-ts.length, " tareas")),
+React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", marginTop: 3 } }, ts.length, " tareas")),
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexShrink: 0 } },
-React.createElement("div", { style: { width: 80 } },
-React.createElement(BarraAvance, { valor: av, height: 6 })),
-React.createElement("span", { style: { fontWeight: 800, color: b, fontSize: 18, minWidth: 38, textAlign: "right" } },
-pct(av), "%"),
+React.createElement("div", { style: { width: 80 } }, React.createElement(BarraAvance, { valor: av, height: 6 })),
+React.createElement("span", { style: { fontWeight: 800, color: b, fontSize: 18, minWidth: 38, textAlign: "right" } }, pct(av), "%"),
 React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, Object.entries(byAv).map(([e, n]) => {
 const ec = colorAvance(e === "Completa" ? 1 : e === "Avanzado" ? 0.8 : e === "En marcha" ? 0.5 : e === "Iniciado" ? 0.1 : 0);
-return React.createElement("span", { key: e, style: { fontSize: 10, background: ec.bg, color: ec.text, borderRadius: 99, padding: "1px 7px", fontWeight: 700 } },
-e, " ", n);
+return React.createElement("span", { key: e, style: { fontSize: 10, background: ec.bg, color: ec.text, borderRadius: 99, padding: "1px 7px", fontWeight: 700 } }, e, " ", n);
 })),
 React.createElement("span", { style: { color: "#CBD5E1", fontSize: 16, transform: abierto ? "rotate(90deg)" : "none", transition: "transform .2s" } }, "›"))),
 abierto && React.createElement("div", { style: { borderTop: "1px solid #E2E8F0", padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6, background: "#F8FAFC" } }, ts.map(t => {
@@ -587,12 +564,12 @@ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#0F
 React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } },
 React.createElement(Badge, { label: tlb, tipo: "estado" }),
 React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }),
-React.createElement("span", { style: { fontWeight: 800, color: tb, fontSize: 14 } },
-pct(t.avance), "%"))),
-React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" } },
-t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", t.responsable),
+React.createElement("span", { style: { fontWeight: 800, color: tb, fontSize: 14 } }, pct(t.avance), "%"))),
+React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap", alignItems: "center" } },
+t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.responsable),
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
-t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, " ", fmtD(t.fechaVencimiento))));
+t.fechaInicio && React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 8px" } }, "Inicio: ", fmtD(t.fechaInicio)),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 8px" } }, "Vence: ", fmtD(t.fechaVencimiento))));
 })));
 })));
 }
@@ -648,9 +625,10 @@ React.createElement("div", { style: { fontSize: 11, color: "#94A3B8" } }, t.prog
 React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } },
 React.createElement(Badge, { label: lb, tipo: "estado" }),
 React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }),
-t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, " ", t.responsable),
+t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, t.responsable),
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: ", t.colaboradores),
-t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento))),
+t.fechaInicio && React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 8px" } }, "Inicio: ", fmtD(t.fechaInicio)),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 8px" } }, "Vence: ", fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›")));
 })
 )
@@ -662,9 +640,7 @@ const [personaActiva, setPersonaActiva] = useState(null);
 
 const personasData = useMemo(() => {
 const map = {};
-usuarios.forEach(u => {
-map[u.nombre] = { resp: [], colab: [], esOficial: true };
-});
+usuarios.forEach(u => { map[u.nombre] = { resp: [], colab: [], esOficial: true }; });
 
 tareas.forEach(t => {
 const r = (t.responsable || "Sin asignar").trim();
@@ -675,9 +651,7 @@ if (t.colaboradores) {
 const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
 colabs.forEach(c => {
 if (!map[c]) map[c] = { resp: [], colab: [], esOficial: false };
-if (!map[c].colab.some(item => item.id === t.id)) {
-map[c].colab.push(t);
-}
+if (!map[c].colab.some(item => item.id === t.id)) { map[c].colab.push(t); }
 });
 }
 });
@@ -685,15 +659,7 @@ map[c].colab.push(t);
 return Object.entries(map).map(([nombre, data]) => {
 const todas = [...data.resp, ...data.colab];
 const avProm = avg(todas.map(t => t.avance));
-return {
-nombre,
-resp: data.resp,
-colab: data.colab,
-todas,
-avProm,
-total: todas.length,
-esOficial: data.esOficial
-};
+return { nombre, resp: data.resp, colab: data.colab, todas, avProm, total: todas.length, esOficial: data.esOficial };
 }).sort((a, b) => b.avProm - a.avProm);
 }, [tareas, usuarios]);
 
@@ -708,10 +674,7 @@ return React.createElement("div", null,
 React.createElement("button", { onClick: () => setPersonaActiva(null), style: { background: "none", border: "none", color: CLIENTE.colorA, cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 18, padding: 0 } }, "← Todos los integrantes"),
 React.createElement("div", { style: { borderLeft: `4px solid ${colorAvance(pData.avProm).bar}`, paddingLeft: 14, marginBottom: 18 } },
 React.createElement("h2", { style: { margin: 0, fontSize: 20, fontWeight: 800, color: "#0F172A" } }, pData.nombre),
-React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 4 } },
-`Participa en ${pData.total} tareas (${pData.resp.length} como responsable, ${pData.colab.length} como colaborador) · Avance promedio: `,
-React.createElement("strong", { style: { color: colorAvance(pData.avProm).bar } }, pct(pData.avProm), "%")
-)
+React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 4 } }, `Participa en ${pData.total} tareas (${pData.resp.length} como responsable, ${pData.colab.length} como colaborador) · Avance promedio: `, React.createElement("strong", { style: { color: colorAvance(pData.avProm).bar } }, pct(pData.avProm), "%"))
 ),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } },
 pData.resp.length > 0 && React.createElement("div", null,
@@ -729,10 +692,12 @@ React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 6 } },
 React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
 React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: b, minWidth: 34, textAlign: "right" } }, pct(t.avance), "%")),
-React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
+React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" } },
 React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.programa, " › ", t.plan),
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
-t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))
+t.fechaInicio && React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 8px" } }, "Inicio: ", fmtD(t.fechaInicio)),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 8px" } }, "Vence: ", fmtD(t.fechaVencimiento)),
+t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, t.comentarios.slice(0, 50), t.comentarios.length > 50 ? "…" : ""))
 );
 }))
 ),
@@ -751,10 +716,12 @@ React.createElement(Badge, { label: t.prioridad, tipo: "prioridad" }))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 6 } },
 React.createElement(BarraAvance, { valor: t.avance, height: 6 }),
 React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: b, minWidth: 34, textAlign: "right" } }, pct(t.avance), "%")),
-React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
+React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" } },
 React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.programa, " › ", t.plan),
 React.createElement("span", { style: { fontSize: 11, color: "#475569" } }, "Resp: ", t.responsable),
-t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))
+t.fechaInicio && React.createElement("span", { style: { fontSize: 11, color: "#0369A1", background: "#F0F9FF", borderRadius: 99, padding: "2px 8px" } }, "Inicio: ", fmtD(t.fechaInicio)),
+t.fechaVencimiento && React.createElement("span", { style: { fontSize: 11, color: "#B45309", background: "#FFFBEB", borderRadius: 99, padding: "2px 8px" } }, "Vence: ", fmtD(t.fechaVencimiento)),
+t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, t.comentarios.slice(0, 50), t.comentarios.length > 50 ? "…" : ""))
 );
 }))
 )
@@ -764,17 +731,12 @@ t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#9
 
 return React.createElement("div", null,
 nombresNoOficialesEncontrados.length > 0 && React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#92400E" } },
-React.createElement("strong", null, "⚠️ Alerta de nombres en Sheets sin usuario oficial: "),
-"Se detectaron nombres en la planilla que no están dados de alta en la pestaña de Usuarios: ",
-React.createElement("strong", null, nombresNoOficialesEncontrados.map(p => p.nombre).join(", ")),
-". Asegurate de unificarlos."
-),
+React.createElement("strong", null, "⚠️ Alerta de nombres en Sheets sin usuario oficial: "), "Se detectaron nombres en la planilla que no están dados de alta en la pestaña de Usuarios: ", React.createElement("strong", null, nombresNoOficialesEncontrados.map(p => p.nombre).join(", ")), ". Asegurate de unificarlos."),
 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 } }, personasData.map(p =>
 React.createElement(Card, { key: p.nombre, onClick: () => setPersonaActiva(p.nombre), accent: colorAvance(p.avProm).bar, style: { cursor: "pointer" } },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
 React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginTop: 4 } }, p.nombre),
-!p.esOficial && React.createElement("span", { style: { fontSize: 10, background: "#FEF2F2", color: "#B91C1C", padding: "2px 6px", borderRadius: 4, fontWeight: 700 } }, "Sin rol")
-),
+!p.esOficial && React.createElement("span", { style: { fontSize: 10, background: "#FEF2F2", color: "#B91C1C", padding: "2px 6px", borderRadius: 4, fontWeight: 700 } }, "Sin rol")),
 React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: colorAvance(p.avProm).bar, margin: "10px 0 4px" } }, pct(p.avProm), "%"),
 React.createElement(BarraAvance, { valor: p.avProm, height: 6 }),
 React.createElement("div", { style: { fontSize: 11, color: "#64748B", marginTop: 8, display: "flex", justifyContent: "space-between" } },
@@ -805,19 +767,14 @@ return React.createElement("div", { className: "print-only" },
 React.createElement("div", { style: { borderBottom: "3px solid #F05A28", paddingBottom: "12px", marginBottom: "25px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
 React.createElement("div", null,
 React.createElement("h1", { style: { fontSize: "24pt", fontWeight: 900, color: "#F05A28", margin: 0, letterSpacing: "-1px" } }, "NEXT SIEMBRA"),
-React.createElement("div", { style: { fontSize: "11pt", fontWeight: 700, color: "#2D2D2D", textTransform: "uppercase", letterSpacing: "1px", marginTop: "2px" } }, "Maestro de Generación de Demanda")
-),
+React.createElement("div", { style: { fontSize: "11pt", fontWeight: 700, color: "#2D2D2D", textTransform: "uppercase", letterSpacing: "1px", marginTop: "2px" } }, "Maestro de Generación de Demanda")),
 React.createElement("div", { style: { textAlign: "right", fontSize: "9pt", color: "#64748B" } },
-React.createElement("strong", null, "REPORTE MAESTRO COMPLETO"), React.createElement("br"),
-`Emitido por: ${usuario?.nombre || 'Solo Lectura'}`, React.createElement("br"),
-`Fecha: ${new Date().toLocaleDateString("es-AR")}`
-)
+React.createElement("strong", null, "REPORTE MAESTRO COMPLETO"), React.createElement("br"), `Emitido por: ${usuario?.nombre || 'Solo Lectura'}`, React.createElement("br"), `Fecha: ${new Date().toLocaleDateString("es-AR")}`)
 ),
 React.createElement("div", { style: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "15px", marginBottom: "30px" }, className: "print-break-avoid" },
 React.createElement("h2", { style: { fontSize: "12pt", fontWeight: 800, color: "#2D2D2D", textTransform: "uppercase", margin: "0 0 10px 0" } }, "Consolidado de Avance Operativo"),
 React.createElement("div", { style: { background: "#E2E8F0", borderRadius: "4px", height: "10px", width: "100%", overflow: "hidden", marginTop: "4px" } },
-React.createElement("div", { style: { width: `${pct(totalAv)}%`, background: colorAvance(totalAv).bar, height: "100%", borderRadius: "4px" } })
-),
+React.createElement("div", { style: { width: `${pct(totalAv)}%`, background: colorAvance(totalAv).bar, height: "100%", borderRadius: "4px" } })),
 React.createElement("div", { style: { fontSize: "9pt", color: "#64748B", marginTop: "5px", fontWeight: 600 } }, `Progreso general PAC logrado: ${pct(totalAv)}%`),
 React.createElement("div", { style: { display: "flex", gap: "10px", marginTop: "15px" } },
 [
@@ -839,22 +796,20 @@ const avProg = avg(allTs.map(t => t.avance));
 return React.createElement("div", { key: prog, style: { marginBottom: "35px" } },
 React.createElement("div", { style: { background: "#2D2D2D", color: "#fff", padding: "8px 12px", borderRadius: "6px 6px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `3px solid ${col}` }, className: "print-break-avoid" },
 React.createElement("h3", { style: { fontSize: "11pt", fontWeight: 700, textTransform: "uppercase", margin: 0 } }, `Programa: ${prog}`),
-React.createElement("div", { style: { fontSize: "12pt", fontWeight: 800, color: col } }, `${pct(avProg)}%`)
-),
+React.createElement("div", { style: { fontSize: "12pt", fontWeight: 800, color: col } }, `${pct(avProg)}%`)),
 Object.keys(porPrograma[prog]).map(pl => {
 const ts = porPrograma[prog][pl];
 const avPl = avg(ts.map(t => t.avance));
 return React.createElement("div", { key: pl, style: { border: "1px solid #E2E8F0", borderTop: "none", padding: "12px", background: "#fff" }, className: "print-break-avoid" },
-React.createElement("h4", { style: { fontSize: "10pt", fontWeight: 700, color: "#475569", margin: "0 0 8px 0", borderBottom: "1px double #E2E8F0", paddingBottom: "4px" } },
-`Plan: ${pl} `, React.createElement("span", { style: { color: CLIENTE.colorA, fontWeight: 800 } }, `(${pct(avPl)}% Avance)`)
-),
+React.createElement("h4", { style: { fontSize: "10pt", fontWeight: 700, color: "#475569", margin: "0 0 8px 0", borderBottom: "1px double #E2E8F0", paddingBottom: "4px" } }, `Plan: ${pl} `, React.createElement("span", { style: { color: CLIENTE.colorA, fontWeight: 800 } }, `(${pct(avPl)}% Avance)`)),
 React.createElement("table", { className: "print-table" },
 React.createElement("thead", null, React.createElement("tr", null,
-React.createElement("th", { style: { width: "35%" } }, "Acción / Tarea"),
-React.createElement("th", { style: { width: "18%" } }, "Responsable"),
-React.createElement("th", { style: { width: "17%" } }, "Colaboradores"),
+React.createElement("th", { style: { width: "32%" } }, "Acción / Tarea"),
+React.createElement("th", { style: { width: "16%" } }, "Responsable"),
+React.createElement("th", { style: { width: "15%" } }, "Colaboradores"),
+React.createElement("th", { style: { width: "10%" } }, "Vencimiento"),
 React.createElement("th", { style: { width: "12%" } }, "Prioridad"),
-React.createElement("th", { style: { width: "13%" } }, "Estado (Avance)"),
+React.createElement("th", { style: { width: "10%" } }, "Estado"),
 React.createElement("th", { style: { width: "5%", textAlign: "right" } }, "%")
 )),
 React.createElement("tbody", null, ts.map(t => {
@@ -864,6 +819,7 @@ return React.createElement("tr", { key: t.id },
 React.createElement("td", null, t.tarea || "(Sin nombre)"),
 React.createElement("td", null, t.responsable || "-"),
 React.createElement("td", null, t.colaboradores || "-"),
+React.createElement("td", null, t.fechaVencimiento ? fmtD(t.fechaVencimiento) : "-"),
 React.createElement("td", null, React.createElement("span", { className: "print-badge", style: { background: pcfg.bg, color: pcfg.text } }, t.prioridad)),
 React.createElement("td", null, tlb),
 React.createElement("td", { style: { textAlign: "right", fontWeight: 700 } }, `${pct(t.avance)}%`)
@@ -914,56 +870,44 @@ React.createElement("button", { onClick: () => onLogin(null), style: { backgroun
 
 function ModalAyuda({ onClose }) {
 const [tab, setTab] = useState("usuario");
-
 const Seccion = ({ titulo, children }) => React.createElement("div", { style: { marginBottom: 20 } },
 React.createElement("h4", { style: { fontSize: 14, color: "#0F172A", marginBottom: 10, fontWeight: 700, borderBottom: "1px solid #E2E8F0", paddingBottom: 6 } }, titulo),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, children)
 );
-
 const ItemLista = ({ negrita, texto }) => React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "baseline" } },
 React.createElement("span", { style: { color: CLIENTE.colorA, fontSize: 14, fontWeight: 800 } }, "•"),
 React.createElement("span", null, React.createElement("strong", { style: { color: "#334155" } }, negrita), texto)
 );
-
 const manualUsuario = React.createElement(React.Fragment, null,
 React.createElement(Seccion, { titulo: "Navegación del Tablero" },
-React.createElement(ItemLista, { negrita: "Resumen:", texto: " Vista ejecutiva global de tareas agrupadas por su grado de avance (Completas, Avanzadas, etc.) y progreso consolidado por Programa." }),
-React.createElement(ItemLista, { negrita: "Programas y Planes:", texto: " Permite hacer exploración profunda desde el nivel macro (Programa) hasta el nivel micro (Tarea individual)." }),
-React.createElement(ItemLista, { negrita: "Equipo:", texto: " Vista integral donde se detalla el estatus de las tareas de cada integrante, diferenciando claramente su rol como Responsable o Colaborador." }),
-React.createElement(ItemLista, { negrita: "Tareas:", texto: " Buscador con filtros múltiples para encontrar acciones específicas." })
+React.createElement(ItemLista, { negrita: "Resumen:", texto: " Vista ejecutiva global de tareas agrupadas por su grado de avance y progreso consolidado por Programa." }),
+React.createElement(ItemLista, { negrita: "Programas y Planes:", texto: " Exploración profunda desde el nivel macro (Programa) hasta el nivel micro (Tarea individual)." }),
+React.createElement(ItemLista, { negrita: "Equipo:", texto: " Estatus de tareas de cada integrante, diferenciando rol de Responsable o Colaborador." }),
+React.createElement(ItemLista, { negrita: "Tareas:", texto: " Buscador con filtros múltiples." })
 ),
 React.createElement(Seccion, { titulo: "Administración vía Google Sheets" },
-React.createElement("p", { style: { marginBottom: 6 } }, "Las altas, bajas, modificaciones de PIN y roles de los usuarios se gestionan de forma centralizada desde la pestaña 'Usuarios' en tu Google Sheets."))
+React.createElement("p", { style: { marginBottom: 6 } }, "Las altas, bajas y modificaciones de usuarios se gestionan desde la pestaña 'Usuarios' en tu Google Sheets."))
 );
-
 const manualMantenimiento = React.createElement(React.Fragment, null,
 React.createElement(Seccion, { titulo: "Validación y Buenas Prácticas en Sheets" },
-React.createElement("p", { style: { marginBottom: 10 } }, "Para evitar desajustes en el cruce de datos de responsables y colaboradores, asegurate de utilizar los nombres oficiales dados de alta en la pestaña 'Usuarios' de tu Google Sheets.")
-)
+React.createElement("p", { style: { marginBottom: 10 } }, "Utiliza los nombres oficiales dados de alta en la pestaña 'Usuarios' de tu Google Sheets."))
 );
-
 return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
 React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: 650, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
 React.createElement("div", { style: { padding: "20px 24px 0", borderBottom: "1px solid #E2E8F0", flexShrink: 0 } },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 } },
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
 React.createElement("span", { style: { fontSize: 20 } }, "❓"),
-React.createElement("span", { style: { fontSize: 18, fontWeight: 800, color: "#0F172A" } }, "Ayuda y Documentación")
-),
-React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8" } }, "✕")
-),
+React.createElement("span", { style: { fontSize: 18, fontWeight: 800, color: "#0F172A" } }, "Ayuda y Documentación")),
+React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8" } }, "✕")),
 React.createElement("div", { style: { display: "flex", gap: 24 } },
 React.createElement("button", { onClick: () => setTab("usuario"), style: { padding: "10px 4px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === "usuario" ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${tab === "usuario" ? CLIENTE.colorA : "transparent"}`, transition: "all .2s" } }, "Manual de usuario"),
-React.createElement("button", { onClick: () => setTab("mantenimiento"), style: { padding: "10px 4px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === "mantenimiento" ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${tab === "mantenimiento" ? CLIENTE.colorA : "transparent"}`, transition: "all .2s" } }, "Instalación y mantenimiento")
-)
+React.createElement("button", { onClick: () => setTab("mantenimiento"), style: { padding: "10px 4px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === "mantenimiento" ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${tab === "mantenimiento" ? CLIENTE.colorA : "transparent"}`, transition: "all .2s" } }, "Instalación y mantenimiento"))
 ),
-React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "24px", fontSize: 13, color: "#334155", lineHeight: 1.6 } },
-tab === "usuario" ? manualUsuario : manualMantenimiento
-),
+React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "24px", fontSize: 13, color: "#334155", lineHeight: 1.6 } }, tab === "usuario" ? manualUsuario : manualMantenimiento),
 React.createElement("div", { style: { padding: "14px 24px", borderTop: "1px solid #E2E8F0", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", borderRadius: "0 0 18px 18px" } },
 React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontWeight: 600 } }, "Tablero de Generación de Demanda · Next Siembra"),
-React.createElement("button", { onClick: onClose, style: { padding: "9px 24px", borderRadius: 10, border: "none", background: CLIENTE.colorA, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar")
-)
+React.createElement("button", { onClick: onClose, style: { padding: "9px 24px", borderRadius: 10, border: "none", background: CLIENTE.colorA, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar"))
 )
 );
 }
@@ -999,9 +943,7 @@ setVista("tareas");
 }
 };
 
-const handleEditar = (tarea) => {
-setModal(tarea);
-};
+const handleEditar = (tarea) => { setModal(tarea); };
 
 const guardar = useCallback(async (form) => {
 setSaving(true);
@@ -1061,6 +1003,9 @@ tarea: t.tarea || "Acción sin nombre",
 responsable: t.responsable || "No asignado",
 colaboradores: t.colaboradores || "",
 prioridad: t.prioridad || "Media",
+fechaInicio: t.fecha_inicio || t.fechainicio || "",
+fechaVencimiento: t.fecha_vencimiento || t.fechavencimiento || "",
+fechaCierre: t.fecha_cierre || t.fechacierre || "",
 avance: isNaN(avNum) ? 0 : avNum,
 comentarios: t.comentarios || t.comentario || "",
 ultimaActualizacion: t.ultimaactualizacion || null
