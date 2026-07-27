@@ -110,7 +110,7 @@ const fmtD = val => {
 if (!val || val.trim() === "" || val === "-") return null;
 try {
 const d = new Date(val);
-if (isNaN(d.getTime())) return val; // Si no es fecha parseable, devuelve el texto original (ej: "15/08")
+if (isNaN(d.getTime())) return val;
 return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 } catch { return val; }
 };
@@ -392,7 +392,8 @@ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5,
 const pav = avg(ts.filter(t => t.plan === pl).map(t => t.avance));
 return React.createElement("span", { key: pl, onClick: e => { e.stopPropagation(); onNavegar("planes", { prog, pl }); }, style: { fontSize: 11, background: "#F8FAFC", border: `1px solid ${colorAvance(pav).bar}`, borderRadius: 7, padding: "3px 9px", color: "#475569", cursor: "pointer" } },
 React.createElement("span", { style: { fontSize: 9, color: "#94A3B8", textTransform: "uppercase", marginRight: 3 } }, "PLAN"), pl, " ", React.createElement("strong", { style: { color: colorAvance(pav).bar } }, pct(pav), "%"));
-})));
+})))
+;
 })))
 );
 }
@@ -480,8 +481,6 @@ React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 10, fl
 }))));
 
 const tareasDelPlan = tree[prog][plan];
-const fInicioPlan = fmtD(t.fechaInicio);
-const fVencePlan = fmtD(t.fechaVencimiento);
 
 return React.createElement("div", null,
 panelEstado && (React.createElement(PanelEstado, { tareas: panelEstado.tareas, avanceLabel: panelEstado.avanceLabel, progNombre: panelEstado.progNombre, progColor: panelEstado.progColor, onEditar: (t) => { setPanelEstado(null); onEditar(t); }, onClose: () => setPanelEstado(null) })),
@@ -691,8 +690,6 @@ return personasData.filter(p => !p.esOficial && p.total > 0);
 if (personaActiva) {
 const pData = personasData.find(p => p.nombre === personaActiva);
 if (!pData) return null;
-const fInicioP = fmtD(pData.resp.fechaInicio);
-const fVenceP = fmtD(pData.resp.fechaVencimiento);
 
 return React.createElement("div", null,
 React.createElement("button", { onClick: () => setPersonaActiva(null), style: { background: "none", border: "none", color: CLIENTE.colorA, cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 18, padding: 0 } }, "← Todos los integrantes"),
