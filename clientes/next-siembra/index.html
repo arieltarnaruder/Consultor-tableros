@@ -33,6 +33,7 @@ body { background: #fff; font-size: 10pt; margin: 0; padding: 0; }
 <script>
 const {useState,useMemo,useEffect,useCallback,useRef} = React;
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=0";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywwlxfNpLg6CJrJeOt-kEksUx2sr0lFqWNu0YPLyBsUVherXjFEDAF5J6_j8sK6eWODA/exec";
 const USUARIOS_DEFAULT = [
 { id: "ariel", nombre: "Ariel Tarnaruder", rol: "administrador", zona: null, pin: "2502", email: "ariel@consultor.com" },
 { id: "maxi", nombre: "Maxi Donolo", rol: "sr", zona: null, pin: "1111", email: "maxi@nextsiembra.com" },
@@ -1016,8 +1017,7 @@ React.createElement("div", { style: { padding: "14px 24px", borderTop: "1px soli
 React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontWeight: 600 } }, "Tablero de Generación de Demanda · Next Siembra"),
 React.createElement("button", { onClick: onClose, style: { padding: "9px 24px", borderRadius: 10, border: "none", background: CLIENTE.colorA, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, "Cerrar")
 )
-)
-);
+));
 }
 function App() {
 const [usuarios, setUsuarios] = useState(obtenerUsuariosGuardados());
@@ -1059,9 +1059,24 @@ setModal(tarea);
 const guardar = useCallback(async (form) => {
 setSaving(true);
 try {
+if (APPS_SCRIPT_URL && APPS_SCRIPT_URL.startsWith("http")) {
+await fetch(APPS_SCRIPT_URL, {
+method: "POST",
+mode: "no-cors",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+id: form.id,
+avance: form.avance,
+comentarios: form.comentarios
+})
+});
+}
 setTareas(prev => prev.map(t => t.id === form.id ? form : t));
 setModal(null);
-showToast("Cambio registrado localmente");
+showToast("Cambio guardado y sincronizado");
+} catch (err) {
+console.error(err);
+showToast("Error al sincronizar con Sheets", false);
 } finally {
 setSaving(false);
 }
@@ -1083,7 +1098,7 @@ encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
 let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
 if (avNum > 1) avNum = avNum / 100;
 const tareaMapeada = {
-id: i,
+id: i + 1,
 programa: t.programa || "Sin Programa",
 plan: t.plan || "Sin Plan",
 tarea: t.tarea || t.accion || t["acción"] || "",
