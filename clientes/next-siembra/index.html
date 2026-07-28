@@ -38,6 +38,8 @@ const USUARIOS_DEFAULT = [
 { id: "ariel", nombre: "Ariel Tarnaruder", rol: "administrador", zona: null, pin: "2502", email: "ariel@consultor.com" },
 { id: "maxi", nombre: "Maxi Donolo", rol: "sr", zona: null, pin: "1111", email: "maxi@nextsiembra.com" },
 { id: "adrian", nombre: "Adrián Bonfiglio", rol: "lider", zona: null, pin: "2222", email: "adrian@nextsiembra.com" },
+{ id: "jerry", nombre: "Jerry Teplitz", rol: "lider", zona: null, pin: "3333", email: "jerry@nextsiembra.com" },
+{ id: "bimbi", nombre: "Bimbi Aguero", rol: "vendedor", zona: null, pin: "4444", email: "bimbi@nextsiembra.com" },
 { id: "v1", nombre: "Vendedor 1", rol: "vendedor", zona: "Vendedor 1", pin: "1001", email: "v1@nextsiembra.com" },
 { id: "v2", nombre: "Vendedor 2", rol: "vendedor", zona: "Vendedor 2", pin: "1002", email: "v2@nextsiembra.com" },
 { id: "v3", nombre: "Vendedor 3", rol: "vendedor", zona: "Vendedor 3", pin: "1003", email: "v3@nextsiembra.com" },
@@ -630,16 +632,22 @@ function VistaEquipos({ tareas, onEditar }) {
 const [personaActiva, setPersonaActiva] = useState(null);
 const personasData = useMemo(() => {
 const map = {};
+// Inicializar todos los usuarios oficiales de USUARIOS_DEFAULT para que aparezcan siempre
+USUARIOS_DEFAULT.forEach(u => {
+map[u.nombre] = { resp: [], colab: [] };
+});
 tareas.forEach(t => {
-const r = (t.responsable || "Sin asignar").trim();
-if (!map[r]) map[r] = { resp: [], colab: [] };
+const r = (t.responsable || "").trim();
+if (r && map[r]) {
 map[r].resp.push(t);
+}
 if (t.colaboradores) {
 const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
 colabs.forEach(c => {
-if (!map[c]) map[c] = { resp: [], colab: [] };
+if (map[c]) {
 if (!map[c].colab.some(item => item.id === t.id)) {
 map[c].colab.push(t);
+}
 }
 });
 }
@@ -654,7 +662,6 @@ if (personaActiva) {
 const pData = personasData.find(p => p.nombre === personaActiva);
 if (!pData) return null;
 return React.createElement("div", null,
-React.createElement("button", { onClick: () => setPersonaActiva(null), style: { background: "none", border: "none", color: CLIENTE.colorA, cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 18, padding: 0 } }, "← Todos los integrantes"),
 React.createElement("div", { style: { borderLeft: `4px solid ${colorAvance(pData.avProm).bar}`, paddingLeft: 14, marginBottom: 18 } },
 React.createElement("h2", { style: { margin: 0, fontSize: 20, fontWeight: 800, color: "#0F172A" } }, pData.nombre),
 React.createElement("div", { style: { fontSize: 13, color: "#64748B", marginTop: 4 } },
@@ -863,16 +870,19 @@ React.createElement("span", { style: { color: CLIENTE.colorA, fontSize: 14, font
 React.createElement("span", null, React.createElement("strong", { style: { color: "#334155" } }, negrita), texto)
 );
 const manualUsuario = React.createElement(React.Fragment, null,
-React.createElement(Seccion, { titulo: "Navegación del Tablero" },
-React.createElement(ItemLista, { negrita: "Resumen:", texto: " Vista ejecutiva global de tareas agrupadas por su grado de avance (Completas, Avanzadas, etc.) y progreso consolidado por Programa." }),
-React.createElement(ItemLista, { negrita: "Programas y Planes:", texto: " Permite hacer exploración profunda desde el nivel macro (Programa) hasta el nivel micro (Tarea individual)." }),
-React.createElement(ItemLista, { negrita: "Equipo:", texto: " Vista integral donde se detalla el estatus de las tareas de cada integrante, diferenciando claramente su rol como Responsable o Colaborador." }),
-React.createElement(ItemLista, { negrita: "Tareas:", texto: " Buscador con filtros múltiples para encontrar acciones específicas." })
+React.createElement(Seccion, { titulo: "Navegación y Operación del Tablero" },
+React.createElement(ItemLista, { negrita: "Resumen Ejecutivo:", texto: " Vista global de tareas agrupadas por estado de avance y progreso consolidado por Programa." }),
+React.createElement(ItemLista, { negrita: "Programas y Planes:", texto: " Exploración detallada desde nivel macro (Programa) hasta acciones individuales." }),
+React.createElement(ItemLista, { negrita: "Equipo:", texto: " Control de desempeño por integrante (Responsable y Colaborador) sincronizado con Google Sheets." }),
+React.createElement(ItemLista, { negrita: "Actualización de Avance:", texto: " Hacé clic en cualquier tarea para modificar su porcentaje o comentarios. Los cambios se sincronizan automáticamente con la Planilla Maestra." })
 )
 );
 const manualMantenimiento = React.createElement(React.Fragment, null,
-React.createElement(Seccion, { titulo: "Validación y Buenas Prácticas en Sheets" },
-React.createElement("p", { style: { marginBottom: 10 } }, "Para evitar desajustes en el cruce de datos de responsables y colaboradores, asegurate de utilizar validación por lista desplegable en tu Google Sheets."))
+React.createElement(Seccion, { titulo: "Gestión de Usuarios y Planilla Maestra" },
+React.createElement(ItemLista, { negrita: "Hoja Usuarios:", texto: " Toda la administración de integrantes (nombre, rol, PIN, email) se gestiona directamente en la pestaña 'Usuarios' de tu Google Sheets." }),
+React.createElement(ItemLista, { negrita: "Validación de Datos:", texto: " La planilla cuenta con listas desplegables automáticas en la columna de responsables para evitar errores tipográficos." }),
+React.createElement(ItemLista, { negrita: "Sincronización en Tiempo Real:", texto: " El puente operativo por Google Apps Script actualiza de forma inmediata los cierres al 100% y los comentarios del equipo." })
+)
 );
 return React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", zIndex: 2500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }, onClick: e => e.target === e.currentTarget && onClose() },
 React.createElement("div", { style: { background: "#fff", borderRadius: 18, width: "100%", maxWidth: 650, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" } },
@@ -1005,8 +1015,7 @@ const TABS_JERARQUIA = [
 { id: "ejecutivo", label: "Resumen" },
 { id: "programas", label: "Programas" },
 { id: "planes", label: "Planes" },
-{ id: "tareas", label: "Tareas" },
-{ id: "equipos", label: "Equipo" }
+{ id: "tareas", label: "Tareas" }
 ];
 const totalAv = avg(tareas.map(t => t.avance));
 const { bar } = colorAvance(totalAv);
@@ -1042,7 +1051,8 @@ React.createElement("div", { style: { display: "flex", alignItems: "center", mar
 React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: "4px" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
-React.createElement("div", { style: { paddingBottom: 8 } },
+React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
+React.createElement("button", { onClick: () => setVista("equipos"), style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === "equipos" ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === "equipos" ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, "Equipo"),
 React.createElement("button", { onClick: () => setShowAyuda(true), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#475569", whiteSpace: "nowrap" } }, "? Ayuda")
 )
 ))),
