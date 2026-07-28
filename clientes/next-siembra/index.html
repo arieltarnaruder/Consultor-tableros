@@ -184,7 +184,7 @@ t.responsable && (React.createElement("span", { style: { fontSize: 11, color: "#
 t.colaboradores && (React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: " + t.colaboradores)),
 t.fechaInicio && fmtD(t.fechaInicio) && (React.createElement("span", { style: { fontSize: 11, color: "#0284C7", background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 99, padding: "2px 8px" } }, "Inicio: " + fmtD(t.fechaInicio))),
 t.fechaFin && fmtD(t.fechaFin) && (React.createElement("span", { style: { fontSize: 11, color: "#0D9488", background: "#F0FDFA", border: "1px solid #CCFBF1", borderRadius: 99, padding: "2px 8px" } }, "Fin: " + fmtD(t.fechaFin))),
-t.fechaVencimiento && fmtD(t.fechaVencimiento) && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 8px" } }, fmtD(t.fechaVencimiento))),
+t.fechaVencimiento && fmtD(t.fechaVencimiento) && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 8px" } }, "Vencimiento: " + fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8", marginLeft: "auto" } }, t.plan)),
 esRZNColectivo(t) && t.zonas && (React.createElement("div", { style: { marginTop: 8, borderTop: "1px solid #F1F5F9", paddingTop: 8 } },
 React.createElement("div", { style: { fontSize: 10, color: "#94A3B8", fontWeight: 600, marginBottom: 5, textTransform: "uppercase", letterSpacing: ".04em" } }, "Por colaborador"),
@@ -498,7 +498,7 @@ t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#6
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaInicio && fmtD(t.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7" } }, "Inicio: ", fmtD(t.fechaInicio)),
 t.fechaFin && fmtD(t.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488" } }, "Fin: ", fmtD(t.fechaFin)),
-t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento)),
+t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, "Vencimiento: ", fmtD(t.fechaVencimiento)),
 t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))));
 }))));
 }
@@ -578,7 +578,7 @@ t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#6
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaInicio && fmtD(t.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7" } }, "Inicio: ", fmtD(t.fechaInicio)),
 t.fechaFin && fmtD(t.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488" } }, "Fin: ", fmtD(t.fechaFin)),
-t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8" } }, " ", fmtD(t.fechaVencimiento))));
+t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, "Vencimiento: ", fmtD(t.fechaVencimiento))));
 })));
 })));
 }
@@ -632,7 +632,7 @@ t.responsable && React.createElement("span", { style: { fontSize: 11, color: "#6
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaInicio && fmtD(t.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7" } }, "Inicio: ", fmtD(t.fechaInicio)),
 t.fechaFin && fmtD(t.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488" } }, "Fin: ", fmtD(t.fechaFin)),
-t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, " ", fmtD(t.fechaVencimiento))),
+t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, "Vencimiento: ", fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›")));
 })
 )
@@ -792,6 +792,7 @@ React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.pro
 t.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", fontWeight: 600 } }, "Colab: ", t.colaboradores),
 t.fechaInicio && fmtD(t.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7" } }, "Inicio: ", fmtD(t.fechaInicio)),
 t.fechaFin && fmtD(t.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488" } }, "Fin: ", fmtD(t.fechaFin)),
+t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, "Vencimiento: ", fmtD(t.fechaVencimiento)),
 t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))
 );
 }))
@@ -816,6 +817,7 @@ React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, t.pro
 React.createElement("span", { style: { fontSize: 11, color: "#475569" } }, "Resp: ", t.responsable),
 t.fechaInicio && fmtD(t.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7" } }, "Inicio: ", fmtD(t.fechaInicio)),
 t.fechaFin && fmtD(t.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488" } }, "Fin: ", fmtD(t.fechaFin)),
+t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { style: { fontSize: 11, color: "#64748B" } }, "Vencimiento: ", fmtD(t.fechaVencimiento)),
 t.comentarios && React.createElement("span", { style: { fontSize: 11, color: "#94A3B8", fontStyle: "italic" } }, " ", t.comentarios.slice(0, 70), t.comentarios.length > 70 ? "…" : ""))
 );
 }))
@@ -910,7 +912,7 @@ React.createElement("table", { className: "print-table" },
 React.createElement("thead", null, React.createElement("tr", null,
 React.createElement("th", { style: { width: "30%" } }, "Acción / Tarea"),
 React.createElement("th", { style: { width: "16%" } }, "Responsable"),
-React.createElement("th", { style: { width: "14%" } }, "Fechas (Inicio / Fin)"),
+React.createElement("th", { style: { width: "14%" } }, "Fechas (Inicio / Vencimiento)"),
 React.createElement("th", { style: { width: "12%" } }, "Prioridad"),
 React.createElement("th", { style: { width: "13%" } }, "Estado (Avance)"),
 React.createElement("th", { style: { width: "5%", textAlign: "right" } }, "%")
@@ -921,7 +923,7 @@ const { label: tlb } = colorAvance(t.avance);
 return React.createElement("tr", { key: t.id },
 React.createElement("td", null, t.tarea || "(Sin nombre)"),
 React.createElement("td", null, t.responsable || "-"),
-React.createElement("td", null, `${t.fechaInicio && fmtD(t.fechaInicio) ? fmtD(t.fechaInicio) : '-'} / ${t.fechaFin && fmtD(t.fechaFin) ? fmtD(t.fechaFin) : '-'}`),
+React.createElement("td", null, `${t.fechaInicio && fmtD(t.fechaInicio) ? fmtD(t.fechaInicio) : '-'} / ${t.fechaVencimiento && fmtD(t.fechaVencimiento) ? fmtD(t.fechaVencimiento) : '-'}`),
 React.createElement("td", null, React.createElement("span", { className: "print-badge", style: { background: pcfg.bg, color: pcfg.text } }, t.prioridad)),
 React.createElement("td", null, tlb),
 React.createElement("td", { style: { textAlign: "right", fontWeight: 700 } }, `${pct(t.avance)}%`)
