@@ -1079,14 +1079,14 @@ for (let i = 1; i < lineas.length; i++) {
 const fila = lineas[i];
 if (fila.length < 3 || !fila[0]) continue;
 const t = {};
-encabezados.forEach((h, idx) => { let key = h === "accion" ? "tarea" : h; t[key] = fila[idx] ? fila[idx].trim() : ""; });
+encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
 let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
 if (avNum > 1) avNum = avNum / 100;
 const tareaMapeada = {
 id: i,
 programa: t.programa || "Sin Programa",
 plan: t.plan || "Sin Plan",
-tarea: t.tarea || "Acción sin nombre",
+tarea: t.tarea || t.accion || t["acción"] || "",
 responsable: t.responsable || "No asignado",
 colaboradores: t.colaboradores || "",
 prioridad: t.prioridad || "Media",
@@ -1097,6 +1097,12 @@ fechaVencimiento: t.fechavencimiento || t.fecha_vencimiento || "",
 comentarios: t.comentarios || t.comentario || "",
 ultimaActualizacion: t.ultimaactualizacion || null
 };
+if (!tareaMapeada.tarea && fila[2]) {
+tareaMapeada.tarea = fila[2].trim();
+}
+if (!tareaMapeada.tarea) {
+tareaMapeada.tarea = "Acción sin nombre";
+}
 if (esRZNColectivo(tareaMapeada)) tareaMapeada.zonas = zonaDefault();
 rawTareas.push(tareaMapeada);
 }
