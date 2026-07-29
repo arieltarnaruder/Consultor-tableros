@@ -640,21 +640,21 @@ React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: k.c
 ))
 ),
 React.createElement("div", { className: "hide-scrollbar", style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "10px 14px", marginBottom: 14, display: "flex", gap: 8, alignItems: "center", overflowX: "auto", whiteSpace: "nowrap" } },
-React.createElement("input", { value: filtros.q, onChange: e => set("q", e.target.value), placeholder: "Buscar tarea o plan…", style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 12px", fontSize: 13, flexShrink: 0, width: 160, outline: "none", color: "#0F172A", background: "#F8FAFC" } }),
+React.createElement("input", { value: filtros.q, onChange: e => set("q", e.target.value), placeholder: "Buscar...", style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 12px", fontSize: 13, flexShrink: 0, width: 130, outline: "none", color: "#0F172A", background: "#F8FAFC" } }),
 [
 { k: "programa", opts: ["", ...programas], label: "Programa" },
 { k: "responsable", opts: ["", ...responsables], label: "Responsable" },
 { k: "prioridad", opts: ["", "Alta", "Media", "Baja"], label: "Prioridad" },
-{ k: "avance", opts: ["", "Completa", "Avanzado", "En marcha", "Iniciado", "Sin inicio"], label: "Grado de Avance" },
+{ k: "avance", opts: ["", "Completa", "Avanzado", "En marcha", "Iniciado", "Sin inicio"], label: "Estado" },
 ].map(({ k, opts, label }) => React.createElement("select", { key: k, value: filtros[k], onChange: e => set(k, e.target.value), style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#F8FAFC", cursor: "pointer", color: filtros[k] ? "#0F172A" : "#94A3B8", flexShrink: 0 } },
 React.createElement("option", { value: "" }, label),
 opts.filter(Boolean).map(o => React.createElement("option", { key: o, value: o }, o)))),
 React.createElement("select", { value: orden, onChange: e => setOrden(e.target.value), style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#F8FAFC", cursor: "pointer", color: orden ? "#0F172A" : "#94A3B8", flexShrink: 0, fontWeight: 600 } },
-React.createElement("option", { value: "" }, "⇅ Ordenar por defecto"),
-React.createElement("option", { value: "venc_asc" }, "Vencimiento (Más próximo)"),
-React.createElement("option", { value: "venc_desc" }, "Vencimiento (Más lejano)"),
-React.createElement("option", { value: "inicio_desc" }, "Inicio (Más reciente)"),
-React.createElement("option", { value: "inicio_asc" }, "Inicio (Más antiguo)")
+React.createElement("option", { value: "" }, "⇅ Ordenar"),
+React.createElement("option", { value: "venc_asc" }, "Venc. Próximo"),
+React.createElement("option", { value: "venc_desc" }, "Venc. Lejano"),
+React.createElement("option", { value: "inicio_desc" }, "Inicio Reciente"),
+React.createElement("option", { value: "inicio_asc" }, "Inicio Antiguo")
 ),
 (Object.values(filtros).some(Boolean) || orden) && React.createElement("button", { onClick: () => { setFiltros({ q: "", programa: "", responsable: "", prioridad: "", avance: "" }); setOrden(""); }, style: { border: "1px solid #FECACA", borderRadius: 8, padding: "7px 12px", fontSize: 12, background: "#FEF2F2", color: "#B91C1C", cursor: "pointer", fontWeight: 600, flexShrink: 0 } }, "✕ Limpiar"),
 React.createElement("span", { style: { fontSize: 12, color: "#94A3B8", marginLeft: "auto", paddingLeft: 10, flexShrink: 0 } }, filtradasOrdenadas.length, " tareas")
