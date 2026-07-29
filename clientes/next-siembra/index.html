@@ -624,8 +624,9 @@ React.createElement("span", { style: { color: "#CBD5E1", fontSize: 18 } }, "›"
 )
 );
 }
-function VistaEquipos({ tareas, onEditar }) {
+function VistaEquipos({ tareas, onEditar, resetKey }) {
 const [personaActiva, setPersonaActiva] = useState(null);
+useEffect(() => { setPersonaActiva(null); }, [resetKey]);
 const personasData = useMemo(() => {
 const map = {};
 USUARIOS_DEFAULT.forEach(u => {
@@ -917,6 +918,8 @@ const [saving, setSaving] = useState(false);
 const [toast, setToast] = useState(null);
 const [showUserMenu, setShowUserMenu] = useState(false);
 const [showAyuda, setShowAyuda] = useState(false);
+const [equipoResetKey, setEquipoResetKey] = useState(0);
+
 const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 const handleLogin = (u) => setUsuario(u);
 const handleLogout = () => { setUsuario(undefined); setModal(null); setShowUserMenu(false); };
@@ -1011,8 +1014,7 @@ const TABS_JERARQUIA = [
 { id: "ejecutivo", label: "Resumen" },
 { id: "programas", label: "Programas" },
 { id: "planes", label: "Planes" },
-{ id: "tareas", label: "Tareas" },
-{ id: "equipos", label: "Equipo" }
+{ id: "tareas", label: "Tareas" }
 ];
 const totalAv = avg(tareas.map(t => t.avance));
 const { bar } = colorAvance(totalAv);
@@ -1044,19 +1046,14 @@ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")),
 showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
-React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, justifyContent: "space-between", width: "100%" } },
-React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: "4px" } },
-TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { 
-  if (tab.id === 'equipos' && vista === 'equipos') {
-    // Si ya está en equipos, clic recarga/resetea la vista general de equipo
-    return;
-  }
-  setVista(tab.id); 
-  if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); 
-  if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); 
-}, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
+React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, width: "100%", gap: 10, flexWrap: "wrap", justifyContent: "space-between" } },
+React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 200px" } },
+TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
-React.createElement("div", { style: { paddingBottom: 8 } },
+React.createElement("div", { style: { display: "flex", justifyContent: "center", flex: "1 1 120px" } },
+React.createElement("button", { onClick: () => { setVista("equipos"); setEquipoResetKey(k => k + 1); }, style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 24px", border: `1.5px solid ${vista === "equipos" ? CLIENTE.colorA : "#CBD5E1"}`, borderRadius: 8, background: vista === "equipos" ? "#fff" : "#F8FAFC", color: vista === "equipos" ? CLIENTE.colorA : "#475569", cursor: "pointer", fontSize: 13, fontWeight: 800, boxShadow: vista === "equipos" ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .2s" } }, "👥 Equipo")
+),
+React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", flex: "1 1 200px", paddingBottom: 4 } },
 React.createElement("button", { onClick: () => setShowAyuda(true), style: { display: "flex", alignItems: "center", gap: 6, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#475569", whiteSpace: "nowrap" } }, "? Ayuda")
 )
 ))),
@@ -1064,7 +1061,7 @@ React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: 
 vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
 vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
 vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
-vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar }),
+vista === "equipos" && React.createElement(VistaEquipos, { tareas: tareas, onEditar: handleEditar, resetKey: equipoResetKey }),
 vista === "tareas" && React.createElement(VistaTareas, { tareas: tareas, onEditar: handleEditar, initAvance: navTareas.filtroAvance }))
 )
 );
