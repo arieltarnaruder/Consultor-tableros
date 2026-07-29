@@ -95,15 +95,22 @@ CLIENTE.colorA,
 const pct = v => Math.round(v * 100);
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const fmtD = val => {
-if (!val) return "";
+if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-") return "";
 try {
+if (val.includes('/')) {
+const partes = val.split('/');
+if (partes.length === 3) {
+const d = new Date(partes[2], partes[1] - 1, partes[0]);
+if (!isNaN(d.getTime())) return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+}
+}
 const d = new Date(val);
-if (isNaN(d.getTime())) return val;
+if (isNaN(d.getTime()) || d.getFullYear() < 2000) return val;
 return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 } catch { return val; }
 };
 const parseDateMs = val => {
-if (!val) return null;
+if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-") return null;
 if (val.includes('/')) {
 const [d, m, y] = val.split('/');
 return new Date(y, m - 1, d).getTime();
@@ -295,13 +302,6 @@ React.createElement("span", { style: { fontSize: 11, background: bg, color: text
 React.createElement("span", { style: { fontSize: 22, fontWeight: 800, color: bar } }, pct(f.avance), "%"))),
 React.createElement("input", { type: "range", min: 0, max: 100, value: pct(f.avance), disabled: modoSoloLecturaColab, onChange: e => set("avance", Number(e.target.value) / 100), style: { width: "100%", accentColor: bar, marginBottom: 6, opacity: modoSoloLecturaColab ? 0.6 : 1, cursor: modoSoloLecturaColab ? "not-allowed" : "pointer" } }),
 !modoSoloLecturaColab && React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } }, [0, 25, 50, 75, 100].map(v => React.createElement("button", { key: v, onClick: () => set("avance", v / 100), style: { flex: 1, padding: "5px 0", borderRadius: 8, border: `1px solid ${pct(f.avance) === v ? "#CBD5E1" : "#E2E8F0"}`, background: pct(f.avance) === v ? "#F1F5F9" : "#fff", color: "#475569", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, v, "%")))),
-React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
-React.createElement("div", null,
-React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Fecha de Inicio"),
-React.createElement("input", { type: "date", value: f.fechaInicio || "", onChange: e => set("fechaInicio", e.target.value), style: { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#F8FAFC", color: "#0F172A", outline: "none" } })),
-React.createElement("div", null,
-React.createElement("label", { style: { fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 4 } }, "Fecha de Fin"),
-React.createElement("input", { type: "date", value: f.fechaFin || "", onChange: e => set("fechaFin", e.target.value), style: { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1.5px solid #E2E8F0", fontSize: 13, background: "#F8FAFC", color: "#0F172A", outline: "none" } }))),
 React.createElement("div", null,
 React.createElement("label", { style: { fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", display: "block", marginBottom: 8 } }, "Observaciones y Comentarios"),
 React.createElement("textarea", { value: f.comentarios || "", onChange: e => set("comentarios", e.target.value), rows: 3, placeholder: "Próximos pasos o detalles del status actual...", style: { width: "100%", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#0F172A", resize: "vertical", background: "#F8FAFC", outline: "none" } })),
@@ -609,10 +609,19 @@ return true;
 
 const filtradasOrdenadas = useMemo(() => {
 let res = [...filtradas];
-if (orden === "inicio_asc") res.sort((a, b) => (parseDateMs(a.fechaInicio) || Infinity) - (parseDateMs(b.fechaInicio) || Infinity));
-else if (orden === "inicio_desc") res.sort((a, b) => (parseDateMs(b.fechaInicio) || -Infinity) - (parseDateMs(a.fechaInicio) || -Infinity));
-else if (orden === "venc_asc") res.sort((a, b) => (parseDateMs(a.fechaVencimiento) || Infinity) - (parseDateMs(b.fechaVencimiento) || Infinity));
-else if (orden === "venc_desc") res.sort((a, b) => (parseDateMs(b.fechaVencimiento) || -Infinity) - (parseDateMs(a.fechaVencimiento) || -Infinity));
+if (!orden) return res;
+res.sort((a, b) => {
+let vA, vB;
+if (orden.startsWith("inicio")) {
+vA = parseDateMs(a.fechaInicio); vB = parseDateMs(b.fechaInicio);
+} else {
+vA = parseDateMs(a.fechaVencimiento); vB = parseDateMs(b.fechaVencimiento);
+}
+if (!vA && !vB) return 0;
+if (!vA) return 1;
+if (!vB) return -1;
+return orden.endsWith("asc") ? vA - vB : vB - vA;
+});
 return res;
 }, [filtradas, orden]);
 
@@ -1106,7 +1115,14 @@ showUserMenu && React.createElement("div", { style: { position: "absolute", righ
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, width: "100%", gap: 10, flexWrap: "wrap", justifyContent: "space-between" } },
 React.createElement("div", { className: "hide-scrollbar", style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 200px" } },
-TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
+TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { 
+  if (tab.id === 'equipos' && vista === 'equipos') {
+    return;
+  }
+  setVista(tab.id); 
+  if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); 
+  if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); 
+}, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
 React.createElement("div", { style: { display: "flex", justifyContent: "center", flex: "1 1 120px" } },
 React.createElement("button", { onClick: () => { setVista("equipos"); setEquipoResetKey(k => k + 1); }, style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 24px", border: `1.5px solid ${vista === "equipos" ? CLIENTE.colorA : "#CBD5E1"}`, borderRadius: 8, background: vista === "equipos" ? "#fff" : "#F8FAFC", color: vista === "equipos" ? CLIENTE.colorA : "#475569", cursor: "pointer", fontSize: 13, fontWeight: 800, boxShadow: vista === "equipos" ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .2s" } }, "👥 Equipo")
