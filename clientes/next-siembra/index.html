@@ -10,6 +10,9 @@ body{font-family:system-ui,sans-serif;background:#F1F5F9}
 #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
 .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Scrollbar oculta para contenedores horizontales */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 @media screen {
 .print-only { display: none !important; }
 }
@@ -98,6 +101,19 @@ const d = new Date(val);
 if (isNaN(d.getTime())) return val;
 return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 } catch { return val; }
+};
+const parseDateMs = val => {
+if (!val) return null;
+if (val.includes('/')) {
+const [d, m, y] = val.split('/');
+return new Date(y, m - 1, d).getTime();
+}
+if (val.includes('-') && val.split('-')[0].length === 4) {
+const [y, m, d] = val.split('-');
+return new Date(y, m - 1, d).getTime();
+}
+const d = new Date(val).getTime();
+return isNaN(d) ? null : d;
 };
 function parseCSV(text) {
 const lines = []; let row = [""]; let inQuotes = false;
@@ -570,11 +586,15 @@ t.fechaVencimiento && fmtD(t.fechaVencimiento) && React.createElement("span", { 
 }
 function VistaTareas({ tareas, onEditar, initAvance }) {
 const [filtros, setFiltros] = useState({ q: "", programa: "", responsable: "", prioridad: "", avance: initAvance || "" });
+const [orden, setOrden] = useState("");
+
 useEffect(() => {
 setFiltros(f => ({ ...f, avance: initAvance || "" }));
 }, [initAvance]);
+
 const responsables = useMemo(() => [...new Set(tareas.map(t => t.responsable).filter(Boolean))].sort(), [tareas]);
 const programas = useMemo(() => [...new Set(tareas.map(t => t.programa))].sort(), [tareas]);
+
 const filtradas = useMemo(() => tareas.filter(t => {
 if (filtros.programa && t.programa !== filtros.programa) return false;
 if (filtros.responsable && t.responsable !== filtros.responsable) return false;
@@ -586,24 +606,62 @@ if (!t.tarea.toLowerCase().includes(q) && !t.plan.toLowerCase().includes(q)) ret
 }
 return true;
 }), [tareas, filtros]);
+
+const filtradasOrdenadas = useMemo(() => {
+let res = [...filtradas];
+if (orden === "inicio_asc") res.sort((a, b) => (parseDateMs(a.fechaInicio) || Infinity) - (parseDateMs(b.fechaInicio) || Infinity));
+else if (orden === "inicio_desc") res.sort((a, b) => (parseDateMs(b.fechaInicio) || -Infinity) - (parseDateMs(a.fechaInicio) || -Infinity));
+else if (orden === "venc_asc") res.sort((a, b) => (parseDateMs(a.fechaVencimiento) || Infinity) - (parseDateMs(b.fechaVencimiento) || Infinity));
+else if (orden === "venc_desc") res.sort((a, b) => (parseDateMs(b.fechaVencimiento) || -Infinity) - (parseDateMs(a.fechaVencimiento) || -Infinity));
+return res;
+}, [filtradas, orden]);
+
 const set = (k, v) => setFiltros(f => ({ ...f, [k]: v }));
+
+const avanceCounts = { "Completa": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0 };
+filtradasOrdenadas.forEach(t => {
+const lbl = colorAvance(t.avance).label;
+if (avanceCounts[lbl] !== undefined) avanceCounts[lbl]++;
+});
+
+const miniCards = [
+{ id: "Completa", label: "Completadas", valor: avanceCounts["Completa"], color: "#3B82F6" },
+{ id: "Avanzado", label: "Avanzadas", valor: avanceCounts["Avanzado"], color: "#22C55E" },
+{ id: "En marcha", label: "En Marcha", valor: avanceCounts["En marcha"], color: "#EAB308" },
+{ id: "Iniciado", label: "Iniciadas", valor: avanceCounts["Iniciado"], color: "#F97316" },
+{ id: "Sin inicio", label: "Sin Inicio", valor: avanceCounts["Sin inicio"], color: "#EF4444" }
+];
+
 return React.createElement("div", null,
-React.createElement("div", { style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 14, marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" } },
-React.createElement("input", { value: filtros.q, onChange: e => set("q", e.target.value), placeholder: "Buscar tarea o plan…", style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 12px", fontSize: 13, flex: "1 1 150px", outline: "none", color: "#0F172A", background: "#F8FAFC" } }),
+React.createElement("div", { className: "hide-scrollbar", style: { display: "flex", gap: 10, marginBottom: 14, overflowX: "auto", paddingBottom: 6 } },
+miniCards.map(k => React.createElement("div", { key: k.id, style: { background: "#fff", border: "1px solid #E2E8F0", borderLeft: `3px solid ${k.color}`, borderRadius: 10, padding: "10px 14px", flex: "1 1 120px", minWidth: 110, display: "flex", flexDirection: "column", boxShadow: "0 1px 3px rgba(0,0,0,.02)" } },
+React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 } }, k.label),
+React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: k.color, lineHeight: 1 } }, k.valor)
+))
+),
+React.createElement("div", { className: "hide-scrollbar", style: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "10px 14px", marginBottom: 14, display: "flex", gap: 8, alignItems: "center", overflowX: "auto", whiteSpace: "nowrap" } },
+React.createElement("input", { value: filtros.q, onChange: e => set("q", e.target.value), placeholder: "Buscar tarea o plan…", style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 12px", fontSize: 13, flexShrink: 0, width: 160, outline: "none", color: "#0F172A", background: "#F8FAFC" } }),
 [
 { k: "programa", opts: ["", ...programas], label: "Programa" },
 { k: "responsable", opts: ["", ...responsables], label: "Responsable" },
 { k: "prioridad", opts: ["", "Alta", "Media", "Baja"], label: "Prioridad" },
 { k: "avance", opts: ["", "Completa", "Avanzado", "En marcha", "Iniciado", "Sin inicio"], label: "Grado de Avance" },
-].map(({ k, opts, label }) => React.createElement("select", { key: k, value: filtros[k], onChange: e => set(k, e.target.value), style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#F8FAFC", cursor: "pointer", color: filtros[k] ? "#0F172A" : "#94A3B8" } },
+].map(({ k, opts, label }) => React.createElement("select", { key: k, value: filtros[k], onChange: e => set(k, e.target.value), style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#F8FAFC", cursor: "pointer", color: filtros[k] ? "#0F172A" : "#94A3B8", flexShrink: 0 } },
 React.createElement("option", { value: "" }, label),
 opts.filter(Boolean).map(o => React.createElement("option", { key: o, value: o }, o)))),
-Object.values(filtros).some(Boolean) && React.createElement("button", { onClick: () => setFiltros({ q: "", programa: "", responsable: "", prioridad: "", avance: "" }), style: { border: "1px solid #FECACA", borderRadius: 8, padding: "7px 12px", fontSize: 12, background: "#FEF2F2", color: "#B91C1C", cursor: "pointer", fontWeight: 600 } }, "✕ Limpiar"),
-React.createElement("span", { style: { fontSize: 12, color: "#94A3B8", marginLeft: "auto" } }, filtradas.length, " tareas")
+React.createElement("select", { value: orden, onChange: e => setOrden(e.target.value), style: { border: "1.5px solid #E2E8F0", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#F8FAFC", cursor: "pointer", color: orden ? "#0F172A" : "#94A3B8", flexShrink: 0, fontWeight: 600 } },
+React.createElement("option", { value: "" }, "⇅ Ordenar por defecto"),
+React.createElement("option", { value: "venc_asc" }, "Vencimiento (Más próximo)"),
+React.createElement("option", { value: "venc_desc" }, "Vencimiento (Más lejano)"),
+React.createElement("option", { value: "inicio_desc" }, "Inicio (Más reciente)"),
+React.createElement("option", { value: "inicio_asc" }, "Inicio (Más antiguo)")
+),
+(Object.values(filtros).some(Boolean) || orden) && React.createElement("button", { onClick: () => { setFiltros({ q: "", programa: "", responsable: "", prioridad: "", avance: "" }); setOrden(""); }, style: { border: "1px solid #FECACA", borderRadius: 8, padding: "7px 12px", fontSize: 12, background: "#FEF2F2", color: "#B91C1C", cursor: "pointer", fontWeight: 600, flexShrink: 0 } }, "✕ Limpiar"),
+React.createElement("span", { style: { fontSize: 12, color: "#94A3B8", marginLeft: "auto", paddingLeft: 10, flexShrink: 0 } }, filtradasOrdenadas.length, " tareas")
 ),
 React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
-filtradas.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 48, color: "#94A3B8", fontSize: 14 } }, "Sin resultados."),
-filtradas.map(t => {
+filtradasOrdenadas.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 48, color: "#94A3B8", fontSize: 14 } }, "Sin resultados."),
+filtradasOrdenadas.map(t => {
 const { bar: b, label: lb } = colorAvance(t.avance);
 return React.createElement(Card, { key: t.id, onClick: () => onEditar(t), style: { padding: "11px 14px" } },
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } },
@@ -1047,7 +1105,7 @@ React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼"
 showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, width: "100%", gap: 10, flexWrap: "wrap", justifyContent: "space-between" } },
-React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 200px" } },
+React.createElement("div", { className: "hide-scrollbar", style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 200px" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
 React.createElement("div", { style: { display: "flex", justifyContent: "center", flex: "1 1 120px" } },
