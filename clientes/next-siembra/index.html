@@ -1022,16 +1022,16 @@ React.createElement("div", { style: { width: "100%" } }, React.createElement(Bar
 ),
 React.createElement("button", { onClick: () => { cargarUsuarios(); cargarTareas(); showToast("Datos actualizados"); }, title: "Actualizar datos sin salir", style: { background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center" } }, "🔄")
 ),
-React.createElement("div", { style: { display: "flex", alignItems: "center", width: "100%", gap: 10, justifyContent: "space-between", paddingTop: 8 } },
+React.createElement("div", { style: { display: "flex", alignItems: "center", width: "100%", gap: 4, justifyContent: "space-between", paddingTop: 8 } },
 React.createElement("div", { className: "hide-scrollbar", style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 auto" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { 
   setVista(tab.id); 
   if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); 
   if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); 
-}, style: { padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, whiteSpace: "nowrap", transition: "all .15s" } }, tab.label))
+}, style: { padding: "8px 8px", border: "none", background: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, whiteSpace: "nowrap", transition: "all .15s" } }, tab.label))
 ),
 React.createElement("div", { style: { paddingBottom: 4, flexShrink: 0 } },
-React.createElement("button", { onClick: () => { setVista("equipos"); setEquipoResetKey(k => k + 1); }, style: { display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", border: `1.5px solid ${vista === "equipos" ? CLIENTE.colorA : "#CBD5E1"}`, borderRadius: 8, background: vista === "equipos" ? "#fff" : "#F8FAFC", color: vista === "equipos" ? CLIENTE.colorA : "#475569", cursor: "pointer", fontSize: 13, fontWeight: 800, boxShadow: vista === "equipos" ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .2s" } }, "👥 Equipo")
+React.createElement("button", { onClick: () => { setVista("equipos"); setEquipoResetKey(k => k + 1); }, style: { display: "flex", alignItems: "center", padding: "6px 10px", border: `1.5px solid ${vista === "equipos" ? CLIENTE.colorA : "#CBD5E1"}`, borderRadius: 8, background: vista === "equipos" ? "#fff" : "#F8FAFC", color: vista === "equipos" ? CLIENTE.colorA : "#475569", cursor: "pointer", fontSize: 12, fontWeight: 800, boxShadow: vista === "equipos" ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .2s" } }, "Equipo")
 )
 ))),
 React.createElement("div", { style: { width: "100%", padding: "22px 24px 60px" } },
