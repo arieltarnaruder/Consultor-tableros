@@ -40,9 +40,10 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywwlxfNpLg6CJr
 const USUARIOS_DEFAULT = [
 { id: "ariel", nombre: "Ariel Tarnaruder", rol: "administrador", zona: null, pin: "2502", email: "ariel@consultor.com" },
 { id: "maxi", nombre: "Maxi Donolo", rol: "sr", zona: null, pin: "1111", email: "maxi@nextsiembra.com" },
-{ id: "adrian", nombre: "Adrián Bonfiglio", rol: "lider", zona: null, pin: "2222", email: "adrian@nextsiembra.com" },
+{ id: "adrian", nombre: "Adrian Bonfiglio", rol: "lider", zona: null, pin: "2222", email: "adrian@nextsiembra.com" },
 { id: "jerry", nombre: "Jerry Teplitz", rol: "lider", zona: null, pin: "3333", email: "jerry@nextsiembra.com" },
-{ id: "bimbi", nombre: "Bimbi Aguero", rol: "vendedor", zona: null, pin: "4444", email: "bimbi@nextsiembra.com" }
+{ id: "bimbi", nombre: "Bimbi Aguero", rol: "vendedor", zona: null, pin: "4444", email: "bimbi@nextsiembra.com" },
+{ id: "santiago", nombre: "Santiago Scarafia", rol: "vendedor", zona: null, pin: "5555", email: "santiago@nextsiembra.com" }
 ];
 const ZONAS = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
 const CLIENTE = {
@@ -95,7 +96,7 @@ CLIENTE.colorA,
 const pct = v => Math.round(v * 100);
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const fmtD = val => {
-if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-") return "";
+if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-" || String(val).trim().toLowerCase() === "x") return "";
 try {
 if (val.includes('/')) {
 const partes = val.split('/');
@@ -105,12 +106,12 @@ if (!isNaN(d.getTime())) return d.toLocaleDateString("es-AR", { day: "2-digit", 
 }
 }
 const d = new Date(val);
-if (isNaN(d.getTime()) || d.getFullYear() < 2000) return val;
+if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "";
 return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 } catch { return val; }
 };
 const parseDateMs = val => {
-if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-") return null;
+if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-" || String(val).trim().toLowerCase() === "x") return null;
 if (val.includes('/')) {
 const [d, m, y] = val.split('/');
 return new Date(y, m - 1, d).getTime();
@@ -696,30 +697,29 @@ const [personaActiva, setPersonaActiva] = useState(null);
 useEffect(() => { setPersonaActiva(null); }, [resetKey]);
 const personasData = useMemo(() => {
 const map = {};
-USUARIOS_DEFAULT.forEach(u => {
-map[u.nombre] = { resp: [], colab: [] };
-});
 tareas.forEach(t => {
 const r = (t.responsable || "").trim();
-if (r && map[r]) {
-map[r].resp.push(t);
+if (r && r.toLowerCase() !== "no asignado") {
+  if (!map[r]) map[r] = { resp: [], colab: [] };
+  map[r].resp.push(t);
 }
 if (t.colaboradores) {
-const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
-colabs.forEach(c => {
-if (map[c]) {
-if (!map[c].colab.some(item => item.id === t.id)) {
-map[c].colab.push(t);
-}
-}
-});
+  const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
+  colabs.forEach(c => {
+    if (c.toLowerCase() !== "no asignado") {
+      if (!map[c]) map[c] = { resp: [], colab: [] };
+      if (!map[c].colab.some(item => item.id === t.id)) {
+        map[c].colab.push(t);
+      }
+    }
+  });
 }
 });
 return Object.entries(map).map(([nombre, data]) => {
 const todas = [...data.resp, ...data.colab];
 const avProm = avg(todas.map(t => t.avance));
 return { nombre, resp: data.resp, colab: data.colab, todas, avProm, total: todas.length };
-}).filter(p => p.total > 0).sort((a, b) => b.avProm - a.avProm);
+}).sort((a, b) => b.avProm - a.avProm);
 }, [tareas]);
 if (personaActiva) {
 const pData = personasData.find(p => p.nombre === personaActiva);
@@ -1046,13 +1046,20 @@ const t = {};
 encabezados.forEach((h, idx) => { t[h] = fila[idx] ? fila[idx].trim() : ""; });
 let avNum = parseFloat(t.avance ? t.avance.replace("%", "") : "0");
 if (avNum > 1) avNum = avNum / 100;
+
+let colabsLimpios = (t.colaboradores || "")
+  .split(",")
+  .map(c => c.trim())
+  .filter(Boolean)
+  .join(", ");
+
 const tareaMapeada = {
 id: i + 1,
 programa: t.programa || "Sin Programa",
 plan: t.plan || "Sin Plan",
 tarea: t.tarea || t.accion || t["acción"] || "",
 responsable: t.responsable || "No asignado",
-colaboradores: t.colaboradores || "",
+colaboradores: colabsLimpios,
 prioridad: t.prioridad || "Media",
 avance: isNaN(avNum) ? 0 : avNum,
 fechaInicio: t.fechainicio || t.fecha_inicio || t.inicio || "",
