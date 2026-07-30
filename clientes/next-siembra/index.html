@@ -10,14 +10,9 @@ body{font-family:system-ui,sans-serif;background:#F1F5F9}
 #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;color:#64748B}
 .spinner{width:36px;height:36px;border:3px solid #E2E8F0;border-top:3px solid #F05A28;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Scrollbar oculta para contenedores horizontales */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-@media (max-width: 480px) {
-  .show-desktop { display: none !important; }
-}
-@media (min-width: 481px) {
-  .show-desktop { display: block !important; }
-}
 @media screen {
 .print-only { display: none !important; }
 }
@@ -45,6 +40,7 @@ const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNm
 const USUARIOS_CSV_URL = "https://docs.google.com/spreadsheets/d/1uHTOXpE-RKlqz3VNmc4SI2TVriXlCScAAikg70NhnS8/export?format=csv&gid=361928560";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywwlxfNpLg6CJrJeOt-kEksUx2sr0lFqWNu0YPLyBsUVherXjFEDAF5J6_j8sK6eWODA/exec";
 
+// Fallback de seguridad por si falla la conexión al Sheets
 const USUARIOS_DEFAULT = [
 { id: "ariel", nombre: "Ariel Tarnaruder", rol: "administrador", zona: null, pin: "2502", email: "ariel@consultor.com" }
 ];
@@ -52,7 +48,7 @@ const USUARIOS_DEFAULT = [
 const ZONAS = ["Vendedor 1", "Vendedor 2", "Vendedor 3", "Vendedor 4"];
 const CLIENTE = {
 nombre: "Next Siembra",
-subtitulo: "Tablero GD",
+subtitulo: "TABLERO GD",
 colorA: "#F05A28",
 colorB: "#2D2D2D",
 colorC: "#F5A623",
@@ -84,8 +80,9 @@ return r.includes("vendedor") && (r.includes("x4") || r.includes("x 4") || r.inc
 const parseDateMs = val => {
 if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-" || String(val).trim().toLowerCase() === "x") return null;
 if (val.includes('/')) {
-const [d, m, y] = val.split('/');
-return new Date(y, m - 1, d).getTime();
+const partes = val.split('/');
+// Sheets CSV exporta forzadamente en formato de EEUU: Mes/Día/Año
+return new Date(partes[2], partes[0] - 1, partes[1]).getTime();
 }
 if (val.includes('-') && val.split('-')[0].length === 4) {
 const [y, m, d] = val.split('-');
@@ -101,7 +98,8 @@ try {
 if (val.includes('/')) {
 const partes = val.split('/');
 if (partes.length === 3) {
-const d = new Date(partes[2], partes[1] - 1, partes[0]);
+// Sheets CSV exporta forzadamente en formato de EEUU: Mes/Día/Año
+const d = new Date(partes[2], partes[0] - 1, partes[1]);
 if (!isNaN(d.getTime())) return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
 }
@@ -310,6 +308,8 @@ React.createElement(Badge, { label: label, tipo: "estado" }),
 React.createElement(Badge, { label: f.prioridad, tipo: "prioridad" }),
 f.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: esRZNColectivo(f) ? "#FEF9C3" : "#EEF2FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Resp: " + f.responsable),
 f.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Colab: " + f.colaboradores),
+f.fechaInicio && fmtD(f.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7", background: "#F0F9FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Inicio: " + fmtD(f.fechaInicio)),
+f.fechaFin && fmtD(f.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488", background: "#F0FDFA", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Fin: " + fmtD(f.fechaFin)),
 esRZNColectivo(f) && React.createElement("span", { style: { fontSize: 11, background: "#EFF6FF", color: "#1D4ED8", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, "Progreso Promedio: ", pct(avanceEfectivo), "%"))),
 React.createElement("div", { style: { padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 } },
 modoSoloLecturaColab && React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400E", fontWeight: 600 } }, "ℹ️ Estás visualizando esta tarea como colaborador. Solo el responsable puede modificar el avance."),
@@ -376,7 +376,7 @@ const m = {};
 tareas.forEach(t => { if (!m[t.programa]) m[t.programa] = []; m[t.programa].push(t); });
 return m;
 }, [tareas]);
-const avanceCounts = { "Completa": 0, "Vencida": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0 };
+const avanceCounts = { "Completa": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0, "Vencida": 0 };
 tareas.forEach(t => {
 const lbl = colorAvance(t.avance, t.fechaVencimiento).label;
 if(avanceCounts[lbl] !== undefined) avanceCounts[lbl]++;
@@ -611,7 +611,7 @@ return res;
 
 const set = (k, v) => setFiltros(f => ({ ...f, [k]: v }));
 
-const avanceCounts = { "Completa": 0, "Vencida": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0 };
+const avanceCounts = { "Completa": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0, "Vencida": 0 };
 filtradasOrdenadas.forEach(t => {
 const lbl = colorAvance(t.avance, t.fechaVencimiento).label;
 if (avanceCounts[lbl] !== undefined) avanceCounts[lbl]++;
@@ -740,13 +740,13 @@ m[t.programa][t.plan].push(t);
 return m;
 }, [tareas]);
 const totalAv = avg(tareas.map(t => t.avance));
-const avanceCounts = { "Completa": 0, "Vencida": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0 };
+const avanceCounts = { "Completa": 0, "Avanzado": 0, "En marcha": 0, "Iniciado": 0, "Sin inicio": 0, "Vencida": 0 };
 tareas.forEach(t => { const lbl = colorAvance(t.avance, t.fechaVencimiento).label; if(avanceCounts[lbl] !== undefined) avanceCounts[lbl]++; });
 return React.createElement("div", { className: "print-only" },
 React.createElement("div", { style: { borderBottom: "3px solid #F05A28", paddingBottom: "12px", marginBottom: "25px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
 React.createElement("div", null,
 React.createElement("h1", { style: { fontSize: "24pt", fontWeight: 900, color: "#F05A28", margin: 0, letterSpacing: "-1px" } }, "NEXT SIEMBRA"),
-React.createElement("div", { style: { fontSize: "11pt", fontWeight: 700, color: "#2D2D2D", textTransform: "uppercase", letterSpacing: "1px", marginTop: "2px" } }, "Maestro de Generación de Demanda")
+React.createElement("div", { style: { fontSize: "11pt", fontWeight: 700, color: "#2D2D2D", textTransform: "uppercase", letterSpacing: "1px", marginTop: "2px" } }, CLIENTE.subtitulo)
 ),
 React.createElement("div", { style: { textAlign: "right", fontSize: "9pt", color: "#64748B" } },
 React.createElement("strong", null, "REPORTE MAESTRO COMPLETO"), React.createElement("br"),
@@ -1068,13 +1068,13 @@ showUserMenu && React.createElement("div", { style: { position: "absolute", righ
 React.createElement("button", { onClick: () => { setShowAyuda(true); setShowUserMenu(false); }, style: { width: "100%", padding: "11px 16px", border: "none", borderBottom: "1px solid #E2E8F0", background: "none", textAlign: "left", fontSize: 13, color: "#475569", cursor: "pointer", fontWeight: 600 } }, "❓ Ayuda"),
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
 
-React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", gap: 8 } },
+React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", padding: "8px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", gap: 12 } },
 React.createElement("button", { onClick: () => window.print(), title: "Imprimir PDF", style: { padding: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", fontSize: 16, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 40 } }, "🖨️"),
-React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "2px solid #E2E8F0", borderRadius: 12, padding: "6px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", flex: 1, justifyContent: "center" } },
-React.createElement("span", { style: { fontSize: 11, color: "#475569", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" } }, "Avance"),
-React.createElement("span", { style: { fontSize: 24, fontWeight: 800, color: bar } }, pct(totalAv), "%"),
-React.createElement("div", { className: "show-desktop", style: { width: "100%", maxWidth: 100 } }, React.createElement(BarraAvance, { valor: totalAv, height: 6 }))),
-React.createElement("button", { onClick: () => { cargarUsuarios(); cargarTareas(); showToast("Datos actualizados"); }, title: "Actualizar datos", style: { padding: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", minWidth: 40 } }, "🔄")),
+React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: 99, padding: "6px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", flex: "1 1 auto", justifyContent: "center", maxWidth: 400 } },
+React.createElement("span", { style: { fontSize: 11, color: "#475569", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", textAlign: "right", lineHeight: 1.1 } }, "Avance del", React.createElement("br", null), "Plan General"),
+React.createElement("span", { style: { fontSize: 26, fontWeight: 900, color: bar } }, pct(totalAv), "%"),
+React.createElement("div", { style: { width: "100%", maxWidth: 140 } }, React.createElement(BarraAvance, { valor: totalAv, height: 8 }))),
+React.createElement("button", { onClick: () => { cargarUsuarios(); cargarTareas(); showToast("Datos actualizados"); }, title: "Actualizar datos sin salir", style: { padding: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", minWidth: 40, color: "#475569" } }, "🔄")),
 
 React.createElement("div", { style: { display: "flex", alignItems: "center", width: "100%", gap: 10, justifyContent: "space-between", paddingTop: 8 } },
 React.createElement("div", { className: "hide-scrollbar", style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 auto" } },
