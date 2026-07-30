@@ -72,42 +72,30 @@ return r.includes("vendedor") && (r.includes("x4") || r.includes("x 4") || r.inc
 }
 const parseDateMs = val => {
 if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-" || String(val).trim().toLowerCase() === "x") return null;
-if (val.includes('/')) {
-const partes = val.split('/');
-//Sheets CSV exporta forzadamente en formato de EEUU: Mes/Día/Año. Lo forzamos a Día/Mes/Año.
-const d = new Date(partes[2], partes[1] - 1, partes[0]);
-if (!isNaN(d.getTime())) return d.getTime();
+const s = String(val).trim();
+const partes = s.includes('/') ? s.split('/') : (s.includes('-') ? s.split('-') : []);
+if (partes.length >= 2) {
+if (partes[0].length === 4) {
+return new Date(partes[0], partes[1] - 1, partes[2]).getTime();
 }
-if (val.includes('-') && val.split('-')[0].length === 4) {
-const [y, m, d] = val.split('-');
-return new Date(y, m - 1, d).getTime();
+const d = parseInt(partes[0], 10);
+const m = parseInt(partes[1], 10) - 1;
+let y = new Date().getFullYear();
+if (partes.length === 3) {
+y = parseInt(partes[2], 10);
+if (y < 100) y += 2000;
 }
-// Validación automática para fechas de solo día y mes (formato DD-MM o D-M)
-const partsDash = val.split('-');
-if (partsDash.length === 2) {
-const day = parseInt(partsDash[0]);
-const month = parseInt(partsDash[1]);
-if (!isNaN(day) && !isNaN(month)) {
-const currentYear = new Date().getFullYear();
-const date = new Date(currentYear, month - 1, day);
-if (!isNaN(date.getTime())) return date.getTime();
+return new Date(y, m, d).getTime();
 }
-}
-const d = new Date(val).getTime();
-return isNaN(d) ? null : d;
+const f = new Date(val).getTime();
+return isNaN(f) ? null : f;
 };
 const fmtD = val => {
 if (!val || String(val).trim() === "" || String(val).trim() === "0" || String(val).trim() === "-" || String(val).trim().toLowerCase() === "x") return "";
 try {
-if (val.includes('/')) {
-const partes = val.split('/');
-if (partes.length === 3) {
-//Sheets CSV exporta forzadamente en formato de EEUU: Mes/Día/Año. Lo forzamos a Día/Mes/Año.
-const d = new Date(partes[2], partes[1] - 1, partes[0]);
-if (!isNaN(d.getTime())) return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
-}
-}
-const d = new Date(val);
+const ms = parseDateMs(val);
+if (!ms) return val;
+const d = new Date(ms);
 if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "";
 return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 } catch { return val; }
@@ -809,7 +797,7 @@ React.createElement("div", { style: { marginBottom: 24, textAlign: "center" } },
 React.createElement(LogoNextSiembra, { height: 44 }),
 React.createElement("div", { style: { fontSize: 12, color: "#64748B", fontWeight: 600, marginTop: 8 } }, CLIENTE.subtitulo)),
 React.createElement("div", { style: { background: "#fff", borderRadius: 18, padding: "24px", width: "100%", maxWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,.10)", border: "1px solid #E2E8F0" } },
-React.createElement("div", { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 20 }),
+React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, borderRadius: 99, marginBottom: 20 } }),
 React.createElement("div", { style: { textAlign: "center", marginBottom: 16 } },
 React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#0F172A" } }, "Ingresa tu PIN")),
 React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 } },
@@ -821,7 +809,7 @@ React.createElement("button", { onClick: () => setPin(""), style: { ...btnS, fon
 React.createElement("button", { onClick: () => handleKey("0"), style: btnS }, "0"),
 React.createElement("button", { onClick: () => { setPin(p => p.slice(0, -1)); setErr(""); }, style: { ...btnS, fontSize: 16, color: "#64748B" } }, "x")),
 React.createElement("div", { style: { borderTop: "1px solid #F1F5F9", marginTop: 12, paddingTop: 12, textAlign: "center" } },
-React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "7px 166px", color: "#64748B", fontSize: 12, cursor: "pointer", fontWeight: 600 } }, "Solo lectura")))
+React.createElement("button", { onClick: () => onLogin(null), style: { background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "7px 16px", color: "#64748B", fontSize: 12, cursor: "pointer", fontWeight: 600 } }, "Solo lectura")))
 );
 }
 function ModalAyuda({ onClose }) {
@@ -1010,8 +998,8 @@ toast && React.createElement(Toast, { msg: toast.msg, ok: toast.ok }),
 modal && React.createElement(Modal, { tarea: modal, onSave: guardar, onClose: () => setModal(null), saving: saving, usuario: usuario }),
 showAyuda && React.createElement(ModalAyuda, { onClose: () => setShowAyuda(false) }),
 React.createElement("div", { style: { background: "#fff", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.06)" } },
-React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "0 16px" } },
-React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -16px" } }),
+React.createElement("div", { style: { width: "100%", padding: "0 24px" } },
+React.createElement("div", { style: { height: 4, background: `linear-gradient(90deg, ${CLIENTE.colorA}, ${CLIENTE.colorB})`, margin: "0 -24px" } }),
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 8px" } },
 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
 React.createElement(LogoNextSiembra, { height: 28 }),
@@ -1024,19 +1012,17 @@ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: "#0
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼")),
 showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden", display: "flex", flexDirection: "column" } },
 React.createElement("button", { onClick: () => { setShowAyuda(true); setShowUserMenu(false); }, style: { width: "100%", padding: "11px 16px", border: "none", borderBottom: "1px solid #E2E8F0", background: "none", textAlign: "left", fontSize: 13, color: "#475569", cursor: "pointer", fontWeight: 600 } }, "❓ Ayuda"),
-React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión"))))),
-React.createElement("div", { style: { background: "#fff", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", width: "100%", margin: "0", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px" } },
-React.createElement("button", { onClick: () => window.print(), title: "Imprimir PDF", style: { background: "none", border: "none", padding: "8px", borderRight: "1px solid #E2E8F0", color: "#475569", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 40, paddingRight: 12 } }, "🖨️"),
-React.createElement("div", { style: { display: "flex", gap: 12, alignItems: "center", justifyContent: "center", flex: "1 1 auto" } },
-React.createElement("span", { style: { fontSize: 11, color: "#475569", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", textAlign: "right", lineHeight: 1.1 } }, "Avance del", React.createElement("br", null), "Plan General"),
-React.createElement("span", { style: { fontSize: 26, fontWeight: 900, color: bar } }, pct(totalAv), "%"),
-React.createElement("div", { style: { flex: "1 1 auto", width: "100%", maxWidth: "calc(100% - 180px)" } }, // Barra de progreso real extendida
-React.createElement(BarraAvance, { valor: totalAv, height: 8 }))
+React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
+React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9" } },
+React.createElement("button", { onClick: () => window.print(), title: "Imprimir PDF", style: { background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center" } }, "🖨️"),
+React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 16, flex: "1 1 auto", padding: "0 24px" } },
+React.createElement("span", { style: { fontSize: 12, color: "#475569", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", textAlign: "right", lineHeight: 1.1, flexShrink: 0 } }, "Avance del", React.createElement("br", null), "Plan General"),
+React.createElement("span", { style: { fontSize: 28, fontWeight: 900, color: bar, flexShrink: 0 } }, pct(totalAv), "%"),
+React.createElement("div", { style: { width: "100%" } }, React.createElement(BarraAvance, { valor: totalAv, height: 10 }))
 ),
-React.createElement("button", { onClick: () => { cargarUsuarios(); cargarTareas(); showToast("Datos actualizados"); }, title: "Actualizar datos sin salir", style: { background: "none", border: "none", padding: "8px", borderLeft: "1px solid #E2E8F0", color: "#475569", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 40, paddingLeft: 12 } }, "🔄")
+React.createElement("button", { onClick: () => { cargarUsuarios(); cargarTareas(); showToast("Datos actualizados"); }, title: "Actualizar datos sin salir", style: { background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center" } }, "🔄")
 ),
-React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "0 16px", paddingTop: 8 } },
-React.createElement("div", { style: { display: "flex", alignItems: "center", width: "100%", gap: 10, justifyContent: "space-between" } },
+React.createElement("div", { style: { display: "flex", alignItems: "center", width: "100%", gap: 10, justifyContent: "space-between", paddingTop: 8 } },
 React.createElement("div", { className: "hide-scrollbar", style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 auto" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { 
   setVista(tab.id); 
@@ -1048,7 +1034,7 @@ React.createElement("div", { style: { paddingBottom: 4, flexShrink: 0 } },
 React.createElement("button", { onClick: () => { setVista("equipos"); setEquipoResetKey(k => k + 1); }, style: { display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", border: `1.5px solid ${vista === "equipos" ? CLIENTE.colorA : "#CBD5E1"}`, borderRadius: 8, background: vista === "equipos" ? "#fff" : "#F8FAFC", color: vista === "equipos" ? CLIENTE.colorA : "#475569", cursor: "pointer", fontSize: 13, fontWeight: 800, boxShadow: vista === "equipos" ? "0 4px 12px rgba(0,0,0,.08)" : "none", transition: "all .2s" } }, "👥 Equipo")
 )
 ))),
-React.createElement("div", { style: { maxWidth: 980, margin: "0 auto", padding: "22px 14px 60px" } },
+React.createElement("div", { style: { width: "100%", padding: "22px 24px 60px" } },
 vista === "ejecutivo" && React.createElement(VistaEjecutiva, { tareas: tareas, onEditar: handleEditar, onNavegar: handleNavegar }),
 vista === "programas" && React.createElement(VistaProgramas, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl, forceView: navPlanes.force }),
 vista === "planes" && React.createElement(VistaPlanesAll, { tareas: tareas, onEditar: handleEditar, initProg: navPlanes.prog, initPlan: navPlanes.pl }),
