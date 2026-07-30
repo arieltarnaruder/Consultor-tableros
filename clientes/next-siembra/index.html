@@ -189,6 +189,12 @@ function MiniTarea({ t, onEditar }) {
 const { bar, label: tlb } = colorAvance(t.avance, t.fechaVencimiento);
 const pcfg = PRIO_CFG[t.prioridad];
 const urgColor = t.prioridad === "Alta" ? "#EF4444" : t.prioridad === "Media" ? "#F97316" : "#22C55E";
+
+const fInicio = fmtD(t.fechaInicio);
+const fVenc = fmtD(t.fechaVencimiento);
+const txtInicio = fInicio ? fInicio : "NA";
+const txtVenc = fVenc ? fVenc : "NA";
+
 return (React.createElement("div", { onClick: () => onEditar(t), style: { background: "#fff", border: "1px solid #E2E8F0", borderLeft: `4px solid ${urgColor}`, borderRadius: 10, padding: "12px 14px", cursor: "pointer", transition: "box-shadow .15s" }, onMouseEnter: e => e.currentTarget.style.boxShadow = "0 3px 12px rgba(0,0,0,.1)", onMouseLeave: e => e.currentTarget.style.boxShadow = "none" },
 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 } },
 React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#0F172A", lineHeight: 1.3, flex: 1 } }, t.tarea || "(Sin nombre)"),
@@ -201,9 +207,11 @@ React.createElement(Badge, { label: tlb, tipo: "estado" }),
 React.createElement("span", { style: { fontSize: 11, fontWeight: 700, background: pcfg && pcfg.bg ? pcfg.bg : "#FFFBEB", color: pcfg && pcfg.text ? pcfg.text : "#854D0E", borderRadius: 99, padding: "2px 8px" } }, t.prioridad),
 t.responsable && (React.createElement("span", { style: { fontSize: 11, color: "#475569", background: "#F1F5F9", borderRadius: 99, padding: "2px 8px" } }, t.responsable)),
 t.colaboradores && (React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 8px", fontWeight: 600 } }, "Colab: " + t.colaboradores)),
-t.fechaInicio && fmtD(t.fechaInicio) && (React.createElement("span", { style: { fontSize: 11, color: "#0284C7", background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 99, padding: "2px 8px" } }, "Inicio: " + fmtD(t.fechaInicio))),
-t.fechaVencimiento && fmtD(t.fechaVencimiento) && (React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 8px" } }, "Vencimiento: " + fmtD(t.fechaVencimiento))),
 React.createElement("span", { style: { fontSize: 10, color: "#94A3B8", marginLeft: "auto" } }, t.plan)),
+React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap", alignItems: "center" } },
+React.createElement("span", { style: { fontSize: 11, color: "#0284C7", background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 99, padding: "2px 8px" } }, "Inicio: " + txtInicio),
+React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 8px" } }, "Vencimiento: " + txtVenc)
+),
 t.comentarios && (React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: "#94A3B8", fontStyle: "italic", borderTop: "1px solid #F1F5F9", paddingTop: 6 } },
 t.comentarios.slice(0, 90), t.comentarios.length > 90 ? "…" : ""))));
 }
@@ -260,6 +268,12 @@ const esResponsableReal = puedeEditar(usuario, f);
 const esColaboradorReal = esColaboradorDeTarea(usuario, f);
 const isAdminOrSrOrLider = usuario?.rol === "administrador" || usuario?.rol === "sr" || usuario?.rol === "lider";
 const modoSoloLecturaColab = esColaboradorReal && !esResponsableReal && !isAdminOrSrOrLider;
+
+const fInicioM = fmtD(f.fechaInicio);
+const fVencM = fmtD(f.fechaVencimiento);
+const txtInicioM = fInicioM ? fInicioM : "NA";
+const txtVencM = fVencM ? fVencM : "NA";
+
 const handleZona = (zona, campo, valor) => {
 setF(p => {
 const nuevasZonas = { ...p.zonas, [zona]: { ...p.zonas[zona], [campo]: valor } };
@@ -283,8 +297,8 @@ React.createElement(Badge, { label: label, tipo: "estado" }),
 React.createElement(Badge, { label: f.prioridad, tipo: "prioridad" }),
 f.responsable && React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: esRZNColectivo(f) ? "#FEF9C3" : "#EEF2FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Resp: " + f.responsable),
 f.colaboradores && React.createElement("span", { style: { fontSize: 11, color: "#0891b2", background: "#ECFEFF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Colab: " + f.colaboradores),
-f.fechaInicio && fmtD(f.fechaInicio) && React.createElement("span", { style: { fontSize: 11, color: "#0284C7", background: "#F0F9FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Inicio: " + fmtD(f.fechaInicio)),
-f.fechaFin && fmtD(f.fechaFin) && React.createElement("span", { style: { fontSize: 11, color: "#0D9488", background: "#F0FDFA", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Fin: " + fmtD(f.fechaFin)),
+React.createElement("span", { style: { fontSize: 11, color: "#0284C7", background: "#F0F9FF", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Inicio: " + txtInicioM),
+React.createElement("span", { style: { fontSize: 11, color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 99, padding: "2px 9px", fontWeight: 600 } }, "Vencimiento: " + txtVencM),
 esRZNColectivo(f) && React.createElement("span", { style: { fontSize: 11, background: "#EFF6FF", color: "#1D4ED8", borderRadius: 99, padding: "2px 9px", fontWeight: 700 } }, "Progreso Promedio: ", pct(avanceEfectivo), "%"))),
 React.createElement("div", { style: { padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 } },
 modoSoloLecturaColab && React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400E", fontWeight: 600 } }, "ℹ️ Estás visualizando esta tarea como colaborador. Solo el responsable puede modificar el avance."),
