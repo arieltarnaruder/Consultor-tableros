@@ -1119,7 +1119,7 @@ React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼"
 showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, width: "100%", gap: 10, flexWrap: "wrap", justifyContent: "space-between" } },
-React.createElement("div", { style: { display: "flex", gap: 0, scrollbarWidth: "none", msOverflowStyle: "none" } },
+React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 200px" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
 React.createElement("div", { style: { display: "flex", justifyContent: "center", flex: "1 1 120px" } },
