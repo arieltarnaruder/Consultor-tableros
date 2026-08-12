@@ -632,20 +632,34 @@ const personasData = useMemo(() => {
 const map = {};
 const usrsList = (usuarios && usuarios.length > 0) ? usuarios : USUARIOS_DEFAULT;
 usrsList.forEach(u => {
-if (u.nombre) map[u.nombre.trim()] = { resp: [], colab: [] };
+if (u.nombre && u.nombre.trim()) {
+map[u.nombre.trim()] = { resp: [], colab: [] };
+}
 });
 tareas.forEach(t => {
 const r = (t.responsable || "").trim();
-if (r) {
-if (!map[r]) map[r] = { resp: [], colab: [] };
-map[r].resp.push(t);
+if (r && !r.toLowerCase().includes("no asignad") && !r.toLowerCase().includes("sin asign")) {
+let keyMatch = Object.keys(map).find(k => k.toLowerCase() === r.toLowerCase());
+if (!keyMatch) {
+keyMatch = Object.keys(map).find(k => k.toLowerCase().includes(r.toLowerCase()) || r.toLowerCase().includes(k.toLowerCase()));
+}
+if (keyMatch) {
+map[keyMatch].resp.push(t);
+}
 }
 if (t.colaboradores) {
 const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
 colabs.forEach(c => {
-if (!map[c]) map[c] = { resp: [], colab: [] };
-if (!map[c].colab.some(item => item.id === t.id)) {
-map[c].colab.push(t);
+if (c && !c.toLowerCase().includes("no asignad") && !c.toLowerCase().includes("sin asign")) {
+let keyMatch = Object.keys(map).find(k => k.toLowerCase() === c.toLowerCase());
+if (!keyMatch) {
+keyMatch = Object.keys(map).find(k => k.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(k.toLowerCase()));
+}
+if (keyMatch) {
+if (!map[keyMatch].colab.some(item => item.id === t.id)) {
+map[keyMatch].colab.push(t);
+}
+}
 }
 });
 }
@@ -654,7 +668,7 @@ return Object.entries(map).map(([nombre, data]) => {
 const todas = [...data.resp, ...data.colab];
 const avProm = avg(todas.map(t => t.avance));
 return { nombre, resp: data.resp, colab: data.colab, todas, avProm, total: todas.length };
-}).filter(p => p.total > 0).sort((a, b) => b.avProm - a.avProm);
+}).sort((a, b) => b.avProm - a.avProm);
 }, [tareas, usuarios]);
 if (personaActiva) {
 const pData = personasData.find(p => p.nombre === personaActiva);
@@ -970,18 +984,32 @@ fetch(USERS_CSV_URL)
 .then(res => res.text())
 .then(csvText => {
 const lineas = parseCSV(csvText);
-if (lineas.length > 1) {
-const enc = lineas[0].map(h => h.trim().toLowerCase());
+if (lineas.length > 0) {
+let headerIdx = -1;
+for (let i = 0; i < lineas.length; i++) {
+const rowStr = lineas[i].join(" ").toLowerCase();
+if (rowStr.includes("nombre") && (rowStr.includes("pin") || rowStr.includes("rol"))) {
+headerIdx = i;
+break;
+}
+}
+if (headerIdx !== -1) {
+const enc = lineas[headerIdx].map(h => h.trim().toLowerCase());
+const idxNombre = enc.findIndex(h => h.includes("nombre"));
+const idxRol = enc.findIndex(h => h.includes("rol"));
+const idxPin = enc.findIndex(h => h.includes("pin"));
+const idxEmail = enc.findIndex(h => h.includes("email"));
+
 const rawUsrs = [];
-for (let i = 1; i < lineas.length; i++) {
+for (let i = headerIdx + 1; i < lineas.length; i++) {
 const fila = lineas[i];
-if (!fila[0] || fila.length < 2) continue;
-const u = {};
-enc.forEach((h, idx) => { u[h] = fila[idx] ? fila[idx].trim() : ""; });
-const nombre = u.nombre || fila[0].trim();
+if (!fila || fila.length === 0) continue;
+const nombre = idxNombre !== -1 && fila[idxNombre] ? fila[idxNombre].trim() : "";
 if (!nombre) continue;
-const pin = (u["# pin"] || u.pin || fila[3] || "").trim();
-const rolRaw = (u.rol || fila[1] || "vendedor").trim().toLowerCase();
+
+const pin = idxPin !== -1 && fila[idxPin] ? fila[idxPin].trim() : "";
+const rolRaw = idxRol !== -1 && fila[idxRol] ? fila[idxRol].trim().toLowerCase() : "vendedor";
+
 let rol = "vendedor";
 if (rolRaw.includes("admin") || rolRaw.includes("director")) rol = "administrador";
 else if (rolRaw.includes("sr")) rol = "sr";
@@ -994,10 +1022,13 @@ nombre: nombre,
 rol: rol,
 zona: null,
 pin: pin,
-email: u.email || ""
+email: idxEmail !== -1 && fila[idxEmail] ? fila[idxEmail].trim() : ""
 });
 }
-if (rawUsrs.length > 0) setUsuarios(rawUsrs);
+if (rawUsrs.length > 0) {
+setUsuarios(rawUsrs);
+}
+}
 }
 })
 .catch(err => console.error("Error al cargar usuarios:", err));
@@ -1088,7 +1119,7 @@ React.createElement("span", { style: { fontSize: 10, color: "#94A3B8" } }, "▼"
 showUserMenu && React.createElement("div", { style: { position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.12)", minWidth: 160, zIndex: 200, overflow: "hidden" } },
 React.createElement("button", { onClick: handleLogout, style: { width: "100%", padding: "11px 16px", border: "none", background: "none", textAlign: "left", fontSize: 13, color: "#EF4444", cursor: "pointer", fontWeight: 600 } }, "Cerrar sesión")))),
 React.createElement("div", { style: { display: "flex", alignItems: "center", marginTop: 10, width: "100%", gap: 10, flexWrap: "wrap", justifyContent: "space-between" } },
-React.createElement("div", { style: { display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4, flex: "1 1 200px" } },
+React.createElement("div", { style: { display: "flex", gap: 0, scrollbarWidth: "none", msOverflowStyle: "none" } },
 TABS_JERARQUIA.map(tab => React.createElement("button", { key: tab.id, onClick: () => { setVista(tab.id); if(tab.id !== 'programas' && tab.id !== 'planes') setNavPlanes({ prog: null, pl: null, force: false }); if(tab.id !== 'tareas') setNavTareas({ filtroAvance: "" }); }, style: { padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: vista === tab.id ? CLIENTE.colorA : "#64748B", borderBottom: `3px solid ${vista === tab.id ? CLIENTE.colorA : "transparent"}`, marginBottom: -1, whiteSpace: "nowrap" } }, tab.label))
 ),
 React.createElement("div", { style: { display: "flex", justifyContent: "center", flex: "1 1 120px" } },
