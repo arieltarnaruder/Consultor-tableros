@@ -658,19 +658,33 @@ useEffect(() => { setPersonaActiva(null); }, [resetKey]);
 const personasData = useMemo(() => {
 const map = {};
 usuariosDisp.forEach(u => {
-map[u.nombre] = { resp: [], colab: [] };
+if (u.nombre && u.nombre.trim()) {
+map[u.nombre.trim()] = { resp: [], colab: [] };
+}
 });
 tareas.forEach(t => {
 const r = (t.responsable || "").trim();
-if (r && map[r]) {
-map[r].resp.push(t);
+if (r && !r.toLowerCase().includes("no asignad") && !r.toLowerCase().includes("sin asign")) {
+let keyMatch = Object.keys(map).find(k => k.toLowerCase() === r.toLowerCase());
+if (!keyMatch) {
+keyMatch = Object.keys(map).find(k => k.toLowerCase().includes(r.toLowerCase()) || r.toLowerCase().includes(k.toLowerCase()));
+}
+if (keyMatch) {
+map[keyMatch].resp.push(t);
+}
 }
 if (t.colaboradores) {
 const colabs = t.colaboradores.split(",").map(c => c.trim()).filter(Boolean);
 colabs.forEach(c => {
-if (map[c]) {
-if (!map[c].colab.some(item => item.id === t.id)) {
-map[c].colab.push(t);
+if (c && !c.toLowerCase().includes("no asignad") && !c.toLowerCase().includes("sin asign")) {
+let keyMatch = Object.keys(map).find(k => k.toLowerCase() === c.toLowerCase());
+if (!keyMatch) {
+keyMatch = Object.keys(map).find(k => k.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(k.toLowerCase()));
+}
+if (keyMatch) {
+if (!map[keyMatch].colab.some(item => item.id === t.id)) {
+map[keyMatch].colab.push(t);
+}
 }
 }
 });
@@ -680,8 +694,9 @@ return Object.entries(map).map(([nombre, data]) => {
 const todas = [...data.resp, ...data.colab];
 const avProm = avg(todas.map(t => t.avance));
 return { nombre, resp: data.resp, colab: data.colab, todas, avProm, total: todas.length };
-}).filter(p => p.total > 0).sort((a, b) => b.avProm - a.avProm);
+}).sort((a, b) => b.avProm - a.avProm);
 }, [tareas, usuariosDisp]);
+
 if (personaActiva) {
 const pData = personasData.find(p => p.nombre === personaActiva);
 if (!pData) return null;
@@ -813,7 +828,7 @@ function PantallaLogin({ onLogin, usuarios }) {
 const [pin, setPin] = useState("");
 const [err, setErr] = useState("");
 const tryLogin = (p) => {
-const u = usuarios.find(usr => usr.pin === p);
+const u = usuarios.find(usr => String(usr.pin).trim() === String(p).trim());
 if (u) onLogin(u);
 else { setErr("PIN incorrecto"); setPin(""); }
 };
